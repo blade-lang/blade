@@ -7,9 +7,10 @@
  * Mail headers are ASCII and mail bodies were historically ASCII too,
  * so everything else has to be spelled out in it. Bodies use base64 or
  * quoted-printable; headers use the encoded words of RFC 2047 and, for
- * parameters, the continuations of RFC 2231. This module implements
- * all four in both directions, plus the character sets a message is
- * likely to name.
+ * parameters, the continuations of RFC 2231; IMAP writes mailbox names
+ * in the modified UTF-7 of RFC 3501. This module implements all five
+ * in both directions, plus the character sets a message is likely to
+ * name.
  *
  * ```zuri
  * import mail.encoding
@@ -1060,4 +1061,160 @@ def guess_encoding(data) {
   }
 
   return high * 5 > raw.length() ? 'base64' : 'quoted-printable'
+}
+
+# A run of characters a mailbox name cannot carry as themselves, as
+# modified UTF-7 writes it: the UTF-16 of the run in base64, with `,`
+# for `/` and no padding, between `&` and `-`.
+def _encode_name_run(run: list) {
+  var raw = bytes(0)
+
+  for character in run {
+    var point = character.ord()
+
+    if point > 0xffff {
+      var offset = point - 0x10000
+      var high = 0xd800 + (offset >> 10)
+      var low = 0xdc00 + (offset & 0x3ff)
+
+      raw.append(high >> 8)
+      raw.append(high & 0xff)
+      raw.append(low >> 8)
+      raw.append(low & 0xff)
+    } else {
+      raw.append(point >> 8)
+      raw.append(point & 0xff)
+    }
+  }
+
+  return '&' + base64.encode(raw).rtrim('=').replace('/', ',', false) + '-'
+}
+
+/**
+ * Writes a mailbox name the way IMAP carries it: in the modified UTF-7
+ * of RFC 3501.
+ *
+ * Printable ASCII stands for itself, except `&`, which is written
+ * `&-`. Every run of other characters, including a character outside
+ * the Basic Multilingual Plane, becomes the base64 of its UTF-16
+ * between `&` and `-`, with `,` in place of `/` and the padding left
+ * off.
+ *
+ * `ImapClient` writes every name this way itself, so a program only
+ * needs this to speak to a server some other way.
+ *
+ * ```zuri
+ * import mail.encoding
+ *
+ * echo encoding.encode_mailbox_name('Entwürfe')
+ * echo encoding.encode_mailbox_name('Tom & Jerry')
+ * ```
+ *
+ * ```console
+ * Entw&APw-rfe
+ * Tom &- Jerry
+ * ```
+ *
+ * @param string name: the name as a person reads it.
+ * @returns string: printable ASCII.
+ */
+def encode_mailbox_name(name: string) {
+  var out = []
+  var run = []
+
+  for character in name.to_list() {
+    var point = character.ord()
+
+    if point >= 0x20 and point <= 0x7e {
+      if !run.is_empty() {
+        out.append(_encode_name_run(run))
+        run = []
+      }
+
+      out.append(character == '&' ? '&-' : character)
+      continue
+    }
+
+    run.append(character)
+  }
+
+  if !run.is_empty() {
+    out.append(_encode_name_run(run))
+  }
+
+  return ''.join(out)
+}
+
+/**
+ * Reads a mailbox name IMAP wrote in the modified UTF-7 of RFC 3501
+ * back into the name a person reads.
+ *
+ * `&-` is `&`, and every other run between `&` and `-` is the base64,
+ * with `,` for `/`, of the UTF-16 of the characters it stands for. A
+ * run that does not decode, and an `&` with no `-` after it, are kept
+ * exactly as they were sent, so a name a server wrote badly is still
+ * shown rather than lost.
+ *
+ * ```zuri
+ * import mail.encoding
+ *
+ * echo encoding.decode_mailbox_name('Entw&APw-rfe')
+ * echo encoding.decode_mailbox_name('Tom &- Jerry')
+ * ```
+ *
+ * ```console
+ * Entwürfe
+ * Tom & Jerry
+ * ```
+ *
+ * @param string name: the name as IMAP wrote it.
+ * @returns string
+ */
+def decode_mailbox_name(name: string) {
+  if !name.contains('&') {
+    return name
+  }
+
+  var out = []
+  var at = 0
+
+  while at < name.length() {
+    var amp = name.index_of('&', at)
+
+    if amp < 0 {
+      out.append(name[at,])
+      break
+    }
+
+    out.append(name[at, amp])
+
+    var dash = name.index_of('-', amp + 1)
+
+    if dash < 0 {
+      out.append(name[amp,])
+      break
+    }
+
+    if dash == amp + 1 {
+      out.append('&')
+      at = dash + 1
+      continue
+    }
+
+    var encoded = name[amp + 1, dash].replace(',', '/', false)
+
+    while encoded.length() % 4 != 0 {
+      encoded += '='
+    }
+
+    catch {
+      out.append(decode_text(base64.decode(encoded), 'utf-16be'))
+    } as error {
+      out.append(name[amp, dash + 1])
+    }
+
+    at = dash + 1
+  }
+
+  return ''.join(out)
 }

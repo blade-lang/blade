@@ -294,6 +294,109 @@ def pop3_server(channel) {
   channel.send(deleted)
 }
 
+/**
+ * A server that turns its one client away at the greeting, then sends
+ * down the channel whether the client hung up (`closed`) or kept the
+ * connection open (`left open`).
+ */
+def refusing_server(channel, greeting) {
+  var listener = net.TcpStream()
+
+  listener.bind('127.0.0.1:0')
+  channel.send(listener.local_address().to_string())
+
+  var client = listener.accept()
+  var outcome = 'left open'
+
+  client.write('${greeting}\r\n'.to_bytes())
+  client.set_read_timeout(3000)
+
+  catch {
+    while client.read(1024).length() > 0 {
+    }
+
+    outcome = 'closed'
+  } as error {
+    outcome = 'left open'
+  }
+
+  client.close()
+  listener.close()
+  channel.send(outcome)
+}
+
+/**
+ * An IMAP server that offers `UTF8=ACCEPT` and `SPECIAL-USE`, and
+ * reports back down the channel the bytes of every mailbox name a
+ * client creates and every `LIST` it was sent, so the test can see
+ * what was on the wire.
+ *
+ * The first `LIST` asking for special-use attributes is refused, to
+ * show the client asking again plainly; later ones are answered.
+ */
+def utf8_imap_server(channel) {
+  var listener = net.TcpStream()
+
+  listener.bind('127.0.0.1:0')
+  channel.send(listener.local_address().to_string())
+
+  var client = listener.accept()
+  var stream = mail.stream.LineStream(client, false)
+  var created = []
+  var listings = []
+
+  _say(stream, '* OK [CAPABILITY IMAP4rev1 ENABLE UTF8=ACCEPT LITERAL+ SPECIAL-USE] ready')
+
+  while true {
+    var line = stream.read_line(nil)
+    var words = line.split(' ')
+    var tag = words[0]
+    var verb = words.length() > 1 ? words[1].upper() : ''
+
+    if verb == 'ENABLE' {
+      _say(stream, '* ENABLED UTF8=ACCEPT')
+      _say(stream, '${tag} OK enabled')
+      continue
+    }
+
+    if verb == 'CREATE' {
+      var name = words[2]
+
+      if name.starts_with('{') {
+        name = stream.read_bytes(name[1, name.length() - 2].to_number()).to_string()
+        stream.read_line(nil)
+      }
+
+      created.append(name)
+      _say(stream, '${tag} OK created')
+      continue
+    }
+
+    if verb == 'LIST' {
+      var extended = line.contains('RETURN (SPECIAL-USE)')
+
+      listings.append(line[tag.length() + 1,])
+
+      if extended and listings.length() == 1 {
+        _say(stream, '${tag} BAD not here')
+        continue
+      }
+
+      _say(stream, '* LIST (\\Sent) "/" "Tom &- Jerry"')
+      _say(stream, '${tag} OK listed')
+      continue
+    }
+
+    _say(stream, '* BYE')
+    _say(stream, '${tag} OK bye')
+    break
+  }
+
+  stream.close()
+  listener.close()
+  channel.send({ created, listings })
+}
+
 def _say(stream, line) {
   stream.write_line(line)
   stream.flush()

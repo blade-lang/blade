@@ -1,0 +1,294 @@
+/**
+ * test_net_ip.zu
+ *
+ * How `net.ip` classifies addresses: the special-purpose blocks of
+ * each family, and `is_global()` measured against the IANA registries
+ * it follows.
+ */
+
+import net
+import os
+
+var _passed = 0
+var _failed = 0
+
+def check(label, got, expected) {
+  if got == expected {
+    _passed++
+
+    return
+  }
+
+  _failed++
+
+  echo '  [FAIL] ${label}'
+  echo '         got      ${got}'
+  echo '         expected ${expected}'
+}
+
+def section(title) {
+  echo ''
+  echo '== ${title} =='
+}
+
+# Whether `asking` answers `expected` for each address in `addresses`,
+# handed the address of its own family.
+def each(question, asking, addresses, expected) {
+  for text in addresses {
+    var address = net.Ip.parse(text)
+    var inner = address.is_ipv4() ? address.as_ipv4() : address.as_ipv6()
+
+    check('${text} ${question}', asking(inner), expected)
+  }
+}
+
+section('ipv4 blocks')
+
+each(
+  'is_shared', @(a) => a.is_shared(), ['100.64.0.1', '100.127.255.254'], true,
+)
+each(
+  'is_shared', @(a) => a.is_shared(), ['100.63.255.255', '100.128.0.0'], false,
+)
+each(
+  'is_benchmarking', @(a) => a.is_benchmarking(),
+  ['198.18.0.1', '198.19.255.255'], true,
+)
+each(
+  'is_benchmarking', @(a) => a.is_benchmarking(), ['198.17.0.1', '198.20.0.1'],
+  false,
+)
+each(
+  'is_reserved', @(a) => a.is_reserved(), ['240.0.0.1', '254.255.255.255'],
+  true,
+)
+each(
+  'is_reserved', @(a) => a.is_reserved(),
+  ['239.255.255.255', '255.255.255.255'], false,
+)
+
+section('ipv6 blocks')
+
+each(
+  'is_unique_local', @(a) => a.is_unique_local(), ['fc00::1', 'fd12:3456::1'],
+  true,
+)
+each(
+  'is_unique_local', @(a) => a.is_unique_local(), ['fe80::1', 'fbff::1'], false,
+)
+each(
+  'is_documentation', @(a) => a.is_documentation(),
+  ['2001:db8::1', '3fff::1', '3fff:fff::1'], true,
+)
+each(
+  'is_documentation', @(a) => a.is_documentation(),
+  ['2001:db9::1', '3fff:1000::1'], false,
+)
+
+section('is_global')
+
+# Every block in the IANA IPv4 and IPv6 Special-Purpose Address
+# Registries, probed at its first, second, middle and last address, and
+# a few addresses outside them all. Each answer is the one the registry
+# gives the most specific block holding the address: reachable only
+# where it says so, and not where it says not, or says nothing.
+var REGISTRY = [
+  ['0.0.0.0', false],
+  ['0.0.0.1', false],
+  ['0.128.0.0', false],
+  ['0.255.255.255', false],
+  ['1.1.1.1', true],
+  ['8.8.8.8', true],
+  ['10.0.0.0', false],
+  ['10.0.0.1', false],
+  ['10.128.0.0', false],
+  ['10.255.255.255', false],
+  ['93.184.216.34', true],
+  ['100.64.0.0', false],
+  ['100.64.0.1', false],
+  ['100.96.0.0', false],
+  ['100.127.255.255', false],
+  ['100.128.0.0', true],
+  ['127.0.0.0', false],
+  ['127.0.0.1', false],
+  ['127.128.0.0', false],
+  ['127.255.255.255', false],
+  ['169.254.0.0', false],
+  ['169.254.0.1', false],
+  ['169.254.128.0', false],
+  ['169.254.255.255', false],
+  ['172.16.0.0', false],
+  ['172.16.0.1', false],
+  ['172.24.0.0', false],
+  ['172.31.255.255', false],
+  ['172.32.0.1', true],
+  ['192.0.0.0', false],
+  ['192.0.0.1', false],
+  ['192.0.0.4', false],
+  ['192.0.0.7', false],
+  ['192.0.0.8', false],
+  ['192.0.0.9', true],
+  ['192.0.0.10', true],
+  ['192.0.0.128', false],
+  ['192.0.0.170', false],
+  ['192.0.0.171', false],
+  ['192.0.0.255', false],
+  ['192.0.2.0', false],
+  ['192.0.2.1', false],
+  ['192.0.2.128', false],
+  ['192.0.2.255', false],
+  ['192.31.196.0', true],
+  ['192.31.196.1', true],
+  ['192.31.196.128', true],
+  ['192.31.196.255', true],
+  ['192.52.193.0', true],
+  ['192.52.193.1', true],
+  ['192.52.193.128', true],
+  ['192.52.193.255', true],
+  ['192.88.99.0', false],
+  ['192.88.99.1', false],
+  ['192.88.99.2', false],
+  ['192.88.99.128', false],
+  ['192.88.99.255', false],
+  ['192.168.0.0', false],
+  ['192.168.0.1', false],
+  ['192.168.128.0', false],
+  ['192.168.255.255', false],
+  ['192.175.48.0', true],
+  ['192.175.48.1', true],
+  ['192.175.48.128', true],
+  ['192.175.48.255', true],
+  ['198.18.0.0', false],
+  ['198.18.0.1', false],
+  ['198.19.0.0', false],
+  ['198.19.255.255', false],
+  ['198.20.0.1', true],
+  ['198.51.100.0', false],
+  ['198.51.100.1', false],
+  ['198.51.100.128', false],
+  ['198.51.100.255', false],
+  ['203.0.113.0', false],
+  ['203.0.113.1', false],
+  ['203.0.113.128', false],
+  ['203.0.113.255', false],
+  ['224.0.0.1', true],
+  ['240.0.0.0', false],
+  ['240.0.0.1', false],
+  ['248.0.0.0', false],
+  ['255.255.255.255', false],
+  ['::', false],
+  ['::1', false],
+  ['::ffff:0.0.0.0', false],
+  ['::ffff:0.0.0.1', false],
+  ['::ffff:128.0.0.0', false],
+  ['::ffff:255.255.255.255', false],
+  ['64:ff9b::', true],
+  ['64:ff9b::1', true],
+  ['64:ff9b::8000:0', true],
+  ['64:ff9b::ffff:ffff', true],
+  ['64:ff9b:1::', false],
+  ['64:ff9b:1::1', false],
+  ['64:ff9b:1:8000::', false],
+  ['64:ff9b:1:ffff:ffff:ffff:ffff:ffff', false],
+  ['100::', false],
+  ['100::1', false],
+  ['100::8000:0:0:0', false],
+  ['100::ffff:ffff:ffff:ffff', false],
+  ['100:0:0:1::', false],
+  ['100:0:0:1::1', false],
+  ['100:0:0:1:8000::', false],
+  ['100::1:ffff:ffff:ffff:ffff', false],
+  ['2001::', false],
+  ['2001::1', false],
+  ['2001:0:8000::', false],
+  ['2001:0:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['2001:1::1', true],
+  ['2001:1::2', true],
+  ['2001:1::3', true],
+  ['2001:1::4', false],
+  ['2001:2::', false],
+  ['2001:2::1', false],
+  ['2001:2:0:8000::', false],
+  ['2001:2:0:ffff:ffff:ffff:ffff:ffff', false],
+  ['2001:3::', true],
+  ['2001:3::1', true],
+  ['2001:3:8000::', true],
+  ['2001:3:ffff:ffff:ffff:ffff:ffff:ffff', true],
+  ['2001:4:112::', true],
+  ['2001:4:112::1', true],
+  ['2001:4:112:8000::', true],
+  ['2001:4:112:ffff:ffff:ffff:ffff:ffff', true],
+  ['2001:10::', false],
+  ['2001:10::1', false],
+  ['2001:18::', false],
+  ['2001:1f:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['2001:20::', true],
+  ['2001:20::1', true],
+  ['2001:28::', true],
+  ['2001:2f:ffff:ffff:ffff:ffff:ffff:ffff', true],
+  ['2001:30::', true],
+  ['2001:30::1', true],
+  ['2001:38::', true],
+  ['2001:3f:ffff:ffff:ffff:ffff:ffff:ffff', true],
+  ['2001:100::', false],
+  ['2001:1ff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['2001:200::1', true],
+  ['2001:db8::', false],
+  ['2001:db8::1', false],
+  ['2001:db8:8000::', false],
+  ['2001:db8:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['2001:4860:4860::8888', true],
+  ['2002::', false],
+  ['2002::1', false],
+  ['2002:8000::', false],
+  ['2002:ffff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['2606:4700:4700::1111', true],
+  ['2620:4f:8000::', true],
+  ['2620:4f:8000::1', true],
+  ['2620:4f:8000:8000::', true],
+  ['2620:4f:8000:ffff:ffff:ffff:ffff:ffff', true],
+  ['3fff::', false],
+  ['3fff::1', false],
+  ['3fff:800::', false],
+  ['3fff:fff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['3fff:1000::1', true],
+  ['5f00::', false],
+  ['5f00::1', false],
+  ['5f00:8000::', false],
+  ['5f00:ffff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['fbff::1', true],
+  ['fc00::', false],
+  ['fc00::1', false],
+  ['fd00::', false],
+  ['fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['fe80::', false],
+  ['fe80::1', false],
+  ['fea0::', false],
+  ['febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff', false],
+  ['ff0e::1', true],
+]
+
+for entry in REGISTRY {
+  check('${entry[0]} is_global', net.Ip.parse(entry[0]).is_global(), entry[1])
+}
+
+section('either family')
+
+check('a private ipv4 address', net.Ip.parse('192.168.1.10').is_private(), true)
+check('a unique local ipv6 address', net.Ip.parse('fd00::1').is_private(), true)
+check(
+  'a public ipv4 address is not private', net.Ip.parse('8.8.8.8').is_private(),
+  false,
+)
+check('is_global for ipv4', net.Ip.parse('8.8.8.8').is_global(), true)
+check('is_global for ipv6', net.Ip.parse('fe80::1').is_global(), false)
+
+echo ''
+
+if _failed > 0 {
+  echo '${_failed} of ${_passed + _failed} checks failed'
+
+  os.exit(1)
+}
+
+echo 'all ${_passed} checks passed'

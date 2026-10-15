@@ -31,10 +31,13 @@
  *
  * ### Time
  *
- * Timestamps written as text use ISO 8601 with microseconds and an
- * explicit offset, which every engine here parses and which sorts
- * correctly as text. A `date.Date` carries an offset of its own, so
- * nothing is assumed about the local zone at either end.
+ * Timestamps written as text use ISO 8601 with microseconds, and are
+ * always written in UTC with a `+00:00` offset. Every engine here
+ * parses that, and text written that way sorts and compares in time
+ * order, so `order by` and `<` on such a column agree with the clock.
+ * A `date.Date` written with any other offset is converted to UTC
+ * first, which keeps the moment and drops the offset it was written
+ * in: it reads back as the same instant, in UTC.
  *
  * @copyright 2026, Richard Ore and Zuri contributors
  */
@@ -87,13 +90,17 @@ def is_structured(value) {
 }
 
 /**
- * Formats a `date.Date` as ISO 8601 text.
+ * Formats a `date.Date` as ISO 8601 text in UTC.
+ *
+ * The moment is kept and the offset it was written in is not: noon in
+ * Lagos and eleven in London are the same text. Two timestamps written
+ * this way compare as text exactly as they compare in time.
  *
  * @param date.Date value
- * @returns string
+ * @returns string: as `2026-09-16T10:00:00.000000+00:00`.
  */
 def to_iso(value) {
-  return value.format(ISO_FORMAT)
+  return value.to_offset(0).format(ISO_FORMAT)
 }
 
 /**

@@ -1,6 +1,7 @@
 # The SQLite adapter end to end: opening, running statements, and
 # reading values back as the types their columns were declared with.
 
+import date
 import sql
 import sql.errors { * }
 
@@ -93,6 +94,44 @@ def test_declared_types() {
 
   db.close()
   echo 'test_declared_types passed'
+}
+
+def test_timestamps_in_time_order() {
+  var db = sql.open(':memory:')
+  db.exec('create table t (name text, at datetime)', nil)
+
+  # Eight in the morning UTC, written two hours ahead, and nine UTC
+  # written as it is. Text that kept each offset would put nine first.
+  db.insert('t', {
+    name: 'eight',
+    at: date.parse('2026-10-13T10:00:00+02:00'),
+  })
+
+  db.insert('t', {
+    name: 'nine',
+    at: date.parse('2026-10-13T09:00:00+00:00'),
+  })
+
+  var ordered = db.fetch_column('select name from t order by at', nil, nil)
+  assert ordered == ['eight', 'nine']
+
+  var earlier = db.fetch_column(
+    'select name from t where at < ?',
+    [date.parse('2026-10-13T08:30:00+00:00')],
+    nil,
+  )
+  assert earlier == ['eight']
+
+  # The moment survives the trip, and comes back in UTC.
+  var stored = db.fetch_value("select at from t where name = 'eight'", nil, nil)
+  assert stored.to_time() == date.parse('2026-10-13T08:00:00+00:00').to_time()
+  assert stored.hour == 8
+
+  var nine = db.fetch_value("select at from t where name = 'nine'", nil, nil)
+  assert nine.hour == 9
+
+  db.close()
+  echo 'test_timestamps_in_time_order passed'
 }
 
 def test_large_integers() {
@@ -215,6 +254,7 @@ def test_exec_script() {
 test_connection_strings()
 test_exec_and_query()
 test_declared_types()
+test_timestamps_in_time_order()
 test_large_integers()
 test_parameters()
 test_errors()

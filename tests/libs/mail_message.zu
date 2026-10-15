@@ -181,6 +181,28 @@ check('continuations put back together', enc.decode_parameters({
   'filename*1*': 'sum%C3%A9.pdf',
 }).filename, 'résumé.pdf')
 
+# The examples RFC 3501 gives in section 5.1.3.
+check('the rfc example written', enc.encode_mailbox_name('~peter/mail/台北/日本語'),
+  '~peter/mail/&U,BTFw-/&ZeVnLIqe-')
+check('and read', enc.decode_mailbox_name('~peter/mail/&U,BTFw-/&ZeVnLIqe-'),
+  '~peter/mail/台北/日本語')
+check('a shift back before printable ascii', enc.encode_mailbox_name('☺!'), '&Jjo-!')
+check('one run with no superfluous shift', enc.encode_mailbox_name('台北日本語'),
+  '&U,BTF2XlZyyKng-')
+
+check('mailbox name written in modified utf-7', enc.encode_mailbox_name('Entwürfe'), 'Entw&APw-rfe')
+check('and read back', enc.decode_mailbox_name('Entw&APw-rfe'), 'Entwürfe')
+check('an ampersand is written &-', enc.encode_mailbox_name('Tom & Jerry'), 'Tom &- Jerry')
+check('and read back as one', enc.decode_mailbox_name('Tom &- Jerry'), 'Tom & Jerry')
+check('printable ascii left alone', enc.encode_mailbox_name('Archive/2026'), 'Archive/2026')
+check('a run is one piece', enc.encode_mailbox_name('日本語'), '&ZeVnLIqe-')
+check('outside the BMP goes as a surrogate pair',
+  enc.decode_mailbox_name(enc.encode_mailbox_name('Mail 📬')), 'Mail 📬')
+check('several runs round-trip',
+  enc.decode_mailbox_name(enc.encode_mailbox_name('Привет / Мир & Co')), 'Привет / Мир & Co')
+check('an ampersand with no dash kept', enc.decode_mailbox_name('Fish & Chips'), 'Fish & Chips')
+check('a run that does not decode kept', enc.decode_mailbox_name('Bad &!!!- name'), 'Bad &!!!- name')
+
 check('ascii needs no transfer encoding', enc.guess_encoding('plain ascii'), '7bit')
 check('binary goes base64',
   enc.guess_encoding(bytes([0, 1, 2, 0xff, 0xfe, 0xfd])), 'base64')

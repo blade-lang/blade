@@ -46,11 +46,22 @@ def _is_digit(value: number) {
 }
 
 # The characters that end an atom. Everything printable that is not one
-# of these can be part of one.
+# of these can be part of one. This is the strict rule, the one a value
+# has to meet to be written without quotes.
 def _ends_atom(value: number) {
   return value == 0x20 or value == 0x28 or value == 0x29 or value == 0x7b
     or value == 0x22 or value == 0x5b or value == 0x5d or value < 0x20
     or value == 0x25 or value == 0x2a
+}
+
+# The characters that end a bare value being read. A star and a percent
+# sign are atom-specials, but IMAP still sends them bare in a few places:
+# `1:*` and `*` in a set, `*` and `%` in a LIST pattern, and `\*` in a
+# PERMANENTFLAGS list. Reading them as part of the value takes all of
+# those in.
+def _ends_token(value: number) {
+  return value == 0x20 or value == 0x28 or value == 0x29 or value == 0x7b
+    or value == 0x22 or value == 0x5b or value == 0x5d or value < 0x20
 }
 
 /**
@@ -191,20 +202,8 @@ def _read_literal(state) {
 def _read_atom(state) {
   var start = state.at
 
-  # `\*` is the one place a star is part of a name rather than a
-  # wildcard: it is what a PERMANENTFLAGS list says to mean that new
-  # keywords may be invented.
-  if state.text[start, start + 2 > state.text.length()
-    ? state.text.length()
-    : start + 2]
-    == '\\*' {
-    state.at += 2
-
-    return '\\*'
-  }
-
   while state.at < state.text.length()
-    and !_ends_atom(state.text[state.at].ord()) {
+    and !_ends_token(state.text[state.at].ord()) {
     state.at++
   }
 
@@ -516,6 +515,78 @@ def _flatten(values: list) {
   return ' '.join(parts)
 }
 
+# The response codes whose arguments RFC 3501 and RFC 9051 give a grammar
+# of their own, all of it values. Every other code is an atom, and then,
+# when it says more, any text but a closing bracket.
+var _VALUED_CODES = [
+  'APPENDUID', 'BADCHARSET', 'CAPABILITY', 'COPYUID', 'PERMANENTFLAGS',
+  'UIDNEXT', 'UIDVALIDITY', 'UNSEEN',
+]
+
+# The code in brackets at the start of `remainder`, and what follows it.
+#
+# A code with arguments of its own is read as values, from the line alone,
+# so nothing in it can read on into the next response. Any other code is
+# its atom and its text, which is free text: a quote, a brace or a bracket
+# in it is only a character.
+def _status_code(remainder: string) {
+  var close = remainder.index_of(']')
+
+  if close < 0 {
+    raise ProtocolError('a response code was never closed')
+  }
+
+  var inside = remainder[1, close]
+  var space = inside.index_of(' ')
+  var name = space < 0 ? inside : inside[0, space]
+
+  if _VALUED_CODES.contains(name.upper()) {
+    var state = _cursor(remainder, nil)
+    var code = _read_list(state, ']')
+
+    return { code, rest: state.text[state.at, state.text.length()] }
+  }
+
+  return {
+    code: space < 0 ? [inside] : [name, inside[space + 1, inside.length()]],
+    rest: remainder[close + 1, remainder.length()],
+  }
+}
+
+# The values of a status response: its word, the code in brackets when
+# there is one, and the rest of the line as it was written, or `nil` when
+# `rest` is not a status response.
+#
+# The text after the code is for a person to read. It is free text, and
+# it can hold anything at all, a bracket that is never closed or a quote
+# with no partner, so it is kept whole rather than read as values.
+def _status_tokens(rest: string) {
+  var space = rest.index_of(' ')
+  var word = space < 0 ? rest : rest[0, space]
+
+  if !STATUSES.contains(word.upper()) {
+    return nil
+  }
+
+  var tokens = [word]
+  var remainder = space < 0 ? '' : rest[space + 1, rest.length()].ltrim(' ')
+
+  if remainder.starts_with('[') {
+    var found = _status_code(remainder)
+
+    tokens.append(found.code)
+    remainder = found.rest
+  }
+
+  var text = remainder.trim()
+
+  if !text.is_empty() {
+    tokens.append(text)
+  }
+
+  return tokens
+}
+
 /**
  * Reads responses off a connection, one at a time.
  *
@@ -558,7 +629,11 @@ class Reader {
 
     var tag = line[0, space]
     var rest = line[space + 1, line.length()]
-    var tokens = tokenize(rest, self._source)
+    var tokens = _status_tokens(rest)
+
+    if tokens == nil {
+      tokens = tokenize(rest, self._source)
+    }
 
     if tag == '*' {
       return Response('untagged', '*', tokens, line)

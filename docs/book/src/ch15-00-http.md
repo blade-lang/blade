@@ -1090,6 +1090,7 @@ response.redirect('/elsewhere', 308)      # method-preserving
 response.status = 201
 response.header('X-Thing', 'value')
 response.content_type('text/csv')
+response.content_disposition('attachment', 'Résumé.pdf')
 response.cache_for(3600)
 response.no_cache()
 ```
@@ -1100,6 +1101,13 @@ each returns the response, so they chain.
 `file()` streams from disk rather than reading the file into memory,
 which is what makes serving something larger than you would like to
 hold in memory a one-liner.
+
+`content_disposition()` says whether a browser shows the body or saves
+it, and under what name. A name outside printable ASCII, or one with a
+quote, a backslash or a percent sign in it, goes as RFC 6266 has it:
+whole in `filename*`, with a plain ASCII stand-in in `filename`, and
+`download()` offers its file that way too, so a body written from memory
+and a file from disk reach the person under the same name.
 
 ### Middleware
 

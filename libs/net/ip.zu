@@ -318,6 +318,82 @@ class Ipv4 {
   }
 
   /**
+   * Whether this address is in the `100.64.0.0/10` shared address
+   * space RFC 6598 sets aside for carrier-grade NAT, which sits
+   * between a provider and its customers and is never routed
+   * beyond them.
+   * @returns bool
+   */
+  is_shared() {
+    return self._octets[0] == 100 and self._octets[1] >= 64 and
+      self._octets[1] <= 127
+  }
+
+  /**
+   * Whether this address is in the `198.18.0.0/15` range RFC 2544
+   * reserves for benchmarking network devices.
+   * @returns bool
+   */
+  is_benchmarking() {
+    return self._octets[0] == 198 and
+      (self._octets[1] == 18 or self._octets[1] == 19)
+  }
+
+  /**
+   * Whether this address is in the `240.0.0.0/4` range RFC 1112
+   * reserves for future use. The `255.255.255.255` broadcast
+   * address sits inside that block but is not counted, since it
+   * has a use of its own.
+   * @returns bool
+   */
+  is_reserved() {
+    return self._octets[0] >= 240 and !self.is_broadcast()
+  }
+
+  /**
+   * Whether this address is reachable across the public internet,
+   * as the IANA IPv4 Special-Purpose Address Registry has it.
+   *
+   * An address is global unless the registry marks its block as not
+   * globally reachable or leaves that unanswered: `0.0.0.0/8`, the
+   * private ranges, the shared address space, loopback, link-local,
+   * `192.0.0.0/24` apart from the anycast addresses `192.0.0.9` and
+   * `192.0.0.10`, the documentation ranges, the deprecated 6to4 relay
+   * anycast block `192.88.99.0/24`, benchmarking, the reserved block
+   * and the broadcast address. Multicast addresses are global by this
+   * measure, since the registry does not list them.
+   *
+   * This is the check to make before connecting somewhere a
+   * stranger named, such as a URL in a message, so the connection
+   * cannot be turned against the machine itself or the network it
+   * sits on.
+   *
+   * @returns bool
+   */
+  is_global() {
+    var a = self._octets[0]
+    var b = self._octets[1]
+    var c = self._octets[2]
+    var d = self._octets[3]
+
+    if a == 0 {
+      return false
+    }
+
+    if a == 192 and b == 0 and c == 0 and d != 9 and d != 10 {
+      return false
+    }
+
+    if a == 192 and b == 88 and c == 99 {
+      return false
+    }
+
+    return !(self.is_private() or self.is_shared() or self.is_loopback() or
+      self.is_link_local() or self.is_documentation() or
+      self.is_benchmarking() or self.is_reserved() or self.is_broadcast())
+  }
+
+  /**
    * Returns this address re-expressed as an IPv4-mapped IPv6
    * address, e.g. `192.168.1.10` becomes `::ffff:192.168.1.10`.
    *
@@ -611,6 +687,95 @@ class Ipv6 {
   }
 
   /**
+   * Whether this address is in the `fc00::/7` unique local range
+   * of RFC 4193, the IPv6 counterpart of IPv4's private ranges.
+   * @returns bool
+   */
+  is_unique_local() {
+    return (self._segments[0] & 0xfe00) == 0xfc00
+  }
+
+  /**
+   * Whether this address falls in one of the ranges reserved for
+   * use in documentation and examples: `2001:db8::/32` from RFC
+   * 3849, or `3fff::/20` from RFC 9637.
+   * @returns bool
+   */
+  is_documentation() {
+    var a = self._segments[0]
+
+    return (a == 0x2001 and self._segments[1] == 0x0db8) or
+      (a == 0x3fff and self._segments[1] <= 0x0fff)
+  }
+
+  /**
+   * Whether this address is reachable across the public internet,
+   * as the IANA IPv6 Special-Purpose Address Registry has it.
+   *
+   * An address is global unless the registry marks its block as not
+   * globally reachable or leaves that unanswered: the unspecified and
+   * loopback addresses, IPv4-mapped addresses (`::ffff:0:0/96`), the
+   * local-use translation prefix `64:ff9b:1::/48`, the discard-only
+   * block `100::/64`, the dummy prefix `100:0:0:1::/64`, the IETF
+   * protocol assignments in `2001::/23` apart from the more specific
+   * allocations the registry marks global, 6to4 (`2002::/16`), the
+   * documentation ranges, SRv6 segment identifiers (`5f00::/16`),
+   * unique local addresses and unicast link-local addresses.
+   *
+   * An IPv4-mapped address is never global, whatever IPv4 address
+   * it carries, because it is not an address an IPv6 packet can be
+   * sent to. Check `to_ipv4_mapped()` first to judge the IPv4
+   * address inside it instead.
+   *
+   * @returns bool
+   */
+  is_global() {
+    var a = self._segments[0]
+    var b = self._segments[1]
+
+    if self.is_unspecified() or self.is_loopback() or
+      self.to_ipv4_mapped() != nil {
+      return false
+    }
+
+    if a == 0x64 and b == 0xff9b and self._segments[2] == 1 {
+      return false
+    }
+
+    if a == 0x100 and b == 0 and self._segments[2] == 0 and
+      self._segments[3] <= 1 {
+      return false
+    }
+
+    if a == 0x2001 and b < 0x200 and !self._is_global_assignment() {
+      return false
+    }
+
+    return !(a == 0x2002 or a == 0x5f00 or self.is_documentation() or
+      self.is_unique_local() or self.is_unicast_link_local())
+  }
+
+  # The allocations inside `2001::/23` the registry marks global: the
+  # PCP, TURN and DNS-SD SRP anycast addresses, AMT, AS112-v6, ORCHIDv2
+  # and the drone remote ID prefix.
+  _is_global_assignment() {
+    var b = self._segments[1]
+
+    if b == 1 {
+      var rest = self._segments[2, 7]
+
+      if rest.every(@(segment) => segment == 0) {
+        return self._segments[7] >= 1 and self._segments[7] <= 3
+      }
+
+      return false
+    }
+
+    return b == 3 or (b == 4 and self._segments[2] == 0x112) or
+      (b >= 0x20 and b <= 0x3f)
+  }
+
+  /**
    * If this address is an IPv4-mapped address (`::ffff:0:0/96`),
    * returns the IPv4 address it maps to; otherwise returns
    * `nil`.
@@ -876,6 +1041,30 @@ class Ip {
    */
   is_multicast() {
     return self._inner.is_multicast()
+  }
+
+  /**
+   * Whether this is a private address for its family: one of the
+   * RFC 1918 ranges for IPv4, or the `fc00::/7` unique local range
+   * for IPv6.
+   * @returns bool
+   */
+  is_private() {
+    if self.is_ipv4() {
+      return self._inner.is_private()
+    }
+
+    return self._inner.is_unique_local()
+  }
+
+  /**
+   * Whether this address is reachable across the public internet.
+   * See `Ipv4.is_global()` and `Ipv6.is_global()` for the blocks
+   * each family leaves out.
+   * @returns bool
+   */
+  is_global() {
+    return self._inner.is_global()
   }
 
   /**

@@ -22,6 +22,7 @@ import http.router
 import http.sse
 import http.status
 import http.util
+import os
 
 import validate
 
@@ -456,6 +457,40 @@ var cookie_line = reply.cookie_headers()[0]
 assert cookie_line.contains('HttpOnly'), 'a cookie is HttpOnly unless asked otherwise'
 assert cookie_line.contains('SameSite=Lax'), 'and SameSite=Lax'
 ok('response cookies default to the safe settings')
+
+reply = http.HttpResponse()
+reply.content_disposition('attachment', 'report.pdf')
+assert reply.headers.get('content-disposition') == 'attachment; filename="report.pdf"',
+  'an ascii name is sent once, quoted'
+reply.content_disposition('inline', 'Résumé.pdf')
+assert reply.headers.get('content-disposition') ==
+  "inline; filename=\"R_sum_.pdf\"; filename*=UTF-8''R%C3%A9sum%C3%A9.pdf",
+  'any other name is sent whole as filename* with a stand-in beside it'
+reply.content_disposition('attachment', 'two\r\nlines "50%".txt')
+assert reply.headers.get('content-disposition') ==
+  "attachment; filename=\"twolines _50__.txt\"; filename*=UTF-8''twolines%20%2250%25%22.txt",
+  'control characters are dropped, and a name with a quote or a percent sign goes whole in filename*'
+reply.content_disposition('attachment', '€ rates')
+assert reply.headers.get('content-disposition') ==
+  "attachment; filename=\"_ rates\"; filename*=UTF-8''%E2%82%AC%20rates",
+  'the rfc 6266 example, with its fallback'
+reply.content_disposition('attachment', nil)
+assert reply.headers.get('content-disposition') == 'attachment', 'a name is optional'
+ok('a response says how its body is offered')
+
+var offered = os.join_paths(os.temp_dir(), 'zuri-http-core-日本.txt')
+var written = file(offered, 'w')
+
+written.write('hello')
+written.close()
+
+reply = http.HttpResponse().download(offered, nil)
+assert reply.headers.get('content-disposition') ==
+  "attachment; filename=\"zuri-http-core-__.txt\"; filename*=UTF-8''zuri-http-core-%E6%97%A5%E6%9C%AC.txt",
+  'download offers the base name, whatever it is written in'
+assert reply.headers.get('content-type') == 'application/octet-stream', 'as bytes to save'
+file(offered).delete()
+ok('download offers a file under its own name')
 
 reply = http.HttpResponse()
 reply.status = 503

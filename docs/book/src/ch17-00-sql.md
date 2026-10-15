@@ -1401,6 +1401,12 @@ them; a database that declares them almost certainly means them, so the
 adapter turns them on. Pass `foreign_keys: false` to turn them back
 off.
 
+SQLite has no timestamp type, so a `date.Date` is kept as ISO 8601
+text, written in UTC whatever offset it carried. Text in that one form
+sorts and compares in time order, which is what makes `order by` and
+`<` on such a column agree with the clock. A date reads back as the
+same moment, in UTC.
+
 ### Functions written in Zuri
 
 A function registered on a connection runs inside the engine, once per

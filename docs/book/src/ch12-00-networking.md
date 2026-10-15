@@ -549,7 +549,12 @@ name.
 thread per socket, which is how you serve many connections from one
 isolate. It takes a `UnixStream` alongside a `TcpStream` or a `TlsStream`. `net.addr` and `net.ip` parse, format and classify addresses —
 `is_private()`, `is_loopback()`, `is_multicast()` and the rest — which is
-what you want before trusting an address a client sent you. `net.dtls` is
+what you want before trusting an address a client sent you. `is_global()`
+answers the question a server asks before it connects somewhere a stranger
+named, such as a URL to fetch: whether the address is on the public
+internet, or one of the blocks the IANA registries keep off it, from
+loopback and the private ranges to carrier-grade NAT and the
+documentation prefixes. `net.dtls` is
 TLS over UDP.
 
 [Appendix F](appendix-06-stdlib-index.md) lists every submodule.

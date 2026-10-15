@@ -319,10 +319,7 @@ class HttpResponse {
       offered = parts[parts.length() - 1]
     }
 
-    self.headers.set(
-      'Content-Disposition',
-      'attachment; filename=${util.quote(offered)}',
-    )
+    self.content_disposition('attachment', offered)
     self.headers.set('Content-Type', 'application/octet-stream')
 
     return self
@@ -433,6 +430,50 @@ class HttpResponse {
    */
   content_type(mimetype: string) {
     self.headers.set('Content-Type', mimetype)
+    return self
+  }
+
+  /**
+   * Sets `Content-Disposition`, which says whether a browser shows the
+   * body or saves it, and under what name.
+   *
+   * A name that is all printable ASCII, with no `"`, `\` or `%` in it,
+   * is sent once, quoted. Any other is sent twice, as RFC 6266 lays
+   * out: `filename*` carries it whole as percent-encoded UTF-8, which a
+   * browser takes in preference, and `filename` carries a stand-in with
+   * each of those characters made `_` for a browser that reads only
+   * that. The stand-in leaves out the three because RFC 6266 warns that
+   * many browsers mishandle a backslash escape in a quoted filename,
+   * and some decode a percent sign that was meant literally. Control
+   * characters are dropped from the name either way, so a name taken
+   * from an upload or a message cannot end the header early.
+   *
+   * ```zuri,ignore
+   * response.content_disposition('attachment', 'Résumé.pdf')
+   * # attachment; filename="R_sum_.pdf"; filename*=UTF-8''R%C3%A9sum%C3%A9.pdf
+   * ```
+   *
+   * @param string kind: `attachment` to have the body saved, `inline`
+   *    to have it shown where the browser can.
+   * @param ?string name: the filename to offer; none when not given or
+   *    empty.
+   * @returns HttpResponse: this same instance, for chaining
+   */
+  content_disposition(kind: string, name: ?string) {
+    var value = kind
+
+    if name != nil and name != '' {
+      var cleaned = name.replace('/[\\x00-\\x1f\\x7f]/', '')
+      var fallback = cleaned.replace('/[^\\x20-\\x7e]|["\\\\%]/', '_')
+
+      value += '; filename=${util.quote(fallback)}'
+
+      if fallback != cleaned {
+        value += "; filename*=UTF-8''${util.percent_encode(cleaned)}"
+      }
+    }
+
+    self.headers.set('Content-Disposition', value)
     return self
   }
 

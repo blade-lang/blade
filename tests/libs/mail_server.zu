@@ -13,10 +13,12 @@
 
 import mail
 import mail.imap { ImapClient }
+import mail.imap.parser
 import mail.pool
 import mail.pop3 { Pop3Client }
 import mail.smtp { SmtpClient }
 
+import io
 import isolate
 import net.tls
 import os
@@ -301,6 +303,51 @@ ok('size reported', infos[0].size > 0)
 ok('internal date read', infos[0].internal_date != nil)
 ok('uid reported', infos[0].uid != nil)
 
+check('a set read whole', parser.tokenize('1:* (FLAGS)', nil), ['1:*', ['FLAGS']])
+check('a bare star read', parser.tokenize('*', nil), ['*'])
+check('a wildcard pattern read', parser.tokenize('"" Arch%', nil), ['', 'Arch%'])
+check('the keyword flag read', parser.tokenize('(\\Seen \\*)', nil), [['\\Seen', '\\*']])
+
+# RFC 3501's resp-text: a code in brackets, then free text. The last form
+# of a code is an atom and then any text but `]`, which need not read as
+# values.
+def status_of(line) {
+  var reader = parser.Reader(mail.stream.LineStream(io.BytesIO('${line}\r\n'.to_bytes()), false))
+  var response = reader.next()
+
+  return [response.status, response.code, response.text]
+}
+
+check('a code read as values', status_of('* OK [PERMANENTFLAGS (\\Seen \\*)] Limited'),
+  ['OK', ['PERMANENTFLAGS', ['\\Seen', '\\*']], 'Limited'])
+check('a code of free text read as its atom and its text',
+  status_of('a1 NO [XUNKNOWN it\'s "odd] the rest'), ['NO', ['XUNKNOWN', 'it\'s "odd'], 'the rest'])
+check('the text after a code kept whole', status_of('* BYE [ALERT] going away (now'),
+  ['BYE', ['ALERT'], 'going away (now'])
+
+var braced = parser.Reader(mail.stream.LineStream(
+  io.BytesIO('* OK [XFOO see {3}] hello\r\na1 OK done\r\n'.to_bytes()), false,
+))
+
+check('a brace in free code text is only a character', braced.next().code, ['XFOO', 'see {3}'])
+check('and the next response is read whole', braced.next().text, 'done')
+
+check('a set running to the end', inbox.fetch('1:*', 'FLAGS', false).length(), 2)
+check('the last one alone', inbox.fetch('*', 'FLAGS', false)[0].sequence, 2)
+check('by uid to the end', inbox.fetch('${infos[1].uid}:*', 'FLAGS', true).length(), 1)
+
+var refusal = nil
+
+catch {
+  inbox.run('FETCH', ['1', ') * ('])
+} as error {
+  refusal = error
+}
+
+ok('free text with brackets and stars is a refusal', instance_of(refusal, mail.ImapError))
+check('reported as BAD', refusal == nil ? nil : refusal.status, 'BAD')
+check('and the connection still answers', inbox.search('ALL', false), [1, 2])
+
 var structured = inbox.fetch(2, 'BODYSTRUCTURE', false)[0]
 
 check('structure is a multipart', structured.structure.mime_type(), 'multipart/mixed')
@@ -376,6 +423,15 @@ check('renamed', inbox.list('', '*').map(@(m) => m.name).sort(),
   ['Archive', 'INBOX', 'Soon'])
 inbox.delete('Soon')
 check('deleted', inbox.list('', '*').map(@(m) => m.name).sort(), ['Archive', 'INBOX'])
+
+inbox.create('Entwürfe & Co')
+check('a name outside ascii listed as written',
+  inbox.list('', 'Entw*').map(@(m) => m.name), ['Entwürfe & Co'])
+check('and in modified utf-7 on the wire',
+  inbox.run('LIST', ['""', 'Entw*']).map(@(r) => '${r.arguments()[2]}'), ['Entw&APw-rfe &- Co'])
+check('and selectable by that name', inbox.select('Entwürfe & Co').name, 'Entwürfe & Co')
+inbox.unselect()
+inbox.delete('Entwürfe & Co')
 
 var status = inbox.status('Archive', nil)
 
@@ -541,6 +597,57 @@ check('both hold the same message', first_saw.subject, 'Pooled')
 check('as does the other', second_saw.subject, 'Pooled')
 
 cluster.close(5000)
+
+
+section('a client that fails to start')
+
+# Whatever goes wrong while a client starts, the caller never holds the
+# client, so the connection has to be closed before the error leaves.
+var refusals = {
+  imap: ['* BYE not today', @(address) => ImapClient.connect('imap://${address}', { tls: 'disable' })],
+  pop3: ['-ERR not today', @(address) => Pop3Client.connect('pop3://${address}', { tls: 'disable' })],
+  smtp: ['554 not today', @(address) => SmtpClient.connect('smtp://${address}', { tls: 'disable' })],
+}
+
+for protocol, refusal in refusals {
+  var refusing = isolate.channel(1)
+  var refusing_task = isolate.spawn(mail_server_app.refusing_server, refusing, refusal[0])
+  var refusing_address = refusing.recv()
+
+  ok('${protocol} raises', raises(@() {
+    refusal[1](refusing_address)
+  }))
+  check('${protocol} hangs up', refusing.recv(), 'closed')
+  refusing_task.join(10000)
+}
+
+section('names in utf-8')
+
+# Once UTF8=ACCEPT is on, a mailbox name goes as it is in both
+# directions, `&` included.
+var utf8 = isolate.channel(1)
+var utf8_task = isolate.spawn(mail_server_app.utf8_imap_server, utf8)
+var utf8_client = ImapClient.connect('imap://${utf8.recv()}', { tls: 'disable' })
+
+utf8_client.enable(['UTF8=ACCEPT'])
+check('the server said it turned it on', utf8_client.enabled, ['UTF8=ACCEPT'])
+utf8_client.create('Entwürfe')
+
+var refused_listing = utf8_client.list('', '*')
+
+check('a listed name is not decoded', refused_listing.map(@(m) => m.name), ['Tom &- Jerry'])
+check('a refused special-use listing is asked again plainly',
+  refused_listing[0].flags, ['\\Sent'])
+check('an answered one is used as it is', utf8_client.list('', '*')[0].flags, ['\\Sent'])
+utf8_client.logout()
+
+var utf8_wire = utf8.recv()
+
+check('the name went as utf-8', utf8_wire.created, ['Entwürfe'])
+check('special-use attributes were asked for', utf8_wire.listings, [
+  'LIST "" "*" RETURN (SPECIAL-USE)', 'LIST "" "*"', 'LIST "" "*" RETURN (SPECIAL-USE)',
+])
+utf8_task.join(10000)
 
 echo ''
 

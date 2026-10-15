@@ -820,6 +820,16 @@ shows unread counts for a dozen folders without selecting each one:
 echo inbox.status('Archive', ['MESSAGES', 'UNSEEN'])
 ```
 
+A mailbox name is given and handed back the way a person reads it.
+IMAP writes names in a modified UTF-7, so `Entwürfe` travels as
+`Entw&APw-rfe` and `Tom & Jerry` as `Tom &- Jerry`, and the client
+does that writing and reading for every command that names a mailbox.
+After `enable(['UTF8=ACCEPT'])` on a server that offers it, names go
+as UTF-8 instead, and `enabled` lists what the server agreed to turn
+on. `encoding.encode_mailbox_name()` and `decode_mailbox_name()` do
+the same conversion for a program that reaches the server some other
+way, such as through `run()`.
+
 ### Searching
 
 The criteria are IMAP's own, and they read close to English:

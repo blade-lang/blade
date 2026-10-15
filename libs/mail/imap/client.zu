@@ -368,6 +368,12 @@ def _addresses_of(values: list, index: number) {
 /**
  * A connection to a server that stores mail.
  *
+ * Mailbox names are given to it and handed back as a person reads
+ * them. On the wire IMAP writes a name in the modified UTF-7 of
+ * RFC 3501, so `Entwürfe` travels as `Entw&APw-rfe`, and the client
+ * does that writing and reading itself. Once `UTF8=ACCEPT` is enabled
+ * a name travels as UTF-8 instead, as RFC 6855 has it.
+ *
  * @printable
  */
 class ImapClient {
@@ -387,6 +393,7 @@ class ImapClient {
     self._host = given.get('host', 'localhost')
 
     self.capabilities = []
+    self.enabled = []
     self.state = 'not-authenticated'
     self.mailbox = nil
     self.greeting = nil
@@ -399,6 +406,10 @@ class ImapClient {
   /**
    * Opens a connection and gets as far as being able to select a
    * mailbox.
+   *
+   * When the greeting, TLS or authentication fails, the connection is
+   * closed before the error is raised, since no client is returned to
+   * close it with.
    *
    * | option | default | what it does |
    * | - | - | - |
@@ -443,7 +454,17 @@ class ImapClient {
 
     var client = ImapClient(connection, settings)
 
-    client.begin()
+    # The caller never holds a client that failed to start, so its
+    # connection is closed here or it stays open until it is collected.
+    catch {
+      client.begin()
+    } as error {
+      catch {
+        client.close()
+      }
+
+      raise error
+    }
 
     return client
   }
@@ -728,7 +749,10 @@ class ImapClient {
    * Arguments are written as they are: a plain string goes unquoted,
    * so quote anything that needs it with `parser.quote()` first. A
    * `Literal` is sent as a literal, waiting for the server's
-   * permission unless it said permission is not needed.
+   * permission unless it said permission is not needed. A mailbox name
+   * goes as it is too, so one outside printable ASCII has to be written
+   * with `encoding.encode_mailbox_name()` first unless `UTF8=ACCEPT`
+   * is enabled.
    *
    * @param string name
    * @param list arguments
@@ -928,7 +952,7 @@ class ImapClient {
     self.state = 'authenticated'
 
     catch {
-      self.run(command, [quote(name)])
+      self.run(command, [self._mailbox_name(name)])
     } as error {
       self.mailbox = nil
 
@@ -993,6 +1017,11 @@ class ImapClient {
    * `*` matches anything including the hierarchy separator, and `%`
    * matches anything except it, which is what lists one level.
    *
+   * A server that offers `SPECIAL-USE` is asked for the RFC 6154
+   * attributes outright, such as `\Sent` and `\Trash`, since not
+   * every one volunteers them in a plain listing. One that refuses the
+   * request is asked again plainly.
+   *
    * ```zuri,ignore
    * for box in inbox.list('', '*') {
    *   echo box.name
@@ -1021,10 +1050,25 @@ class ImapClient {
   }
 
   _listing(command: string, reference: ?string, pattern: ?string) {
-    var responses = self.run(command, [
-      quote(reference == nil ? '' : reference),
-      quote(pattern == nil ? '*' : pattern),
-    ])
+    var arguments = [
+      self._mailbox_name(reference == nil ? '' : reference),
+      self._mailbox_name(pattern == nil ? '*' : pattern),
+    ]
+    var responses = nil
+
+    if command == 'LIST' and self.supports('SPECIAL-USE') {
+      catch {
+        responses = self.run(command, arguments + ['RETURN (SPECIAL-USE)'])
+      } as error {
+        if !instance_of(error, ImapError) {
+          raise error
+        }
+      }
+    }
+
+    if responses == nil {
+      responses = self.run(command, arguments)
+    }
 
     var found = []
 
@@ -1033,16 +1077,16 @@ class ImapClient {
         continue
       }
 
-      var arguments = response.arguments()
+      var listed = response.arguments()
 
-      if arguments.length() < 3 {
+      if listed.length() < 3 {
         continue
       }
 
       found.append(MailboxInfo(
-        _as_text(arguments[2]),
-        _strings(arguments[0]),
-        arguments[1] == nil ? nil : _as_text(arguments[1]),
+        self._read_mailbox_name(_as_text(listed[2])),
+        _strings(listed[0]),
+        listed[1] == nil ? nil : _as_text(listed[1]),
       ))
     }
 
@@ -1066,7 +1110,9 @@ class ImapClient {
       ['MESSAGES', 'RECENT', 'UIDNEXT', 'UIDVALIDITY', 'UNSEEN'] :
       items
 
-    var responses = self.run('STATUS', [quote(name), '(${' '.join(wanted)})'])
+    var responses = self.run('STATUS', [
+      self._mailbox_name(name), '(${' '.join(wanted)})',
+    ])
     var found = {}
 
     for response in responses {
@@ -1098,7 +1144,7 @@ class ImapClient {
    * @throws ImapError if it exists already or the name is not allowed.
    */
   create(name: string) {
-    self.run('CREATE', [quote(name)])
+    self.run('CREATE', [self._mailbox_name(name)])
 
     return self
   }
@@ -1111,7 +1157,7 @@ class ImapClient {
    * @throws ImapError if there is no such mailbox.
    */
   delete(name: string) {
-    self.run('DELETE', [quote(name)])
+    self.run('DELETE', [self._mailbox_name(name)])
 
     return self
   }
@@ -1124,7 +1170,7 @@ class ImapClient {
    * @returns ImapClient itself.
    */
   rename(from: string, to: string) {
-    self.run('RENAME', [quote(from), quote(to)])
+    self.run('RENAME', [self._mailbox_name(from), self._mailbox_name(to)])
 
     return self
   }
@@ -1136,7 +1182,7 @@ class ImapClient {
    * @returns ImapClient itself.
    */
   subscribe(name: string) {
-    self.run('SUBSCRIBE', [quote(name)])
+    self.run('SUBSCRIBE', [self._mailbox_name(name)])
 
     return self
   }
@@ -1148,7 +1194,7 @@ class ImapClient {
    * @returns ImapClient itself.
    */
   unsubscribe(name: string) {
-    self.run('UNSUBSCRIBE', [quote(name)])
+    self.run('UNSUBSCRIBE', [self._mailbox_name(name)])
 
     return self
   }
@@ -1399,7 +1445,7 @@ class ImapClient {
    */
   copy(ids, target: string, by_uid: ?bool) {
     self._need_mailbox('copy')
-    self._maybe_uid('COPY', by_uid, [_id_set(ids), quote(target)])
+    self._maybe_uid('COPY', by_uid, [_id_set(ids), self._mailbox_name(target)])
 
     return self
   }
@@ -1420,7 +1466,9 @@ class ImapClient {
     self._need_mailbox('move')
 
     if self.supports('MOVE') {
-      self._maybe_uid('MOVE', by_uid, [_id_set(ids), quote(target)])
+      self._maybe_uid(
+        'MOVE', by_uid, [_id_set(ids), self._mailbox_name(target)],
+      )
 
       return self
     }
@@ -1466,7 +1514,7 @@ class ImapClient {
    */
   append(mailbox: string, note, flags: ?list, received) {
     var raw = instance_of(note, Message) ? note.to_bytes() : note
-    var arguments = [quote(mailbox)]
+    var arguments = [self._mailbox_name(mailbox)]
 
     if flags != nil and !flags.is_empty() {
       arguments.append('(${' '.join(flags)})')
@@ -1602,6 +1650,10 @@ class ImapClient {
    * Turns on an extension the server offers but does not use until
    * asked, such as `UTF8=ACCEPT`.
    *
+   * What the server says it turned on is added to `enabled`. An
+   * extension it offers but did not turn on is left out, and asking
+   * for one it does not know is not an error.
+   *
    * @param list names
    * @returns ImapClient itself.
    * @throws StateError if the server does not offer `ENABLE`.
@@ -1611,9 +1663,40 @@ class ImapClient {
       raise StateError('${self._host} does not offer ENABLE')
     }
 
-    self.run('ENABLE', [' '.join(names)])
+    for response in self.run('ENABLE', [' '.join(names)]) {
+      if response.name() != 'ENABLED' {
+        continue
+      }
+
+      for value in response.arguments() {
+        var name = '${value}'.upper()
+
+        if !self.enabled.contains(name) {
+          self.enabled.append(name)
+        }
+      }
+    }
 
     return self
+  }
+
+  # A mailbox name as a command carries it: modified UTF-7, or UTF-8
+  # once the server has agreed to read it.
+  _mailbox_name(name: string) {
+    if self.enabled.contains('UTF8=ACCEPT') {
+      return quote(name)
+    }
+
+    return quote(encoding.encode_mailbox_name(name))
+  }
+
+  # A mailbox name the server sent, as a person reads it.
+  _read_mailbox_name(name: string) {
+    if self.enabled.contains('UTF8=ACCEPT') {
+      return name
+    }
+
+    return encoding.decode_mailbox_name(name)
   }
 
   /**

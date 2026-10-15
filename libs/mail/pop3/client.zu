@@ -117,6 +117,10 @@ class Pop3Client {
   /**
    * Opens a connection and authenticates.
    *
+   * When the greeting, TLS or authentication fails, the connection is
+   * closed before the error is raised, since no client is returned to
+   * close it with.
+   *
    * | option | default | what it does |
    * | - | - | - |
    * | `username`, `password` | none | authenticate when both are given |
@@ -159,7 +163,17 @@ class Pop3Client {
 
     var client = Pop3Client(connection, settings)
 
-    client.begin()
+    # The caller never holds a client that failed to start, so its
+    # connection is closed here or it stays open until it is collected.
+    catch {
+      client.begin()
+    } as error {
+      catch {
+        client.close()
+      }
+
+      raise error
+    }
 
     return client
   }
