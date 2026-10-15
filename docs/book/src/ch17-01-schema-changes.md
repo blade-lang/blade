@@ -8,7 +8,7 @@ MariaDB.
 
 - [Creating a Table](#creating-a-table)
 - [Column Types](#column-types)
-- [Columns Are Required](#columns-are-required)
+- [Columns Are Required by default](#columns-are-required-by-default)
 - [Keys and Indexes](#keys-and-indexes)
 - [Changing a Table](#changing-a-table)
 - [Renaming and Dropping](#renaming-and-dropping)

@@ -6,7 +6,10 @@ import test { * }
 
 import ..plan
 
-var ROOT = os.create_temp_dir('zuri-migrate-plan-')
+# Resolved, because the working directory comes back resolved: macOS
+# reaches its temporary directories through a link, and Windows can
+# hand one out under a short name.
+var ROOT = os.real_path(os.create_temp_dir('zuri-migrate-plan-'))
 var PROJECT = os.join_paths(ROOT, 'project')
 var STARTED_IN = os.cwd()
 
@@ -33,6 +36,9 @@ def failure(body: function) {
 }
 
 before_each(@{
+  # Windows will not remove the directory a process is working in.
+  os.change_dir(ROOT)
+
   if os.dir_exists(PROJECT) {
     os.remove_dir(PROJECT, true)
   }

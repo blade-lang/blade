@@ -21,6 +21,7 @@ import .util
 
 import json
 import mime
+import os
 import wire
 
 /**
@@ -315,8 +316,7 @@ class HttpResponse {
 
     var offered = name
     if offered == nil {
-      var parts = path.split('/')
-      offered = parts[parts.length() - 1]
+      offered = os.base_name(path)
     }
 
     self.content_disposition('attachment', offered)
