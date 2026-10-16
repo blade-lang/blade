@@ -32,8 +32,7 @@ import .auth
 import .errors { raise_for }
 import .packets { Cursor, MAX_PAYLOAD, PacketStream, Writer }
 import .types {
-  UNSIGNED_FLAG, decode_binary, decode_text, parameter_type,
-  write_parameter,
+  UNSIGNED_FLAG, parameter_type, row_decoders, write_parameter,
 }
 
 /** What the client asks for and what the server offers. */
@@ -122,6 +121,17 @@ class Protocol {
   var _closed = false
   var _private = false
   var _local_infile = false
+
+  # One cursor for every packet read on the way to a result, reset onto
+  # each in turn, since no packet is still being read when the next one
+  # arrives.
+  var _cursor = Cursor(bytes(0))
+
+  # What each prepared statement's columns looked like, by statement
+  # id: `{ raws, columns, decoders }`. The server sends the definitions
+  # again with every result, and a definition that has not changed is
+  # recognised by its bytes rather than read again.
+  var _known = {}
 
   /**
    * @param PacketStream stream
@@ -297,12 +307,12 @@ class Protocol {
    * @returns dict Either `{ kind: 'ok', affected_rows, last_insert_id,
    *    warnings, info }` or `{ kind: 'rows', columns, rows }`.
    */
-  read_response(sql, binary: bool) {
+  read_response(sql, binary: bool, known) {
     var packet = self._read(sql)
     var first = packet.length() > 0 ? packet[0] : 0
 
     if first == 0x00 {
-      var result = self._read_ok(Cursor(packet).skip(1))
+      var result = self._read_ok(self._cursor.reset(packet).skip(1))
       self._drain(binary)
 
       return result
@@ -313,14 +323,15 @@ class Protocol {
       return self._answer_local_infile(packet, sql)
     }
 
-    var count = Cursor(packet).lenenc_int()
-    var columns = self.read_columns(count, false)
+    var count = self._cursor.reset(packet).lenenc_int()
+    var columns = self.read_columns(count, false, known)
+    var decoders = self._decoders_for(columns, binary, known)
     var rows = []
-    var row = self.read_row(columns, binary, sql)
+    var row = self.read_row(decoders, binary, sql)
 
     while row != nil {
       rows.append(row)
-      row = self.read_row(columns, binary, sql)
+      row = self.read_row(decoders, binary, sql)
     }
 
     self._drain(binary)
@@ -342,16 +353,19 @@ class Protocol {
       var first = packet.length() > 0 ? packet[0] : 0
 
       if first == 0x00 {
-        self._read_ok(Cursor(packet).skip(1))
+        self._read_ok(self._cursor.reset(packet).skip(1))
 
         continue
       }
 
-      var columns = self.read_columns(Cursor(packet).lenenc_int(), false)
-      var row = self.read_row(columns, binary, nil)
+      var columns = self.read_columns(
+        self._cursor.reset(packet).lenenc_int(), false, nil,
+      )
+      var decoders = row_decoders(columns, binary)
+      var row = self.read_row(decoders, binary, nil)
 
       while row != nil {
-        row = self.read_row(columns, binary, nil)
+        row = self.read_row(decoders, binary, nil)
       }
     }
   }
@@ -360,13 +374,41 @@ class Protocol {
    * Reads the column definitions of a result that has just started.
    *
    * @param number count
+   * @param bool trailer Whether a marker closes the definitions even
+   *    when EOF packets are deprecated, as it does for a cursor.
+   * @param dict|nil known What the statement's columns looked like
+   *    last time, `{ raws, columns, decoders }`. A definition whose
+   *    bytes match is not read again, and `known` is brought up to
+   *    date with whatever did change.
    * @returns list[dict]
    */
-  read_columns(count, trailer) {
-    var columns = []
+  read_columns(count, trailer, known) {
+    var reused = known != nil and known.raws.length() == count
+    var columns = reused ? known.columns : []
+    var raws = nil
 
-    for _ in 0..count {
-      columns.append(self._read_column(self._read(nil)))
+    iter var index = 0; index < count; index++ {
+      var packet = self._read(nil)
+
+      if reused {
+        if packet == known.raws[index] {
+          continue
+        }
+
+        # The first definition that changed. Those before it stand, and
+        # everything from here is read afresh.
+        reused = false
+        columns = known.columns[0, index]
+        raws = known.raws[0, index]
+      } else if known != nil and raws == nil {
+        raws = []
+      }
+
+      columns.append(self._read_column(packet))
+
+      if raws != nil {
+        raws.append(packet)
+      }
     }
 
     # A plain result set runs its rows straight on from the column
@@ -378,18 +420,24 @@ class Protocol {
       self._read_trailer(self._read(nil))
     }
 
+    if known != nil and !reused {
+      known.raws = raws or []
+      known.columns = columns
+      known.decoders = nil
+    }
+
     return columns
   }
 
   /**
    * Reads the next row, or nil once the result is over.
    *
-   * @param list columns
+   * @param list decoders One per column, from `row_decoders()`.
    * @param bool binary
    * @param string|nil sql
    * @returns list|nil
    */
-  read_row(columns: list, binary: bool, sql) {
+  read_row(decoders: list, binary: bool, sql) {
     var packet = self._read(sql)
     var first = packet.length() > 0 ? packet[0] : 0
 
@@ -400,8 +448,8 @@ class Protocol {
     }
 
     return binary ?
-      self._read_binary_row(packet, columns) :
-      self._read_text_row(packet, columns)
+      self._read_binary_row(packet, decoders) :
+      self._read_text_row(packet, decoders)
   }
 
   /**
@@ -425,9 +473,17 @@ class Protocol {
     var parameter_count = cursor.int2()
 
     var parameters = parameter_count > 0
-      ? self.read_columns(parameter_count, false)
+      ? self.read_columns(parameter_count, false, nil)
       : []
-    var columns = column_count > 0 ? self.read_columns(column_count, false) : []
+
+    # What the columns look like now is what every execution is checked
+    # against.
+    var known = { raws: [], columns: [], decoders: nil }
+    var columns = column_count > 0
+      ? self.read_columns(column_count, false, known)
+      : []
+
+    self._known.set(id, known)
 
     return { id, parameters, columns, parameter_count }
   }
@@ -448,8 +504,10 @@ class Protocol {
       COMMANDS.STMT_EXECUTE, self._execute_payload(id, values, cursor_type),
     )
 
+    var known = self._known.get(id, nil)
+
     if cursor_type == CURSOR_NONE {
-      return self.read_response(sql, true)
+      return self.read_response(sql, true, known)
     }
 
     # A cursor answers with the column definitions and nothing else;
@@ -458,12 +516,12 @@ class Protocol {
     var first = packet.length() > 0 ? packet[0] : 0
 
     if first == 0x00 {
-      return self._read_ok(Cursor(packet).skip(1))
+      return self._read_ok(self._cursor.reset(packet).skip(1))
     }
 
-    var count = Cursor(packet).lenenc_int()
+    var count = self._cursor.reset(packet).lenenc_int()
 
-    return { kind: 'cursor', columns: self.read_columns(count, true) }
+    return { kind: 'cursor', columns: self.read_columns(count, true, known) }
   }
 
   /**
@@ -480,6 +538,7 @@ class Protocol {
 
     self.send_command(COMMANDS.STMT_FETCH, writer.payload())
 
+    var decoders = row_decoders(columns, true)
     var rows = []
 
     while true {
@@ -499,7 +558,7 @@ class Protocol {
         }
       }
 
-      rows.append(self._read_binary_row(packet, columns))
+      rows.append(self._read_binary_row(packet, decoders))
     }
   }
 
@@ -509,6 +568,10 @@ class Protocol {
    * @param number id
    */
   close_statement(id: number) {
+    if self._known.contains(id) {
+      self._known.remove(id)
+    }
+
     if self._closed {
       return
     }
@@ -955,7 +1018,7 @@ class Protocol {
   # server that deprecated the older marker and the older marker
   # otherwise.
   _read_trailer(packet) {
-    var cursor = Cursor(packet).skip(1)
+    var cursor = self._cursor.reset(packet).skip(1)
 
     if self.has(CAPABILITIES.DEPRECATE_EOF) {
       cursor.lenenc_int()
@@ -976,7 +1039,7 @@ class Protocol {
   }
 
   _read_column(packet) {
-    var cursor = Cursor(packet)
+    var cursor = self._cursor.reset(packet)
 
     cursor.lenenc_bytes()
     var schema = cursor.lenenc_string()
@@ -1007,12 +1070,12 @@ class Protocol {
     }
   }
 
-  _read_text_row(packet, columns: list) {
-    var cursor = Cursor(packet)
+  _read_text_row(packet, decoders: list) {
+    var cursor = self._cursor.reset(packet)
     var row = []
 
-    for column in columns {
-      row.append(decode_text(cursor.lenenc_bytes(), column))
+    for decoder in decoders {
+      row.append(decoder(cursor.lenenc_bytes()))
     }
 
     return row
@@ -1020,20 +1083,37 @@ class Protocol {
 
   # A binary row leads with a bitmap of which values are NULL, offset by
   # two bits that the protocol reserves.
-  _read_binary_row(packet, columns: list) {
-    var cursor = Cursor(packet).skip(1)
-    var size = ((columns.length() + 7 + 2) / 8).floor()
-    var nulls = cursor.fixed(size)
+  _read_binary_row(packet, decoders: list) {
+    var count = decoders.length()
+    var cursor = self._cursor.reset(packet).skip(1)
+    var nulls = cursor.fixed(((count + 7 + 2) / 8).floor())
     var row = []
 
-    iter var index = 0; index < columns.length(); index++ {
+    iter var index = 0; index < count; index++ {
       var bit = index + 2
-      var absent = (nulls[(bit / 8).floor()] & (1 << (bit % 8))) != 0
 
-      row.append(absent ? nil : decode_binary(cursor, columns[index]))
+      if (nulls[(bit / 8).floor()] & (1 << (bit % 8))) != 0 {
+        row.append(nil)
+      } else {
+        row.append(decoders[index](cursor))
+      }
     }
 
     return row
+  }
+
+  # The decoders for a result's rows, kept with the statement's columns
+  # for as long as those columns do not change.
+  _decoders_for(columns, binary, known) {
+    if known == nil or !binary {
+      return row_decoders(columns, binary)
+    }
+
+    if known.decoders == nil {
+      known.decoders = row_decoders(columns, true)
+    }
+
+    return known.decoders
   }
 
   # The body of a COM_STMT_EXECUTE: which parameters are NULL, then

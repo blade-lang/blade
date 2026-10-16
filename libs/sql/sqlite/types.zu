@@ -176,20 +176,41 @@ def conversions_for(declared: list) {
 }
 
 /**
- * Applies a result's conversions to one row of stored values.
+ * The columns of a result that need a conversion at all, each as
+ * `[index, conversion]`. Most columns need none, and a row is decoded
+ * by visiting only these.
  *
- * @param list values
- * @param list conversions
+ * @param list conversions From `conversions_for()`.
  * @returns list
  */
-def decode_row(values: list, conversions: list) {
-  var out = []
+def decoders_for(conversions: list) {
+  var decoders = []
 
-  for index, value in values {
-    out.append(decode(
-      value, index < conversions.length() ? conversions[index] : nil,
-    ))
+  for index, conversion in conversions {
+    if conversion != nil {
+      decoders.append([index, conversion])
+    }
   }
 
-  return out
+  return decoders
+}
+
+/**
+ * Applies a result's conversions to one row of stored values, in the
+ * row itself.
+ *
+ * @param list values A row as the engine returned it.
+ * @param list decoders From `decoders_for()`.
+ * @returns list The same row.
+ */
+def decode_row(values: list, decoders: list) {
+  for decoder in decoders {
+    var index = decoder[0]
+
+    if index < values.length() {
+      values[index] = decode(values[index], decoder[1])
+    }
+  }
+
+  return values
 }

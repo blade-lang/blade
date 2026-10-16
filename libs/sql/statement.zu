@@ -25,7 +25,7 @@
 
 import .cursor { Cursor }
 import .errors { ClosedError }
-import .params { translate }
+import .params { bind_plan }
 import .result { ResultSet, ExecResult }
 
 /**
@@ -38,22 +38,22 @@ class Statement {
   var _connection
   var _sql
   var _source
-  var _style
+  var _plan
   var _closed = false
 
   /**
    * @param Connection connection The connection that prepared this.
    * @param DriverStatement statement The adapter's own statement.
    * @param string source The statement as it was written.
-   * @param string sql The statement as the engine received it.
-   * @param string style The driver's placeholder style.
+   * @param dict plan The statement's plan for the driver's placeholder
+   *    style, from `sql.params.plan()`.
    */
-  @new(connection, statement, source, sql, style) {
+  @new(connection, statement, source, plan) {
     self._connection = connection
     self._statement = statement
     self._source = source
-    self._sql = sql
-    self._style = style
+    self._sql = plan.sql
+    self._plan = plan
   }
 
   /**
@@ -201,10 +201,9 @@ class Statement {
 
   # Turns the caller's parameters into the list the adapter binds.
   #
-  # The statement text was translated when it was prepared, so only the
-  # values are worked out here. Named parameters still go through the
-  # translator, since the mapping from names to positions is what it
-  # produced in the first place.
+  # The statement text was planned when it was prepared, so only the
+  # values are worked out here. Named parameters are put in the order
+  # the plan recorded for them.
   _bind(params) {
     if params == nil {
       return []
@@ -214,7 +213,7 @@ class Statement {
       return params
     }
 
-    return translate(self._source, params, self._style).values
+    return bind_plan(self._plan, params)
   }
 
   _open() {

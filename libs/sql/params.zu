@@ -521,19 +521,39 @@ def _words(text) {
  *    statement mentions a name the dictionary does not hold.
  */
 def translate(sql: string, params, style: string) {
+  var compiled = plan(sql, style)
+
+  return { sql: compiled.sql, values: bind_plan(compiled, params) }
+}
+
+/**
+ * The work of `translate()` that depends only on the statement: its
+ * text rewritten into `style`, and which values it binds in what
+ * order. A connection keeps the plan of each statement it runs, so
+ * running one again does no string work at all.
+ *
+ * @param string sql The statement, written with `?` or `:name`.
+ * @param string style The active driver's placeholder style.
+ * @returns dict `{ sql, positional, mentions, order }`: the rewritten
+ *    text, how many `?` it holds, every `:name` in the order written,
+ *    and the names in binding order.
+ * @throws QueryError if `style` is not one of the three, or the
+ *    statement mixes `?` and `:name`.
+ */
+def plan(sql: string, style: string) {
   if !STYLES.contains(style) {
     raise QueryError('unknown placeholder style ${style}')
   }
 
   var out = []
-  var values = []
+  var mentions = []
+  var order = []
 
   # Name to the position it was first bound at, so a repeated name
   # reuses its placeholder instead of binding the same value twice.
   var bound = {}
 
   var positional = 0
-  var named = 0
   var run = 0
 
   for token in tokenize(sql) {
@@ -541,41 +561,11 @@ def translate(sql: string, params, style: string) {
       positional++
       run++
       out.append(placeholder(style, run))
-
-      if !is_list(params) {
-        raise QueryError(
-          'this statement uses ? placeholders, so its parameters have ' +
-            'to be a list, not ${typeof(params)}',
-        )
-      }
-
-      if positional > params.length() {
-        raise QueryError(
-          'the statement has more ? placeholders than the ' +
-            '${params.length()} values given',
-        )
-      }
-
-      values.append(params[positional - 1])
       continue
     }
 
     if token.kind == 'named' {
-      named++
-
-      if !is_dict(params) {
-        raise QueryError(
-          'this statement uses :name placeholders, so its parameters ' +
-            'have to be a dictionary, not ${typeof(params)}',
-        )
-      }
-
-      if !params.contains(token.name) {
-        raise QueryError(
-          'the statement mentions :${token.name}, which the parameters ' +
-            'do not hold',
-        )
-      }
+      mentions.append(token.name)
 
       var reuse = bound.get(token.name, nil)
 
@@ -584,7 +574,7 @@ def translate(sql: string, params, style: string) {
       } else {
         run++
         bound.set(token.name, run)
-        values.append(params[token.name])
+        order.append(token.name)
         out.append(placeholder(style, run))
       }
 
@@ -599,21 +589,77 @@ def translate(sql: string, params, style: string) {
     out.append(token.text)
   }
 
-  if positional > 0 and named > 0 {
+  if positional > 0 and !mentions.is_empty() {
     raise QueryError(
       'a statement uses either ? or :name placeholders, not both',
     )
   }
 
-  if positional > 0 and positional < params.length() {
+  return { sql: ''.join(out), positional, mentions, order }
+}
+
+/**
+ * The values a planned statement binds, in binding order.
+ *
+ * A positional statement binds the list it is given exactly as it is,
+ * so the list must hold one value per `?`.
+ *
+ * @param dict plan From `plan()`.
+ * @param list|dict|nil params The values to bind. `nil` means none.
+ * @returns list
+ * @throws QueryError if `params` is the wrong shape for the statement,
+ *    holds a different number of values than a positional statement
+ *    has `?`, or lacks a name a named statement mentions.
+ */
+def bind_plan(plan: dict, params) {
+  var positional = plan.positional
+
+  if positional > 0 {
+    if !is_list(params) {
+      raise QueryError(
+        'this statement uses ? placeholders, so its parameters have ' +
+          'to be a list, not ${typeof(params)}',
+      )
+    }
+
+    if positional > params.length() {
+      raise QueryError(
+        'the statement has more ? placeholders than the ' +
+          '${params.length()} values given',
+      )
+    }
+
+    if positional < params.length() {
+      raise QueryError(
+        '${params.length()} values were given for a statement with ' +
+          '${positional} ? placeholder${positional == 1 ? "" : "s"}',
+      )
+    }
+
+    return params
+  }
+
+  var mentions = plan.mentions
+
+  if mentions.is_empty() {
+    return []
+  }
+
+  if !is_dict(params) {
     raise QueryError(
-      '${params.length()} values were given for a statement with ' +
-        '${positional} ? placeholder${positional == 1 ? "" : "s"}',
+      'this statement uses :name placeholders, so its parameters ' +
+        'have to be a dictionary, not ${typeof(params)}',
     )
   }
 
-  return {
-    sql: ''.join(out),
-    values,
+  for name in mentions {
+    if !params.contains(name) {
+      raise QueryError(
+        'the statement mentions :${name}, which the parameters ' +
+          'do not hold',
+      )
+    }
   }
+
+  return plan.order.map(@(name) => params[name])
 }

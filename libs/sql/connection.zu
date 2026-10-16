@@ -19,11 +19,14 @@ import .crud
 import .crud { raw }
 import .cursor { Cursor }
 import .errors { ClosedError, NotSupportedError, QueryError }
-import .params { scan, split_statements, translate }
+import .params { split_statements, plan, bind_plan }
 import .result { ResultSet, ExecResult }
 import .schema { Schema }
 import .statement { Statement }
 import .transaction { Transaction }
+
+# The most statement plans a connection keeps.
+var PLAN_LIMIT = 256
 
 /**
  * An open connection to a database.
@@ -52,6 +55,10 @@ class Connection {
   # the pool needs somewhere to keep what it knows about a connection
   # it has lent out.
   var _pool_entry
+
+  # The plan of every statement text this connection has run, so the
+  # same text run again is bound without being read a second time.
+  var _plans = {}
 
   /**
    * @param DriverConnection connection The adapter's own connection.
@@ -262,17 +269,16 @@ class Connection {
       )
     }
 
-    # Translated once, here, so running the statement in a loop does no
+    # Planned once, here, so running the statement in a loop does no
     # string work at all. Named parameters still resolve per call, but
     # only to reorder values, never to rebuild the text.
-    var prepared = translate(sql, self._probe_params(sql), self._style)
+    var prepared = plan(sql, self._style)
 
     return Statement(
       self,
       self._connection.prepare(prepared.sql),
       sql,
-      prepared.sql,
-      self._style,
+      prepared,
     )
   }
 
@@ -675,34 +681,28 @@ class Connection {
     return self._pool_entry
   }
 
+  # Rewrites `sql` for this connection's driver and binds `params` to
+  # it, planning each distinct text once.
   _translate(sql, params) {
-    return translate(sql, params == nil ? [] : params, self._style)
-  }
+    var compiled = self._plans.get(sql, nil)
 
-  # A prepared statement is translated before it has values, so named
-  # parameters need a stand-in dictionary holding every name the
-  # statement mentions. The values are irrelevant; only the mapping
-  # from name to position survives.
-  _probe_params(sql) {
-    var found = scan(sql)
+    if compiled == nil {
+      compiled = plan(sql, self._style)
 
-    if found.names.is_empty() {
-      var probe = []
-
-      for index in 0..(found.positional) {
-        probe.append(nil)
+      # A program runs a bounded set of statements, so this only fills
+      # when one builds its text from data. Starting again then costs
+      # one translation per statement, never a wrong answer.
+      if self._plans.length() >= PLAN_LIMIT {
+        self._plans = {}
       }
 
-      return probe
+      self._plans.set(sql, compiled)
     }
 
-    var probe = {}
-
-    for name in found.names {
-      probe.set(name, nil)
+    return {
+      sql: compiled.sql,
+      values: bind_plan(compiled, params == nil ? [] : params),
     }
-
-    return probe
   }
 
   # Splits `rows` so no statement binds more parameters than the engine

@@ -118,6 +118,10 @@ fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
       native(vm, "stmt_readonly", 1, false, stmt_readonly),
     ),
     ("stmt_busy", native(vm, "stmt_busy", 1, false, stmt_busy)),
+    (
+      "reprepare_count",
+      native(vm, "reprepare_count", 1, false, reprepare_count),
+    ),
     // Incremental blob access.
     ("blob_open", native(vm, "blob_open", 5, true, blob_open)),
     ("blob_bytes", native(vm, "blob_bytes", 1, false, blob_bytes)),
@@ -887,6 +891,20 @@ fn stmt_busy(ctx: &mut ZuriContext) -> Result<Value, String> {
   Ok(Value::bool(
     unsafe { ffi::sqlite3_stmt_busy(stmt_of(ctx)) } != 0,
   ))
+}
+
+/// How many times SQLite has compiled the statement again on its own,
+/// which it does when a table the statement reads has changed since it
+/// was prepared. Whoever keeps a description of the statement's columns
+/// describes it again when this number moves, and only then.
+fn reprepare_count(ctx: &mut ZuriContext) -> Result<Value, String> {
+  enforce_method_arg_count!(ctx, 0);
+  enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
+
+  let count =
+    unsafe { ffi::sqlite3_stmt_status(stmt_of(ctx), ffi::SQLITE_STMTSTATUS_REPREPARE, 0) };
+
+  Ok(Value::number(count as f64))
 }
 
 /// Reads and range checks a column index argument.

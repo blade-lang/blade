@@ -164,13 +164,41 @@ class Writer {
 }
 
 /**
+ * A finished message from a body already built as a list of bytes.
+ *
+ * The same framing `Writer.frame()` gives, for a body put together
+ * without a `Writer`.
+ *
+ * @param string tag
+ * @param list body
+ * @returns bytes
+ */
+def frame(tag: string, body: list) {
+  var out = [tag.ord()]
+
+  out.extend(write_int32(body.length() + 4))
+  out.extend(body)
+
+  return bytes(out)
+}
+
+/**
+ * How much a `Reader` asks the stream for at a time.
+ */
+var READ_SIZE = 65536
+
+/**
  * Reads framed messages from a connected stream.
  *
  * Works over a plain `TcpStream` or a `TlsStream` without caring
- * which, since both read the same way.
+ * which, since both read the same way. Reads are buffered: one read
+ * from the stream usually brings in every message of a reply, and the
+ * messages are then taken from the buffer.
  */
 class Reader {
   var _stream
+  var _buffer = bytes(0)
+  var _at = 0
 
   /**
    * @param TcpStream|TlsStream stream An already-connected stream.
@@ -184,9 +212,21 @@ class Reader {
    * connection becomes a TLS one.
    *
    * @param TlsStream stream
+   * @throws ConnectionError if bytes the server sent before the
+   *    handshake are still unread. They arrived in the clear, so
+   *    nothing that follows may treat them as protected.
    */
   upgrade(stream) {
+    if self._at < self._buffer.length() {
+      raise ConnectionError(
+        'the server sent data before the TLS handshake finished',
+        { driver: 'postgres' },
+      )
+    }
+
     self._stream = stream
+    self._buffer = bytes(0)
+    self._at = 0
   }
 
   /**
@@ -201,25 +241,12 @@ class Reader {
       return bytes(0)
     }
 
-    var chunk
+    self._fill(count)
 
-    catch {
-      chunk = self._stream.read_exact(count)
-    } as error {
-      raise ConnectionError(
-        'the connection to the server failed while reading: ' +
-          error.message,
-        { driver: 'postgres' },
-      )
-    }
+    var at = self._at
+    self._at = at + count
 
-    if chunk == nil or chunk.length() < count {
-      raise ConnectionError(
-        'the server closed the connection', { driver: 'postgres' },
-      )
-    }
-
-    return chunk
+    return self._buffer[at, at + count]
   }
 
   /**
@@ -228,12 +255,53 @@ class Reader {
    * @returns dict `{ tag, payload }`
    */
   read_message() {
-    var header = self.read_exact(5)
-    var length = read_uint32(header, 1)
+    self._fill(5)
+
+    var length = read_uint32(self._buffer, self._at + 1)
+
+    self._fill(length + 1)
+
+    var buffer = self._buffer
+    var at = self._at
+
+    self._at = at + length + 1
 
     return {
-      tag: header[0].chr(),
-      payload: self.read_exact(length - 4),
+      tag: buffer[at].chr(),
+      payload: buffer[at + 5, at + length + 1],
+    }
+  }
+
+  # Reads from the stream until at least `count` unread bytes are
+  # buffered.
+  _fill(count) {
+    while self._buffer.length() - self._at < count {
+      var chunk
+
+      catch {
+        chunk = self._stream.read(READ_SIZE)
+      } as error {
+        raise ConnectionError(
+          'the connection to the server failed while reading: ' +
+            error.message,
+          { driver: 'postgres' },
+        )
+      }
+
+      if chunk == nil or chunk.length() == 0 {
+        raise ConnectionError(
+          'the server closed the connection', { driver: 'postgres' },
+        )
+      }
+
+      # What was read already is dropped before more is added, so the
+      # buffer only ever holds what has not been read yet.
+      if self._at > 0 {
+        self._buffer = self._buffer[self._at, self._buffer.length()]
+        self._at = 0
+      }
+
+      self._buffer.extend(chunk)
     }
   }
 }

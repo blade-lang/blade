@@ -40,7 +40,6 @@
  */
 
 import date
-import zuri
 
 import ..crud { Raw }
 import .casts { cast }
@@ -80,6 +79,7 @@ class Query {
       limit: nil,
       offset: nil,
       includes: [],
+      driver: nil,
     }
   }
 
@@ -557,18 +557,36 @@ class Query {
   }
 
   _table() {
-    return self._driver().ddl().table_name(self._definition.table_name)
+    return self._definition.sql_names(self._driver()).table
   }
 
+  # The driver behind this query's connection, found once and carried
+  # along by every query built from this one.
   _driver() {
-    var connection = zuri.reflect.has_prop(self._db, 'connection')
-      ? self._db.connection
-      : self._db
-    return connection.driver()
+    var driver = self._state.driver
+
+    if driver == nil {
+      var connection = hasprop(self._db, 'connection')
+        ? self._db.connection
+        : self._db
+
+      driver = connection.driver()
+      self._state.driver = driver
+    }
+
+    return driver
   }
 
   _quote(column) {
-    return self._driver().quote_identifier(column)
+    var names = self._definition.sql_names(self._driver())
+    var quoted = names.quoted.get(column, nil)
+
+    if quoted == nil {
+      quoted = names.driver.quote_identifier(column)
+      names.quoted.set(column, quoted)
+    }
+
+    return quoted
   }
 
   # The conditions of a dictionary, each `{ sql, values }`.
@@ -729,8 +747,8 @@ class Query {
         var found = _index(_batched(query, owner_key, keys), owner_key)
 
         for record in records {
-          var key = zuri.reflect.get_prop(record, association.foreign_key)
-          zuri.reflect.set_prop(
+          var key = getprop(record, association.foreign_key)
+          setprop(
             record, association.name, key == nil ? nil : found.get(key, nil),
           )
         }
@@ -743,7 +761,7 @@ class Query {
         var grouped = {}
 
         for child in children {
-          var key = zuri.reflect.get_prop(child, association.foreign_key)
+          var key = getprop(child, association.foreign_key)
 
           if !grouped.contains(key) {
             grouped.set(key, [])
@@ -754,13 +772,13 @@ class Query {
 
         for record in records {
           var mine = grouped.get(
-            zuri.reflect.get_prop(record, association.key), [],
+            getprop(record, association.key), [],
           )
           var value = association.kind == HAS_MANY
             ? mine
             : mine.is_empty() ? nil : mine[0]
 
-          zuri.reflect.set_prop(record, association.name, value)
+          setprop(record, association.name, value)
         }
       }
       when 'belongs_to_many' {
@@ -807,15 +825,15 @@ class Query {
 
         for record in records {
           var mine = joined.get(
-            zuri.reflect.get_prop(record, association.key), [],
+            getprop(record, association.key), [],
           )
 
           mine.sort(@(a, b) => _compare(
-            zuri.reflect.get_prop(a, target.primary),
-            zuri.reflect.get_prop(b, target.primary),
+            getprop(a, target.primary),
+            getprop(b, target.primary),
           ))
 
-          zuri.reflect.set_prop(record, association.name, mine)
+          setprop(record, association.name, mine)
         }
       }
     }
@@ -898,7 +916,7 @@ def _keys(records, field) {
   var keys = []
 
   for record in records {
-    var key = zuri.reflect.get_prop(record, field)
+    var key = getprop(record, field)
 
     if key != nil and !keys.contains(key) {
       keys.append(key)
@@ -940,7 +958,7 @@ def _index(records, field) {
   var indexed = {}
 
   for record in records {
-    indexed.set(zuri.reflect.get_prop(record, field), record)
+    indexed.set(getprop(record, field), record)
   }
 
   return indexed

@@ -1,0 +1,7 @@
+# Announces itself when its body runs, which an import is meant to make
+# happen once however many times it is reached.
+echo 'counted ran'
+
+def name() {
+  return 'counted'
+}

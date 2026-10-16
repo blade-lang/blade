@@ -63,6 +63,17 @@ class ScriptedStream {
     return chunk
   }
 
+  # A real socket hands back whatever has arrived. This one hands back
+  # five bytes at most, so every packet arrives split across reads and
+  # the stream has to put it back together.
+  read(length) {
+    var end = (self._at + length.min(5)).min(self._incoming.length())
+    var chunk = self._incoming[self._at, end]
+    self._at = end
+
+    return chunk
+  }
+
   close() {}
 }
 

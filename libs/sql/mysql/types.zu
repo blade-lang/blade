@@ -246,43 +246,7 @@ def describe_columns(columns: list) {
  * @returns any
  */
 def decode_text(raw, column: dict) {
-  if raw == nil {
-    return nil
-  }
-
-  var type = column.get('type', TYPES.NULL)
-
-  if _is_byte_column(type, column) {
-    return raw
-  }
-
-  var text = raw.to_string()
-
-  if _is_integer(type) {
-    return integer_from_text(text)
-  }
-
-  if type == TYPES.FLOAT or type == TYPES.DOUBLE {
-    return text.to_number()
-  }
-
-  if type == TYPES.DECIMAL or type == TYPES.NEWDECIMAL {
-    return decimal(text, nil)
-  }
-
-  if type == TYPES.DATE or type == TYPES.DATETIME or type == TYPES.TIMESTAMP {
-    return _date_from_text(text)
-  }
-
-  if type == TYPES.TIME {
-    return parse_time(text)
-  }
-
-  if type == TYPES.JSON {
-    return from_json(text)
-  }
-
-  return text
+  return text_decoder_for(column)(raw)
 }
 
 /**
@@ -296,44 +260,113 @@ def decode_text(raw, column: dict) {
  * @returns any
  */
 def decode_binary(cursor, column: dict) {
+  return binary_decoder_for(column)(cursor)
+}
+
+/**
+ * The function that reads a column's values out of text protocol
+ * rows, chosen once from what the column is. It takes the raw value,
+ * nil for NULL, and returns the value as Zuri holds it.
+ *
+ * @param dict column
+ * @returns function
+ */
+def text_decoder_for(column: dict) {
+  var type = column.get('type', TYPES.NULL)
+
+  if _is_byte_column(type, column) {
+    return @(raw) => raw
+  }
+
+  if _is_integer(type) {
+    return @(raw) => raw == nil ? nil : integer_from_text(raw.to_string())
+  }
+
+  if type == TYPES.FLOAT or type == TYPES.DOUBLE {
+    return @(raw) => raw == nil ? nil : raw.to_string().to_number()
+  }
+
+  if type == TYPES.DECIMAL or type == TYPES.NEWDECIMAL {
+    return @(raw) => raw == nil ? nil : decimal(raw.to_string(), nil)
+  }
+
+  if type == TYPES.DATE or type == TYPES.DATETIME or type == TYPES.TIMESTAMP {
+    return @(raw) => raw == nil ? nil : _date_from_text(raw.to_string())
+  }
+
+  if type == TYPES.TIME {
+    return @(raw) => raw == nil ? nil : parse_time(raw.to_string())
+  }
+
+  if type == TYPES.JSON {
+    return @(raw) => raw == nil ? nil : from_json(raw.to_string())
+  }
+
+  return @(raw) => raw == nil ? nil : raw.to_string()
+}
+
+/**
+ * The function that reads a column's values out of binary protocol
+ * rows, chosen once from what the column is. It takes a cursor
+ * positioned at a value that is present and returns the value.
+ *
+ * @param dict column
+ * @returns function
+ */
+def binary_decoder_for(column: dict) {
   var type = column.get('type', TYPES.NULL)
   var unsigned = is_unsigned(column)
 
   if type == TYPES.TINY {
-    return _signed(cursor.byte(), 1, unsigned)
+    return @(cursor) => _signed(cursor.byte(), 1, unsigned)
   }
 
   if type == TYPES.SHORT or type == TYPES.YEAR {
-    return _signed(cursor.int2(), 2, unsigned)
+    return @(cursor) => _signed(cursor.int2(), 2, unsigned)
   }
 
   if type == TYPES.LONG or type == TYPES.INT24 {
-    return _signed(cursor.int4(), 4, unsigned)
+    return @(cursor) => _signed(cursor.int4(), 4, unsigned)
   }
 
   if type == TYPES.LONGLONG {
-    return _signed64(cursor.int8(), unsigned)
+    return @(cursor) => _signed64(cursor.int8(), unsigned)
   }
 
   if type == TYPES.FLOAT {
-    return struct.unpack('g', cursor.fixed(4))['1']
+    return @(cursor) => struct.unpack('g', cursor.fixed(4))['1']
   }
 
   if type == TYPES.DOUBLE {
-    return struct.unpack('e', cursor.fixed(8))['1']
+    return @(cursor) => struct.unpack('e', cursor.fixed(8))['1']
   }
 
   if type == TYPES.DATE or type == TYPES.DATETIME or type == TYPES.TIMESTAMP {
-    return _read_binary_date(cursor)
+    return @(cursor) => _read_binary_date(cursor)
   }
 
   if type == TYPES.TIME {
-    return _read_binary_time(cursor)
+    return @(cursor) => _read_binary_time(cursor)
   }
 
   # Everything else arrives with its length in front of it, which is
   # the same shape the text protocol uses, so it decodes the same way.
-  return decode_text(cursor.lenenc_bytes(), column)
+  var text = text_decoder_for(column)
+
+  return @(cursor) => text(cursor.lenenc_bytes())
+}
+
+/**
+ * A decoder per column of a result, for rows in the given encoding.
+ *
+ * @param list columns
+ * @param bool binary
+ * @returns list[function]
+ */
+def row_decoders(columns: list, binary: bool) {
+  return binary ?
+    columns.map(@(column) => binary_decoder_for(column)) :
+    columns.map(@(column) => text_decoder_for(column))
 }
 
 /**

@@ -132,6 +132,9 @@ var ARRAY_ELEMENTS = {
  */
 var EPOCH_OFFSET = 946684800
 
+# Days from 0000-03-01 to the PostgreSQL epoch.
+var _DAYS_FROM_MARCH_ZERO = 730425
+
 /**
  * Reads a signed 16 bit big-endian integer.
  *
@@ -453,11 +456,29 @@ def encode_numeric(value) {
 def date_from_micros(micros: number) {
   var seconds = (micros / 1000000).floor()
   var remainder = micros - seconds * 1000000
-  var moment = date.from_time(seconds + EPOCH_OFFSET)
+  var days = (seconds / 86400).floor()
+  var clock = seconds - days * 86400
+
+  # The calendar date of a day count, by Howard Hinnant's civil_from_days:
+  # count from 0000-03-01, so the leap day falls at the end of each
+  # year, then split into 400 year eras, years, and days of the year.
+  var shifted = days + _DAYS_FROM_MARCH_ZERO
+  var era = (shifted / 146097).floor()
+  var of_era = shifted - era * 146097
+  var year_of_era = (
+    (of_era - (of_era / 1460).floor() + (of_era / 36524).floor() -
+      (of_era / 146096).floor()) / 365
+  ).floor()
+  var of_year = of_era - (365 * year_of_era + (year_of_era / 4).floor() -
+    (year_of_era / 100).floor())
+  var march_month = ((5 * of_year + 2) / 153).floor()
+  var day = of_year - ((153 * march_month + 2) / 5).floor() + 1
+  var month = march_month < 10 ? march_month + 3 : march_month - 9
+  var year = year_of_era + era * 400 + (month <= 2 ? 1 : 0)
 
   return date.Date(
-    moment.year, moment.month, moment.day,
-    moment.hour, moment.minute, moment.seconds,
+    year, month, day,
+    (clock / 3600).floor(), ((clock % 3600) / 60).floor(), clock % 60,
     remainder, 0, false,
   )
 }
@@ -892,6 +913,10 @@ class TypeRegistry {
   var _decoders = {}
   var _encoders = {}
 
+  # Moves whenever a codec is added or replaced, so whoever resolved
+  # codecs once knows to resolve them again.
+  var _version = 0
+
   @new() {
     self._install_defaults()
   }
@@ -911,6 +936,55 @@ class TypeRegistry {
     if encoder != nil {
       self._encoders.set('${oid}', encoder)
     }
+
+    self._version++
+  }
+
+  /**
+   * A number that changes every time a codec is registered. Codecs
+   * resolved with `decoder_for()` and `encoder_for()` stay right for as
+   * long as it holds still.
+   *
+   * @returns number
+   */
+  version() {
+    return self._version
+  }
+
+  /**
+   * The function that reads `oid` in binary, taking `(bytes, oid)`, or
+   * nil when the type is read as text.
+   *
+   * @param number oid
+   * @returns function|nil
+   */
+  decoder_for(oid: number) {
+    if ARRAY_ELEMENTS.contains('${oid}') {
+      var registry = self
+      return @(buffer, array_oid) => decode_array(buffer, array_oid, registry)
+    }
+
+    return self._decoders.get('${oid}', nil)
+  }
+
+  /**
+   * The function that writes a value for a parameter of type `oid`,
+   * taking the value and returning a list of bytes. A type with no
+   * binary encoder gets the one that writes text, which the server
+   * reads for every type it knows.
+   *
+   * @param number oid
+   * @returns function
+   */
+  encoder_for(oid: number) {
+    var element = ARRAY_ELEMENTS.get('${oid}', nil)
+
+    if element != nil {
+      var registry = self
+      return @(value) => encode_array(value, element, registry)
+    }
+
+    return self._encoders.get('${oid}', encode_text)
   }
 
   /**

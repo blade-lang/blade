@@ -34,11 +34,58 @@ type ImportResult = Result<Value, Value>;
 /// `"http/status"`); `importer_path` is the CURRENTLY COMPILING
 /// file's own path, a compile-time constant baked in by
 /// `Compiler::compile_import`.
+///
+/// An import that has run once resolves the same way every time after:
+/// to the same file, whose module is already cached. Where it led is
+/// remembered per importing file and path, so running it again is two
+/// lookups rather than a walk of the filesystem. Only a module that has
+/// finished loading is remembered, so an import that reaches one still
+/// running its own body, as a circular import does, keeps resolving the
+/// long way until it has.
 pub fn import(vm: &mut VM, importer_path: &str, raw_path: &str) -> ImportResult {
-  if is_relative(raw_path) {
-    import_relative(vm, importer_path, raw_path)
+  let site = (importer_path.to_string(), raw_path.to_string());
+
+  if let Some(key) = vm.import_sites.get(&site) {
+    if let Some(&module) = vm.modules.get(key) {
+      return Ok(module);
+    }
+  }
+
+  let module = if is_relative(raw_path) {
+    import_relative(vm, importer_path, raw_path)?
   } else {
-    import_search(vm, raw_path)
+    import_search(vm, raw_path)?
+  };
+
+  if module.is_module() {
+    let loaded = module.as_module();
+
+    if loaded.loaded {
+      let key = module_key(&loaded.path);
+
+      if vm
+        .modules
+        .get(&key)
+        .is_some_and(|cached| cached.equals(&module))
+      {
+        vm.import_sites.insert(site, key);
+      }
+    }
+  }
+
+  Ok(module)
+}
+
+/// The key `vm.modules` holds a module under, from the path the module
+/// records: its canonical path, or `builtin:NAME` for a native module,
+/// which records its path as `<builtin:NAME>`.
+fn module_key(path: &str) -> String {
+  match path
+    .strip_prefix("<builtin:")
+    .and_then(|rest| rest.strip_suffix('>'))
+  {
+    Some(name) => format!("builtin:{}", name),
+    None => path.to_string(),
   }
 }
 

@@ -29,7 +29,7 @@ import .types { decode_row }
 class SqliteCursor < DriverCursor {
   var _statement
   var _columns = []
-  var _conversions = []
+  var _decoders = []
   var _query
   var _closed = false
   var _owned = true
@@ -41,7 +41,8 @@ class SqliteCursor < DriverCursor {
   /**
    * @param ptr statement A prepared native statement, already bound.
    * @param list columns Column descriptors.
-   * @param list conversions Per column conversions.
+   * @param list decoders The columns that need converting, from
+   *    `decoders_for()`.
    * @param string query The statement, for error messages.
    * @param bool owned Whether closing the cursor finalizes the
    *    statement, which it does for a cursor the connection compiled
@@ -51,10 +52,10 @@ class SqliteCursor < DriverCursor {
    *    taken, `row` being the row it read or nil when it found none;
    *    nil when the cursor takes every step itself.
    */
-  @new(statement, columns, conversions, query, owned, first) {
+  @new(statement, columns, decoders, query, owned, first) {
     self._statement = statement
     self._columns = columns
-    self._conversions = conversions
+    self._decoders = decoders
     self._query = query
     self._owned = owned
     self._first = first
@@ -86,7 +87,7 @@ class SqliteCursor < DriverCursor {
         return nil
       }
 
-      return decode_row(first, self._conversions)
+      return decode_row(first, self._decoders)
     }
 
     var outcome
@@ -103,7 +104,7 @@ class SqliteCursor < DriverCursor {
       return nil
     }
 
-    return decode_row(_sqlite.row(self._statement), self._conversions)
+    return decode_row(_sqlite.row(self._statement), self._decoders)
   }
 
   /**

@@ -42,6 +42,11 @@ var MAX_PAYLOAD = 0xffffff
 var COMPRESS_THRESHOLD = 50
 
 /**
+ * How much a `PacketStream` asks the stream for at a time.
+ */
+var READ_SIZE = 65536
+
+/**
  * The first byte of a length-encoded integer that means the value is
  * NULL. Only meaningful where a column value is expected.
  */
@@ -251,6 +256,20 @@ class Cursor {
    */
   @new(data) {
     self._data = data
+  }
+
+  /**
+   * Points this cursor at the start of `data`, so one cursor can read
+   * packet after packet without a new one for each.
+   *
+   * @param bytes data
+   * @returns Cursor This cursor.
+   */
+  reset(data) {
+    self._data = data
+    self._at = 0
+
+    return self
   }
 
   /**
@@ -514,7 +533,16 @@ class PacketStream {
   var _compressed_sequence = 0
   var _compression = 'none'
   var _level = 3
+
+  # Packet bytes taken from compressed packets and not yet read, from
+  # `_pending_at` on.
   var _pending = bytes(0)
+  var _pending_at = 0
+
+  # Bytes read from the stream and not yet used, from `_raw_at` on. One
+  # read usually brings in a whole reply.
+  var _raw = bytes(0)
+  var _raw_at = 0
 
   /**
    * @param TcpStream|TlsStream|UnixStream stream An already-connected
@@ -531,6 +559,13 @@ class PacketStream {
    * @param TlsStream stream
    */
   upgrade(stream) {
+    if self._raw_at < self._raw.length() {
+      raise ConnectionError(
+        'the server sent data before the TLS handshake finished',
+        { driver: 'mysql' },
+      )
+    }
+
     self._stream = stream
   }
 
@@ -626,7 +661,7 @@ class PacketStream {
    * @returns bytes
    */
   read_packet() {
-    var parts = bytes(0)
+    var parts = nil
     var size = MAX_PAYLOAD
 
     while size == MAX_PAYLOAD {
@@ -637,8 +672,13 @@ class PacketStream {
       # continue from.
       self._sequence = (header[3] + 1) & 0xff
 
-      if size > 0 {
-        parts.extend(self._receive(size))
+      var part = size > 0 ? self._receive(size) : bytes(0)
+
+      # Nearly every message is one packet, which needs no joining.
+      if parts == nil {
+        parts = part
+      } else {
+        parts.extend(part)
       }
     }
 
@@ -731,14 +771,14 @@ class PacketStream {
   }
 
   _buffered() {
-    return self._pending.length()
+    return self._pending.length() - self._pending_at
   }
 
   _take(count: number) {
-    var taken = self._pending[0, count]
-    self._pending = self._pending[count, self._pending.length()]
+    var at = self._pending_at
+    self._pending_at = at + count
 
-    return taken
+    return self._pending[at, at + count]
   }
 
   # Reads one compressed packet and adds what it held to the buffer.
@@ -757,6 +797,13 @@ class PacketStream {
         zlib.decompress(body, nil)
     }
 
+    # What was taken already goes before more is added, so the buffer
+    # only ever holds what has not been read yet.
+    if self._pending_at > 0 {
+      self._pending = self._pending[self._pending_at, self._pending.length()]
+      self._pending_at = 0
+    }
+
     self._pending.extend(body)
   }
 
@@ -765,24 +812,36 @@ class PacketStream {
       return bytes(0)
     }
 
-    var chunk
+    while self._raw.length() - self._raw_at < count {
+      var chunk
 
-    catch {
-      chunk = self._stream.read_exact(count)
-    } as error {
-      raise ConnectionError(
-        'the connection to the server failed while reading: ' +
-          error.message,
-        { driver: 'mysql' },
-      )
+      catch {
+        chunk = self._stream.read(READ_SIZE)
+      } as error {
+        raise ConnectionError(
+          'the connection to the server failed while reading: ' +
+            error.message,
+          { driver: 'mysql' },
+        )
+      }
+
+      if chunk == nil or chunk.length() == 0 {
+        raise ConnectionError(
+          'the server closed the connection', { driver: 'mysql' },
+        )
+      }
+
+      if self._raw_at > 0 {
+        self._raw = self._raw[self._raw_at, self._raw.length()]
+        self._raw_at = 0
+      }
+
+      self._raw.extend(chunk)
     }
 
-    if chunk == nil or chunk.length() < count {
-      raise ConnectionError(
-        'the server closed the connection', { driver: 'mysql' },
-      )
-    }
+    var at = self._raw_at
+    self._raw_at = at + count
 
-    return chunk
+    return self._raw[at, at + count]
   }
 }

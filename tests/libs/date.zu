@@ -607,6 +607,23 @@ check('from_time 946684800 year',  d_2000.year,  2000)
 check('from_time 946684800 month', d_2000.month, 1)
 check('from_time 946684800 day',   d_2000.day,   1)
 
+# Before 1970. `//` already rounds a negative time down to the day it
+# falls in, so the second before the epoch is the last of 1969-12-31,
+# and a time on a day boundary has no negative zero left in it.
+var before = date.from_time(-1)
+check('from_time(-1) date', before.format('Y-m-d H:i:s'), '1969-12-31 23:59:59')
+check('from_time(-1) weekday', before.week_day, 3)
+check('from_time(-1) year_day', before.year_day, 365)
+
+var boundary = date.from_time(-86400)
+check('from_time(-86400) date', boundary.format('Y-m-d H:i:s'), '1969-12-31 00:00:00')
+check('from_time(-86400) hour is a plain zero', boundary.hour.to_string(), '0')
+
+var early = date.from_time(-3470817660)   # 1860-01-06 11:59:00 UTC
+check('from_time(-3470817660) date', early.format('Y-m-d H:i:s'), '1860-01-06 11:59:00')
+check('from_time(-2208988800) date',
+  date.from_time(-2208988800).format('Y-m-d H:i:s'), '1900-01-01 00:00:00')
+
 
 # ===========================================================================
 # 19. from_time(): millisecond and microsecond inputs

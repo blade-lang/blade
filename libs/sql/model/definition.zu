@@ -277,6 +277,9 @@ class Definition {
    */
   var transactional = false
 
+  # The table and column names as the last driver used writes them.
+  var _names
+
   /**
    * @param class model
    * @param string name
@@ -295,7 +298,33 @@ class Definition {
    */
   table(name: string) {
     self.table_name = name
+    self._names = nil
     return self
+  }
+
+  /**
+   * The model's table name and its quoted identifiers as `driver`
+   * writes them, worked out once and kept for as long as the same
+   * driver asks. `quoted` fills in as identifiers are asked for.
+   *
+   * @internal Used by `Query`.
+   * @param Driver driver
+   * @returns dict `{ driver, table, quoted }`
+   */
+  sql_names(driver) {
+    var names = self._names
+
+    if names == nil or names.driver != driver {
+      names = {
+        driver,
+        table: driver.ddl().table_name(self.table_name),
+        quoted: {},
+      }
+
+      self._names = names
+    }
+
+    return names
   }
 
   /**
@@ -677,7 +706,7 @@ class Definition {
         var value = row[column]
         var kind = self.casts.get(column, nil)
 
-        zuri.reflect.set_prop(
+        setprop(
           record, column, kind == nil ? value : cast(kind, value),
         )
       }
@@ -696,8 +725,8 @@ class Definition {
    * @param Model record
    */
   saved(record) {
-    zuri.reflect.set_prop(record, '_original', self.snapshot(record))
-    zuri.reflect.set_prop(record, '_persisted', true)
+    setprop(record, '_original', self.snapshot(record))
+    setprop(record, '_persisted', true)
   }
 
   /**
@@ -710,7 +739,7 @@ class Definition {
     var values = {}
 
     for column in self.columns {
-      values.set(column, zuri.reflect.get_prop(record, column))
+      values.set(column, getprop(record, column))
     }
 
     return values
@@ -727,7 +756,7 @@ class Definition {
     var values = {}
 
     for column in self.columns {
-      values.set(column, _copy(zuri.reflect.get_prop(record, column)))
+      values.set(column, _copy(getprop(record, column)))
     }
 
     return values

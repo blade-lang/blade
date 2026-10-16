@@ -24,13 +24,20 @@ import ..errors { ClosedError, QueryError }
 import ..types { flatten }
 import .cursor { SqliteCursor }
 import .errors { reraise }
-import .types { conversions_for, decode_row }
+import .types { conversions_for, decoders_for, decode_row }
 
 /**
  * Describes the columns a compiled statement returns.
  *
+ * Along with the columns come the conversions their declared types
+ * call for, the columns that need one, how many parameters the
+ * statement binds, and how many times SQLite had compiled it again by
+ * the time it was described. A caller keeps the description and reads
+ * it again only once that last number has moved.
+ *
  * @param ptr statement
- * @returns dict `{ columns, conversions }`
+ * @returns dict `{ columns, conversions, decoders, parameters,
+ *    reprepares }`
  */
 def describe(statement) {
   var names = _sqlite.column_names(statement)
@@ -52,9 +59,14 @@ def describe(statement) {
     })
   }
 
+  var conversions = conversions_for(declared)
+
   return {
     columns,
-    conversions: conversions_for(declared),
+    conversions,
+    decoders: decoders_for(conversions),
+    parameters: _sqlite.bind_parameter_count(statement),
+    reprepares: _sqlite.reprepare_count(statement),
   }
 }
 
@@ -64,12 +76,12 @@ def describe(statement) {
  * @param ptr statement
  * @param list values
  * @param string query For error messages.
+ * @param number expected How many parameters the statement binds, as
+ *    `describe()` reported it.
  * @throws QueryError if the count does not match what the statement
  *    expects.
  */
-def bind_all(statement, values: list, query: string) {
-  var expected = _sqlite.bind_parameter_count(statement)
-
+def bind_all(statement, values: list, query: string, expected: number) {
   if values.length() != expected {
     raise QueryError(
       'this statement binds ${expected} parameter' +
@@ -79,12 +91,12 @@ def bind_all(statement, values: list, query: string) {
     )
   }
 
-  for index, value in values {
-    catch {
-      _sqlite.bind(statement, index + 1, flatten(value))
-    } as error {
-      reraise(error, query)
+  catch {
+    iter var index = 0; index < expected; index++ {
+      _sqlite.bind(statement, index + 1, flatten(values[index]))
     }
+  } as error {
+    reraise(error, query)
   }
 }
 
@@ -98,7 +110,9 @@ class SqliteStatement < DriverStatement {
   var _statement
   var _query
   var _columns = []
-  var _conversions = []
+  var _decoders = []
+  var _parameters = 0
+  var _reprepares = 0
   var _closed = false
   var _lent = false
 
@@ -111,10 +125,7 @@ class SqliteStatement < DriverStatement {
     self._connection = connection
     self._statement = statement
     self._query = query
-
-    var described = describe(statement)
-    self._columns = described.columns
-    self._conversions = described.conversions
+    self._describe()
   }
 
   columns() {
@@ -122,7 +133,7 @@ class SqliteStatement < DriverStatement {
   }
 
   parameter_count() {
-    return _sqlite.bind_parameter_count(self._statement)
+    return self._parameters
   }
 
   /**
@@ -135,7 +146,7 @@ class SqliteStatement < DriverStatement {
     self._ready()
     _sqlite.reset(self._statement)
     _sqlite.clear_bindings(self._statement)
-    bind_all(self._statement, values, self._query)
+    bind_all(self._statement, values, self._query, self._parameters)
 
     catch {
       while _sqlite.step(self._statement) == 'row' {
@@ -170,7 +181,7 @@ class SqliteStatement < DriverStatement {
     self._ready()
     _sqlite.reset(self._statement)
     _sqlite.clear_bindings(self._statement)
-    bind_all(self._statement, values, self._query)
+    bind_all(self._statement, values, self._query, self._parameters)
 
     var rows = []
 
@@ -186,15 +197,20 @@ class SqliteStatement < DriverStatement {
     # The tables may have changed since this was prepared, in which
     # case the steps above compiled it again; what it is now is what
     # the rows are.
-    self._describe()
+    self._redescribe()
     _sqlite.reset(self._statement)
 
-    var conversions = self._conversions
-    var decoded = rows.map(@(row) => decode_row(row, conversions))
+    var decoders = self._decoders
+
+    if !decoders.is_empty() {
+      for row in rows {
+        decode_row(row, decoders)
+      }
+    }
 
     return {
       columns: self._columns,
-      rows: decoded,
+      rows,
     }
   }
 
@@ -211,7 +227,7 @@ class SqliteStatement < DriverStatement {
     self._ready()
     _sqlite.reset(self._statement)
     _sqlite.clear_bindings(self._statement)
-    bind_all(self._statement, values, self._query)
+    bind_all(self._statement, values, self._query, self._parameters)
 
     # The first step is taken here rather than by the cursor. It is the
     # step that compiles the statement again when its tables changed
@@ -226,13 +242,13 @@ class SqliteStatement < DriverStatement {
       reraise(error, self._query)
     }
 
-    self._describe()
+    self._redescribe()
     self._lent = true
 
     return SqliteCursor(
       self._statement,
       self._columns,
-      self._conversions,
+      self._decoders,
       self._query,
       false,
       { row: outcome == 'row' ? _sqlite.row(self._statement) : nil },
@@ -266,7 +282,17 @@ class SqliteStatement < DriverStatement {
     var described = describe(self._statement)
 
     self._columns = described.columns
-    self._conversions = described.conversions
+    self._decoders = described.decoders
+    self._parameters = described.parameters
+    self._reprepares = described.reprepares
+  }
+
+  # Reads them again if SQLite compiled the statement again since they
+  # were last read.
+  _redescribe() {
+    if _sqlite.reprepare_count(self._statement) != self._reprepares {
+      self._describe()
+    }
   }
 
   # Raises unless the statement is in a state to be run.

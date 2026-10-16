@@ -26,7 +26,20 @@ import ..errors { ConnectionError, ProtocolError, QueryError }
 import .auth
 import .errors { raise_for }
 import .messages { * }
-import .types { read_int16, read_uint16, read_int32, read_uint32, text_of }
+import .types {
+  read_int16, read_uint16, read_int32, read_uint32, text_of, write_int16,
+  write_int32,
+}
+
+# Every column read as text, which is what a simple query returns.
+var _AS_TEXT = { decode: [], oids: [] }
+
+# What ends nearly every request: run the unnamed portal to the end,
+# then Sync. Built once, since it never varies.
+var _EXECUTE_ALL = Writer().cstring('').int32(0).frame('E') + Writer().frame('S')
+
+# The length that stands for a NULL parameter.
+var _NULL_LENGTH = write_int32(-1)
 
 /**
  * Drives one connection's conversation with the server.
@@ -65,6 +78,11 @@ class Protocol {
   var _stream
   var _reader
   var _registry
+
+  # What binding each named statement needs, worked out on its first
+  # run: its parameter formats and encoders, and the result formats
+  # and decoders for its columns.
+  var _codecs = {}
   var _pid
   var _secret
   var _status = 'I'
@@ -178,7 +196,7 @@ class Protocol {
       }
 
       if message.tag == DATA_ROW {
-        rows.append(self._read_data_row(message.payload, columns, false))
+        rows.append(self._read_data_row(message.payload, _AS_TEXT))
         continue
       }
 
@@ -293,16 +311,60 @@ class Protocol {
    * @returns dict `{ columns, rows, tag, suspended }`
    */
   execute(request: dict) {
-    self._send_bind(request)
+    var values = request.get('values', [])
+    var parameters = request.get('parameters', [])
 
-    var execute = Writer()
-    execute.cstring(request.get('portal', ''))
-    execute.int32(request.get('limit', 0))
+    # Only a request with a value for every parameter takes the short
+    # way. The long way sends what it was given and leaves the server
+    # to report the mismatch, as it would for any client.
+    if values.length() != parameters.length() {
+      self._send_bind(request)
+      self._send_execute(request)
 
-    self._send(execute.frame('E'))
-    self._send(Writer().frame('S'))
+      return self._collect(
+        request, self._decoders_of(request.get('columns', [])),
+      )
+    }
 
-    return self._collect(request)
+    var codecs = self._codecs_for(request)
+    var encoders = codecs.encoders
+    var portal = request.get('portal', '')
+    var limit = request.get('limit', 0)
+
+    var body = portal.to_bytes().to_list()
+    body.append(0)
+    body.extend(codecs.formats)
+
+    iter var index = 0; index < values.length(); index++ {
+      var value = values[index]
+
+      if value == nil {
+        body.extend(_NULL_LENGTH)
+        continue
+      }
+
+      var encoded = encoders[index](value)
+
+      body.extend(write_int32(encoded.length()))
+      body.extend(encoded)
+    }
+
+    body.extend(codecs.results)
+
+    # Bind, Execute and Sync go out in one write, so the server reads
+    # the whole request at once.
+    var bind = frame('B', body)
+
+    if portal == '' and limit == 0 {
+      self._send(bind + _EXECUTE_ALL)
+    } else {
+      self._send(
+        bind + Writer().cstring(portal).int32(limit).frame('E') +
+          Writer().frame('S'),
+      )
+    }
+
+    return self._collect(request, codecs.decoders)
   }
 
   /**
@@ -317,10 +379,11 @@ class Protocol {
     execute.cstring(request.get('portal', ''))
     execute.int32(request.get('limit', 0))
 
-    self._send(execute.frame('E'))
-    self._send(Writer().frame('S'))
+    self._send(execute.frame('E') + Writer().frame('S'))
 
-    return self._collect(request)
+    return self._collect(
+      request, self._decoders_of(request.get('columns', [])),
+    )
   }
 
   /**
@@ -329,6 +392,7 @@ class Protocol {
    * @param string name
    */
   close_statement(name: string) {
+    self._codecs.remove(name)
     self._close('S', name)
   }
 
@@ -423,8 +487,85 @@ class Protocol {
     self._send(bind.frame('B'))
   }
 
+  # Sends Execute and Sync for a request whose Bind went out already.
+  _send_execute(request) {
+    var execute = Writer()
+    execute.cstring(request.get('portal', ''))
+    execute.int32(request.get('limit', 0))
+
+    self._send(execute.frame('E') + Writer().frame('S'))
+  }
+
+  # What binding a request's statement needs, worked out once per
+  # named statement and again only when the registry changes.
+  _codecs_for(request) {
+    var name = request.get('statement', '')
+    var version = self._registry.version()
+    var cached = name == '' ? nil : self._codecs.get(name, nil)
+
+    if cached != nil and cached.version == version {
+      return cached
+    }
+
+    var registry = self._registry
+    var parameters = request.get('parameters', [])
+    var columns = request.get('columns', [])
+
+    # The statement's name, then a format per parameter: binary where
+    # the registry can encode the type the server inferred, text
+    # otherwise. The parameter count that follows is part of it too,
+    # since every request binds exactly that many.
+    var formats = name.to_bytes().to_list()
+    formats.append(0)
+    formats.extend(write_int16(parameters.length()))
+
+    var encoders = []
+
+    for oid in parameters {
+      formats.extend(write_int16(registry.can_encode(oid) ? 1 : 0))
+      encoders.append(registry.encoder_for(oid))
+    }
+
+    formats.extend(write_int16(parameters.length()))
+
+    # And a format per result column, on the same rule.
+    var results = write_int16(columns.length())
+
+    for column in columns {
+      results.extend(write_int16(registry.knows(column.oid) ? 1 : 0))
+    }
+
+    var codecs = {
+      version,
+      formats,
+      results,
+      encoders,
+      decoders: self._decoders_of(columns),
+    }
+
+    if name != '' {
+      self._codecs.set(name, codecs)
+    }
+
+    return codecs
+  }
+
+  # The decoder for each column, nil for one read as text, and the
+  # OIDs the decoders are handed.
+  _decoders_of(columns) {
+    var decode = []
+    var oids = []
+
+    for column in columns {
+      decode.append(self._registry.decoder_for(column.oid))
+      oids.append(column.oid)
+    }
+
+    return { decode, oids }
+  }
+
   # Reads everything up to ReadyForQuery, gathering rows.
-  _collect(request) {
+  _collect(request, decoders) {
     var columns = request.get('columns', [])
     var rows = []
     var tag = ''
@@ -435,12 +576,13 @@ class Protocol {
       var message = self._read()
 
       if message.tag == DATA_ROW {
-        rows.append(self._read_data_row(message.payload, columns, true))
+        rows.append(self._read_data_row(message.payload, decoders))
         continue
       }
 
       if message.tag == ROW_DESCRIPTION {
         columns = self._read_row_description(message.payload)
+        decoders = self._decoders_of(columns)
         continue
       }
 
@@ -529,17 +671,20 @@ class Protocol {
 
   # Reads a DataRow into a list of values.
   #
-  # The format of each column is the one this connection asked for in
-  # Bind, which is binary wherever the registry has a decoder. It is
-  # deliberately not read off the column descriptor: that descriptor
+  # Each column is read the way this connection asked for it in Bind,
+  # binary wherever `decoders` has a decoder for it. That is decided
+  # here rather than read off the column descriptor: the descriptor
   # comes from Describe, which runs before Bind and therefore always
   # reports text, whatever the values actually arrive as.
-  _read_data_row(payload, columns, binary) {
+  _read_data_row(payload, decoders) {
     var count = read_int16(payload, 0)
+    var decode = decoders.decode
+    var oids = decoders.oids
+    var known = decode.length()
     var values = []
     var at = 2
 
-    for index in 0..count {
+    iter var index = 0; index < count; index++ {
       var size = read_int32(payload, at)
       at += 4
 
@@ -551,14 +696,13 @@ class Protocol {
       var slice = payload[at, at + size]
       at += size
 
-      var column = index < columns.length() ? columns[index] : nil
+      var decoder = index < known ? decode[index] : nil
 
-      if column == nil or !binary or !self._registry.knows(column.oid) {
+      if decoder == nil {
         values.append(text_of(slice))
-        continue
+      } else {
+        values.append(decoder(slice, oids[index]))
       }
-
-      values.append(self._registry.decode(slice, column.oid))
     }
 
     return values

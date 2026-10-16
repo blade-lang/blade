@@ -925,6 +925,11 @@ pub struct VM {
   /// circular imports (see `vm::modules::load_from_candidate`). Also a GC
   /// root: a cached module must stay alive for a later `import` to find it.
   pub(crate) modules: FxHashMap<String, Value>,
+  /// Where each `import` statement that has run led: its importing file
+  /// and path, to the `modules` key of the module it loaded. An import
+  /// inside a function body runs on every call, and this spares each run
+  /// after the first the filesystem work of resolving the path again.
+  pub(crate) import_sites: FxHashMap<(String, String), String>,
   /// The application's entry-file path, set by `set_root_path` — becomes
   /// every module's `__root__`. `None` in REPL mode, per spec.
   pub(crate) root_path: Option<String>,
@@ -1065,6 +1070,7 @@ impl VM {
       global_slots: Vec::new(),
       global_names: FxHashMap::default(),
       modules: FxHashMap::default(),
+      import_sites: FxHashMap::default(),
       root_path: None,
       #[cfg(feature = "opcode-profile")]
       opcode_counts: FxHashMap::default(),

@@ -251,6 +251,36 @@ def test_exec_script() {
   echo 'test_exec_script passed'
 }
 
+def test_schema_change_under_statements() {
+  var db = sql.open(':memory:')
+
+  db.exec('create table t (id integer primary key, name text)', nil)
+  db.exec("insert into t (name) values ('one')", nil)
+
+  var prepared = db.prepare('select * from t')
+
+  assert prepared.fetch_one(nil).keys() == ['id', 'name']
+  assert db.fetch_one('select * from t', nil).keys() == ['id', 'name']
+
+  # SQLite compiles both statements again on their next step. What they
+  # return after that has the new column, read as the type it declares.
+  db.exec('alter table t add column made datetime', nil)
+  db.exec("update t set made = '2026-01-02 03:04:05'", nil)
+
+  for row in [prepared.fetch_one(nil), db.fetch_one('select * from t', nil)] {
+    assert row.keys() == ['id', 'name', 'made']
+    assert instance_of(row.made, date.Date)
+    assert row.made.day == 2
+  }
+
+  assert prepared.columns().map(@(column) => column.name) ==
+    ['id', 'name', 'made']
+
+  prepared.close()
+  db.close()
+  echo 'test_schema_change_under_statements passed'
+}
+
 test_connection_strings()
 test_exec_and_query()
 test_declared_types()
@@ -260,3 +290,4 @@ test_parameters()
 test_errors()
 test_capabilities()
 test_exec_script()
+test_schema_change_under_statements()

@@ -65,10 +65,11 @@ class SqliteConnection < DriverConnection {
   var _options = {}
   var _closed = false
 
-  # Compiled statements held for reuse, and the order they were last
-  # used in, oldest first.
+  # Compiled statements held for reuse, by their text. Each entry is
+  # `{ statement, described, used }`, `used` counting from `_clock` so
+  # the one used longest ago is the one to let go.
   var _cache = {}
-  var _cache_order = []
+  var _clock = 0
 
   # Names of the savepoints currently open, outermost first. Its length
   # is the nesting depth.
@@ -123,11 +124,12 @@ class SqliteConnection < DriverConnection {
   execute(sql: string, values: list) {
     self._open()
 
-    var statement = self._compile(sql)
+    var entry = self._compile(sql)
+    var statement = entry.statement
 
     _sqlite.reset(statement)
     _sqlite.clear_bindings(statement)
-    bind_all(statement, values, sql)
+    bind_all(statement, values, sql, entry.described.parameters)
 
     catch {
       while _sqlite.step(statement) == 'row' {
@@ -161,11 +163,12 @@ class SqliteConnection < DriverConnection {
   select(sql: string, values: list) {
     self._open()
 
-    var statement = self._compile(sql)
+    var entry = self._compile(sql)
+    var statement = entry.statement
 
     _sqlite.reset(statement)
     _sqlite.clear_bindings(statement)
-    bind_all(statement, values, sql)
+    bind_all(statement, values, sql, entry.described.parameters)
 
     var rows = []
 
@@ -178,19 +181,28 @@ class SqliteConnection < DriverConnection {
       reraise(error, sql)
     }
 
-    # Described after stepping, not before. A cached statement whose
+    # Checked after stepping, not before. A cached statement whose
     # tables changed since it was compiled is compiled again by its
     # first step, and only then does it report the columns its rows
     # have.
-    var described = describe(statement)
+    if _sqlite.reprepare_count(statement) != entry.described.reprepares {
+      entry.described = describe(statement)
+    }
 
     _sqlite.reset(statement)
 
-    var conversions = described.conversions
+    var described = entry.described
+    var decoders = described.decoders
+
+    if !decoders.is_empty() {
+      for row in rows {
+        decode_row(row, decoders)
+      }
+    }
 
     return {
       columns: described.columns,
-      rows: rows.map(@(row) => decode_row(row, conversions)),
+      rows,
     }
   }
 
@@ -210,20 +222,19 @@ class SqliteConnection < DriverConnection {
     self._open()
 
     var statement = self._prepare_raw(sql)
+    var described = describe(statement)
 
     catch {
-      bind_all(statement, values, sql)
+      bind_all(statement, values, sql, described.parameters)
     } as error {
       _sqlite.finalize(statement)
       reraise(error, sql)
     }
 
-    var described = describe(statement)
-
     return SqliteCursor(
       statement,
       described.columns,
-      described.conversions,
+      described.decoders,
       sql,
       true,
     )
@@ -696,12 +707,11 @@ class SqliteConnection < DriverConnection {
 
     self._closed = true
 
-    for sql, statement in self._cache {
-      _sqlite.finalize(statement)
+    for sql, entry in self._cache {
+      _sqlite.finalize(entry.statement)
     }
 
     self._cache = {}
-    self._cache_order = []
     self._savepoints = []
 
     _sqlite.close(self._handle)
@@ -721,43 +731,41 @@ class SqliteConnection < DriverConnection {
   }
 
   # Compiles `sql`, reusing an already compiled copy when there is one.
+  # Returns its cache entry, which carries the statement's description
+  # along with it.
   _compile(sql) {
+    self._clock++
+
     var cached = self._cache.get(sql, nil)
 
     if cached != nil {
-      self._touch(sql)
+      cached.used = self._clock
       return cached
     }
 
-    var statement = self._prepare_raw(sql)
+    if self._cache.length() >= CACHE_LIMIT {
+      var oldest = nil
 
-    if self._cache_order.length() >= CACHE_LIMIT {
-      var oldest = self._cache_order[0]
-      self._cache_order = self._cache_order[1, self._cache_order.length()]
-
-      var evicted = self._cache.get(oldest, nil)
-
-      if evicted != nil {
-        _sqlite.finalize(evicted)
-        self._cache.remove(oldest)
+      for text, entry in self._cache {
+        if oldest == nil or entry.used < self._cache[oldest].used {
+          oldest = text
+        }
       }
+
+      _sqlite.finalize(self._cache[oldest].statement)
+      self._cache.remove(oldest)
     }
 
-    self._cache.set(sql, statement)
-    self._cache_order.append(sql)
-
-    return statement
-  }
-
-  # Moves `sql` to the newest end of the reuse order.
-  _touch(sql) {
-    var at = self._cache_order.index_of(sql)
-
-    if at != -1 {
-      self._cache_order.remove_at(at)
+    var statement = self._prepare_raw(sql)
+    var entry = {
+      statement,
+      described: describe(statement),
+      used: self._clock,
     }
 
-    self._cache_order.append(sql)
+    self._cache.set(sql, entry)
+
+    return entry
   }
 
   # Compiles one statement, refusing text that holds more than one.

@@ -1,0 +1,28 @@
+# An import inside a function runs every time the function does. Every
+# run after the first has to land on the module the first one loaded,
+# without running its body again, and the same text in two files has
+# to keep meaning the file beside each one.
+
+import .import_in_function.first as first
+import .import_in_function.second.inner as inner
+
+def load() {
+  import .import_in_function.counted as counted
+
+  return counted
+}
+
+var loaded = load()
+var same = true
+
+for _ in 0..1000 {
+  same = same and load() == loaded
+}
+
+echo same
+echo loaded.name()
+
+for _ in 0..3 {
+  echo first.which()
+  echo inner.which()
+}

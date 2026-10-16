@@ -1,0 +1,5 @@
+def which() {
+  import .util as util
+
+  return util.name()
+}

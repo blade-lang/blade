@@ -212,7 +212,7 @@ class Model {
    * @returns any
    */
   key() {
-    return zuri.reflect.get_prop(self, self._definition().primary)
+    return getprop(self, self._definition().primary)
   }
 
   /**
@@ -227,7 +227,7 @@ class Model {
     var changed = {}
 
     for column in definition.columns {
-      var now = zuri.reflect.get_prop(self, column)
+      var now = getprop(self, column)
 
       if !self._persisted {
         if now != nil {
@@ -304,7 +304,7 @@ class Model {
         )
       }
 
-      zuri.reflect.set_prop(self, key, attributes[key])
+      setprop(self, key, attributes[key])
     }
 
     return self
@@ -479,7 +479,7 @@ class Model {
     definition.load(self, row)
 
     for name, association in definition.associations {
-      zuri.reflect.set_prop(self, name, nil)
+      setprop(self, name, nil)
     }
 
     return self
@@ -499,7 +499,7 @@ class Model {
 
     Query(db, definition, nil).load([self], name)
 
-    return zuri.reflect.get_prop(self, name.split('.')[0])
+    return getprop(self, name.split('.')[0])
   }
 
   /**
@@ -527,12 +527,12 @@ class Model {
           ? target.primary
           : association.key
         filter.set(
-          owner_key, zuri.reflect.get_prop(self, association.foreign_key),
+          owner_key, getprop(self, association.foreign_key),
         )
       }
       when 'has_one', 'has_many' {
         filter.set(
-          association.foreign_key, zuri.reflect.get_prop(self, association.key),
+          association.foreign_key, getprop(self, association.key),
         )
       }
       when 'belongs_to_many' {
@@ -542,7 +542,7 @@ class Model {
         return query.where(
           '${quote(target.primary)} in (select ${quote(association.other_key)} from ' +
             '${through} where ${quote(association.foreign_key)} = ?)',
-          [zuri.reflect.get_prop(self, association.key)],
+          [getprop(self, association.key)],
         )
       }
     }
@@ -644,12 +644,12 @@ class Model {
 
     for column in definition.columns {
       if !definition.hidden_columns.contains(column) {
-        out.set(column, zuri.reflect.get_prop(self, column))
+        out.set(column, getprop(self, column))
       }
     }
 
     for name, association in definition.associations {
-      var value = zuri.reflect.get_prop(self, name)
+      var value = getprop(self, name)
 
       if is_list(value) {
         out.set(
@@ -746,7 +746,7 @@ class Model {
         continue
       }
 
-      var owner = zuri.reflect.get_prop(self, name)
+      var owner = getprop(self, name)
 
       if !instance_of(owner, Model) {
         continue
@@ -763,8 +763,8 @@ class Model {
       var target = definition_of(association.model)
       var owner_key = association.key == nil ? target.primary : association.key
 
-      zuri.reflect.set_prop(
-        self, association.foreign_key, zuri.reflect.get_prop(owner, owner_key),
+      setprop(
+        self, association.foreign_key, getprop(owner, owner_key),
       )
     }
   }
@@ -773,8 +773,8 @@ class Model {
     var now = date.from_time(time())
 
     for column in [definition.created_column, definition.updated_column] {
-      if column != nil and zuri.reflect.get_prop(self, column) == nil {
-        zuri.reflect.set_prop(self, column, now)
+      if column != nil and getprop(self, column) == nil {
+        setprop(self, column, now)
       }
     }
 
@@ -782,7 +782,7 @@ class Model {
     var left = []
 
     for column in definition.columns {
-      var value = zuri.reflect.get_prop(self, column)
+      var value = getprop(self, column)
 
       if value != nil {
         values.set(column, value)
@@ -803,7 +803,7 @@ class Model {
     )
 
     if self.key() == nil {
-      zuri.reflect.set_prop(self, definition.primary, key)
+      setprop(self, definition.primary, key)
     }
 
     # The columns left to the database hold whatever it filled them
@@ -819,7 +819,7 @@ class Model {
           var kind = definition.casts.get(column, nil)
           var value = row.get(column, nil)
 
-          zuri.reflect.set_prop(
+          setprop(
             self, column, kind == nil ? value : cast(kind, value),
           )
         }
@@ -841,7 +841,7 @@ class Model {
     if stamp != nil and !changed.contains(stamp) {
       var now = date.from_time(time())
 
-      zuri.reflect.set_prop(self, stamp, now)
+      setprop(self, stamp, now)
       changed.set(stamp, now)
     }
 
@@ -854,7 +854,7 @@ class Model {
     var filter = {}
 
     for column in columns {
-      var value = zuri.reflect.get_prop(self, column)
+      var value = getprop(self, column)
 
       if value == nil {
         return false
@@ -896,7 +896,7 @@ class Model {
     return {
       association,
       target: definition_of(association.model),
-      own: zuri.reflect.get_prop(self, association.key),
+      own: getprop(self, association.key),
     }
   }
 
@@ -934,7 +934,7 @@ def _keys_of(targets, target) {
         )
       }
 
-      key = zuri.reflect.get_prop(item, target.primary)
+      key = getprop(item, target.primary)
     }
 
     if !keys.contains(key) {
