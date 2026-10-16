@@ -60,6 +60,15 @@ var CAPABILITIES = {
   ZSTD: 0x04000000,
 }
 
+/**
+ * MariaDB's own capabilities: the upper half of its 64 bit set, which
+ * it sends where MySQL leaves reserved bytes. Bit 36 of the full set is
+ * `0x10` here.
+ */
+var MARIADB_CAPABILITIES = {
+  CACHE_METADATA: 0x00000010,
+}
+
 /** What the server says about the session after each command. */
 var STATUS = {
   IN_TRANSACTION: 0x0001,
@@ -113,6 +122,11 @@ class Protocol {
   var _stream
   var _capabilities = 0
   var _server_capabilities = 0
+
+  # MariaDB's own capabilities, as offered and as agreed. Zero with a
+  # MySQL server, which has none.
+  var _server_extended = 0
+  var _extended = 0
   var _status = 0
   var _warnings = 0
   var _connection_id = 0
@@ -324,7 +338,9 @@ class Protocol {
     }
 
     var count = self._cursor.reset(packet).lenenc_int()
-    var columns = self.read_columns(count, false, known)
+    var columns = self._metadata_follows(self._cursor) ?
+      self.read_columns(count, false, known) :
+      self._cached_columns(known, count)
     var decoders = self._decoders_for(columns, binary, known)
     var rows = []
     var row = self.read_row(decoders, binary, sql)
@@ -358,9 +374,10 @@ class Protocol {
         continue
       }
 
-      var columns = self.read_columns(
-        self._cursor.reset(packet).lenenc_int(), false, nil,
-      )
+      var count = self._cursor.reset(packet).lenenc_int()
+      var columns = self._metadata_follows(self._cursor) ?
+        self.read_columns(count, false, nil) :
+        self._cached_columns(nil, count)
       var decoders = row_decoders(columns, binary)
       var row = self.read_row(decoders, binary, nil)
 
@@ -521,7 +538,16 @@ class Protocol {
 
     var count = self._cursor.reset(packet).lenenc_int()
 
-    return { kind: 'cursor', columns: self.read_columns(count, true, known) }
+    if self._metadata_follows(self._cursor) {
+      return { kind: 'cursor', columns: self.read_columns(count, true, known) }
+    }
+
+    # Without the definitions, the packet that says the cursor is open
+    # still closes the metadata.
+    var columns = self._cached_columns(known, count)
+    self._read_trailer(self._read(nil))
+
+    return { kind: 'cursor', columns }
   }
 
   /**
@@ -683,7 +709,17 @@ class Protocol {
     self._server_capabilities = low | (high << 16)
 
     var scramble_length = cursor.byte()
-    cursor.skip(10)
+
+    # MariaDB leaves LONG_PASSWORD clear to say it is MariaDB, and puts
+    # its own capabilities in the last four of these ten bytes.
+    cursor.skip(6)
+    var extended = cursor.int4()
+
+    if !self._speaks_mariadb() {
+      extended = 0
+    }
+
+    self._server_extended = extended
 
     # The rest of the scramble, whose length the server reports one too
     # long, and which this adapter takes without the trailing zero.
@@ -763,14 +799,68 @@ class Protocol {
       )
     }
 
+    # A MariaDB server can keep from sending a prepared statement's
+    # column definitions on every execution while they have not changed.
+    # Only asked for alongside DEPRECATE_EOF, the shape of result every
+    # reader here expects once definitions can be left out.
+    self._extended = 0
+
+    if (agreed & CAPABILITIES.DEPRECATE_EOF) != 0 {
+      self._extended = self._server_extended &
+        MARIADB_CAPABILITIES.CACHE_METADATA
+    }
+
     return agreed
+  }
+
+  # Whether the greeting came from a server that takes MariaDB's own
+  # capabilities, which it signals by not offering LONG_PASSWORD.
+  _speaks_mariadb() {
+    return (self._server_capabilities & CAPABILITIES.LONG_PASSWORD) == 0
+  }
+
+  # The reserved bytes of a handshake response, which for a MariaDB
+  # server end with the MariaDB capabilities this connection takes.
+  _reserved(writer) {
+    if self._speaks_mariadb() {
+      return writer.zeros(19).int4(self._extended)
+    }
+
+    return writer.zeros(23)
+  }
+
+  # Whether column definitions follow the column count just read from
+  # `cursor`. With metadata caching agreed, MariaDB says so in a byte of
+  # its own, and leaves them out while the statement's columns are the
+  # ones it last sent.
+  _metadata_follows(cursor) {
+    if (self._extended & MARIADB_CAPABILITIES.CACHE_METADATA) == 0 {
+      return true
+    }
+
+    return cursor.at_end() or cursor.byte() != 0
+  }
+
+  # The columns a result has when the server left their definitions out:
+  # the ones it last sent for this statement.
+  _cached_columns(known, count) {
+    if known == nil or known.columns.length() != count {
+      raise ProtocolError(
+        'the server left out the column definitions of a result this ' +
+          'connection has none of',
+        { driver: 'mysql' },
+      )
+    }
+
+    return known.columns
   }
 
   # The first 32 bytes of a handshake response, which is all the server
   # reads before starting TLS.
   _send_ssl_request(capabilities: number) {
     var writer = Writer()
-    writer.int4(capabilities).int4(_MAX_PACKET).byte(_CHARSET).zeros(23)
+    writer.int4(capabilities).int4(_MAX_PACKET).byte(_CHARSET)
+    self._reserved(writer)
 
     self._stream.write_packet(writer.payload())
   }
@@ -780,11 +870,8 @@ class Protocol {
     var response = auth.response_for(plugin, password, scramble, self._private)
 
     var writer = Writer()
-    writer.int4(capabilities)
-      .int4(_MAX_PACKET)
-      .byte(_CHARSET)
-      .zeros(23)
-      .cstring(options.get('user', '') or '')
+    writer.int4(capabilities).int4(_MAX_PACKET).byte(_CHARSET)
+    self._reserved(writer).cstring(options.get('user', '') or '')
 
     if (capabilities & CAPABILITIES.PLUGIN_AUTH_LENENC_DATA) != 0 {
       writer.lenenc_string(response)
@@ -853,7 +940,11 @@ class Protocol {
         current = cursor.cstring()
         nonce = cursor.rest()
 
-        if nonce.length() > 0 and nonce[nonce.length() - 1] == 0 {
+        # The hash based plugins' 20 byte scramble comes with a zero after
+        # it. Ed25519's 32 bytes come as they are, and the last of them
+        # is as likely to be zero as any other, so they are kept whole.
+        if current != auth.ED25519 and nonce.length() > 0
+          and nonce[nonce.length() - 1] == 0 {
           nonce = nonce[0, nonce.length() - 1]
         }
 
@@ -1085,14 +1176,23 @@ class Protocol {
   # two bits that the protocol reserves.
   _read_binary_row(packet, decoders: list) {
     var count = decoders.length()
-    var cursor = self._cursor.reset(packet).skip(1)
-    var nulls = cursor.fixed(((count + 7 + 2) / 8).floor())
+    var bitmap = ((count + 7 + 2) / 8).floor()
+
+    if packet.length() < 1 + bitmap {
+      raise ProtocolError(
+        'the server sent a packet that ended in the middle of a value',
+        { driver: 'mysql' },
+      )
+    }
+
+    # The bitmap is read where it lies, one byte past the header.
+    var cursor = self._cursor.reset(packet).skip(1 + bitmap)
     var row = []
 
     iter var index = 0; index < count; index++ {
       var bit = index + 2
 
-      if (nulls[(bit / 8).floor()] & (1 << (bit % 8))) != 0 {
+      if (packet[1 + (bit >> 3)] & (1 << (bit & 7))) != 0 {
         row.append(nil)
       } else {
         row.append(decoders[index](cursor))

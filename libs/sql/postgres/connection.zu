@@ -50,8 +50,11 @@ class PostgresConnection < DriverConnection {
   var _options = {}
   var _closed = false
 
+  # Compiled statements by their text, each
+  # `{ name, parameters, columns, described, used }`. `used` counts from
+  # `_clock`, so the one used longest ago is the one to let go.
   var _cache = {}
-  var _cache_order = []
+  var _clock = 0
   var _counter = 0
 
   var _savepoints = []
@@ -155,8 +158,14 @@ class PostgresConnection < DriverConnection {
       sql,
     })
 
+    # The columns are the compiled ones unless the server described
+    # the result afresh, and those were described when compiled.
+    var columns = id(result.columns) == id(compiled.columns) ?
+      compiled.described :
+      describe_columns(result.columns)
+
     return {
-      columns: describe_columns(result.columns),
+      columns,
       rows: result.rows,
       command: result.tag,
     }
@@ -372,7 +381,6 @@ class PostgresConnection < DriverConnection {
 
     self._closed = true
     self._cache = {}
-    self._cache_order = []
     self._savepoints = []
     self._protocol.terminate()
   }
@@ -526,11 +534,28 @@ class PostgresConnection < DriverConnection {
 
   # Compiles `sql`, reusing an already compiled copy when there is one.
   _compile(sql) {
+    self._clock++
+
     var cached = self._cache.get(sql, nil)
 
     if cached != nil {
-      self._touch(sql)
+      cached.used = self._clock
       return cached
+    }
+
+    if self._cache.length() >= CACHE_LIMIT {
+      var oldest = nil
+
+      for text, entry in self._cache {
+        if oldest == nil or entry.used < self._cache[oldest].used {
+          oldest = text
+        }
+      }
+
+      var evicted = self._cache[oldest]
+
+      self._cache.remove(oldest)
+      self.release_statement(evicted.name)
     }
 
     var name = self._next_name('statement')
@@ -540,34 +565,13 @@ class PostgresConnection < DriverConnection {
       name,
       parameters: described.parameters,
       columns: described.columns,
-    }
-
-    if self._cache_order.length() >= CACHE_LIMIT {
-      var oldest = self._cache_order[0]
-      self._cache_order = self._cache_order[1, self._cache_order.length()]
-
-      var evicted = self._cache.get(oldest, nil)
-
-      if evicted != nil {
-        self._cache.remove(oldest)
-        self.release_statement(evicted.name)
-      }
+      described: describe_columns(described.columns),
+      used: self._clock,
     }
 
     self._cache.set(sql, compiled)
-    self._cache_order.append(sql)
 
     return compiled
-  }
-
-  _touch(sql) {
-    var at = self._cache_order.index_of(sql)
-
-    if at != -1 {
-      self._cache_order.remove_at(at)
-    }
-
-    self._cache_order.append(sql)
   }
 
   _next_name(kind) {

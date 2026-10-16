@@ -2468,8 +2468,8 @@ pub fn obj_str_len_offset() -> i32 {
 
 /// The byte stream counterpart to `obj_str_data_offsets`, measured
 /// the same way on the `Vec` inside the `RefCell`.
-fn obj_bytes_data_offsets() -> (i32, i32) {
-  static OFFSETS: std::sync::OnceLock<(i32, i32)> = std::sync::OnceLock::new();
+fn obj_bytes_data_offsets() -> (i32, i32, i32) {
+  static OFFSETS: std::sync::OnceLock<(i32, i32, i32)> = std::sync::OnceLock::new();
   *OFFSETS.get_or_init(|| {
     let mut probe_vec: Vec<u8> = Vec::with_capacity(64);
     probe_vec.extend_from_slice(b"zuri-bytes-offset-probe");
@@ -2485,9 +2485,9 @@ fn obj_bytes_data_offsets() -> (i32, i32) {
     };
     let data = unsafe { &*cell.as_ptr() };
     let base = (data as *const Vec<u8> as usize - &probe as *const Obj as usize) as i32;
-    let [ptr, len, _] = word_offsets(data, want, "Vec<u8>");
+    let [ptr, len, cap] = word_offsets(data, want, "Vec<u8>");
 
-    (base + ptr, base + len)
+    (base + ptr, base + len, base + cap)
   })
 }
 
@@ -2543,6 +2543,12 @@ pub fn obj_bytes_ptr_offset() -> i32 {
 /// Byte offset from a proven-`Obj::Bytes` pointer to the bytes length.
 pub fn obj_bytes_len_offset() -> i32 {
   obj_bytes_data_offsets().1
+}
+
+/// Byte offset from a proven-`Obj::Bytes` pointer to the capacity of its
+/// data buffer, for an append that writes in place while there is room.
+pub fn obj_bytes_cap_offset() -> i32 {
+  obj_bytes_data_offsets().2
 }
 
 fn obj_range_data_offsets() -> (i32, i32, i32) {

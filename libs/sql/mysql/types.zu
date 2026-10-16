@@ -334,11 +334,11 @@ def binary_decoder_for(column: dict) {
   }
 
   if type == TYPES.FLOAT {
-    return @(cursor) => struct.unpack('g', cursor.fixed(4))['1']
+    return @(cursor) => cursor.float4()
   }
 
   if type == TYPES.DOUBLE {
-    return @(cursor) => struct.unpack('e', cursor.fixed(8))['1']
+    return @(cursor) => cursor.float8()
   }
 
   if type == TYPES.DATE or type == TYPES.DATETIME or type == TYPES.TIMESTAMP {

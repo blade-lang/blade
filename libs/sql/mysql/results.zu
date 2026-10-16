@@ -42,15 +42,20 @@ def exec_result(response: dict) {
  * an empty result, so a caller never has to tell the two apart.
  *
  * @param dict response From `Protocol.read_response()`.
+ * @param dict|nil known `{ columns, described }` for a statement whose
+ *    columns were described when it was prepared. The description is
+ *    reused while the response carries those same columns, and a
+ *    response whose columns changed is described afresh.
  * @returns dict `{ columns, rows }`
  */
-def select_result(response: dict) {
+def select_result(response: dict, known) {
   if response.kind != 'rows' {
     return { columns: [], rows: [] }
   }
 
-  return {
-    columns: describe_columns(response.columns),
-    rows: response.rows,
-  }
+  var columns = known != nil and id(response.columns) == id(known.columns) ?
+    known.described :
+    describe_columns(response.columns)
+
+  return { columns, rows: response.rows }
 }

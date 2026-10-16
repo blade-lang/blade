@@ -1071,6 +1071,10 @@ The placeholders are translated once, when the statement is prepared,
 so the loop does no string work at all. A prepared statement carries
 the same query and fetch methods a connection does.
 
+A prepared statement belongs to the connection that prepared it.
+Closing the connection closes the statement too, along with any cursor
+still open on it, and using either afterwards raises `ClosedError`.
+
 ## Connection Pools
 
 Opening a connection is expensive: for PostgreSQL and MySQL it is a TCP

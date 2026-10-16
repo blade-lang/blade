@@ -27,7 +27,13 @@ class PostgresStatement < DriverStatement {
   var _sql
   var _parameters = []
   var _columns = []
+  var _described = []
   var _closed = false
+
+  # What every execution asks the protocol for, built once. Only the
+  # values and the row limit differ between runs, and the protocol
+  # reads a request without keeping it.
+  var _request
 
   /**
    * @param PostgresConnection connection
@@ -40,10 +46,20 @@ class PostgresStatement < DriverStatement {
     self._sql = compiled.sql
     self._parameters = compiled.parameters
     self._columns = compiled.columns
+    self._described = describe_columns(compiled.columns)
+    self._request = {
+      statement: self._name,
+      portal: '',
+      values: [],
+      parameters: self._parameters,
+      columns: self._columns,
+      limit: 0,
+      sql: self._sql,
+    }
   }
 
   columns() {
-    return describe_columns(self._columns)
+    return self._described
   }
 
   parameter_count() {
@@ -160,15 +176,16 @@ class PostgresStatement < DriverStatement {
   }
 
   _run(values, limit) {
-    return self._connection.run_prepared({
-      statement: self._name,
-      portal: '',
-      values,
-      parameters: self._parameters,
-      columns: self._columns,
-      limit,
-      sql: self._sql,
-    })
+    var request = self._request
+    request.values = values
+    request.limit = limit
+
+    var result = self._connection.run_prepared(request)
+
+    # The values are the caller's, and are not kept past the run.
+    request.values = []
+
+    return result
   }
 
   _open() {

@@ -104,16 +104,87 @@ def test_capabilities() {
   echo 'test_capabilities passed'
 }
 
+def registry_roundtrip(value, oid) {
+  return DEFAULT_REGISTRY.decode(
+    as_bytes(DEFAULT_REGISTRY.encode(value, oid)), oid,
+  )
+}
+
 def test_integers() {
   # The protocol is big-endian throughout, and the 64 bit path cannot
   # go through a shift, which a double would lose the top bits to.
-  assert read_int16(bytes(write_int16(-1234)), 0) == -1234
-  assert read_int16(bytes(write_int16(32767)), 0) == 32767
-  assert read_int32(bytes(write_int32(-123456)), 0) == -123456
-  assert read_int32(bytes(write_int32(2147483647)), 0) == 2147483647
-  assert read_uint32(bytes(write_int32(-1)), 0) == 4294967295
-  assert read_int64(bytes(write_int64(-1234567890123)), 0) == -1234567890123
-  assert read_int64(bytes(write_int64(9007199254740992)), 0) == 9007199254740992
+  assert read_int16(write_int16(-1234), 0) == -1234
+  assert read_int16(write_int16(32767), 0) == 32767
+  assert read_int32(write_int32(-123456), 0) == -123456
+  assert read_int32(write_int32(2147483647), 0) == 2147483647
+  assert read_uint32(write_int32(-1), 0) == 4294967295
+  assert read_int64(write_int64(-1234567890123), 0) == -1234567890123
+  assert read_int64(write_int64(9007199254740992), 0) == 9007199254740992
+
+  # The encoders refuse what their type cannot hold, at each edge.
+  for case in [
+    [encode_int2, 32767, -32768, 32768, -32769],
+    [encode_int4, 2147483647, -2147483648, 2147483648, -2147483649],
+    [encode_oid, 4294967295, 0, 4294967296, -1],
+  ] {
+    var encode = case[0]
+    assert encode(case[1]).length() == encode(case[2]).length()
+
+    for outside in [case[3], case[4]] {
+      var raised = nil
+
+      catch {
+        encode(outside)
+      } as error {
+        raised = error
+      }
+
+      assert instance_of(raised, QueryError)
+    }
+  }
+
+  # And comes back a number while one holds it exactly, a bigint past
+  # that, never rounded.
+  assert int8_at(write_int64(9007199254740991), 0) == 9007199254740991
+  assert int8_at(write_int64(-9007199254740992), 0) == -9007199254740992
+  assert int8_at(write_int64(9007199254740992), 0) == 9007199254740992
+  assert int8_at(encode_int8(-9007199254740993n), 0) == -9007199254740993n
+  assert int8_at(encode_int8(9007199254740993n), 0) == 9007199254740993n
+  assert int8_at(encode_int8(-9223372036854775808n), 0) == -9223372036854775808n
+  assert is_number(int8_at(write_int64(5), 0))
+
+  # A bigint int8 goes out byte for byte, sign-extended to eight.
+  assert encode_int8(-1n) == bytes([255, 255, 255, 255, 255, 255, 255, 255])
+  assert encode_int8(9223372036854775807n) == bytes([127, 255, 255, 255, 255, 255, 255, 255])
+  assert encode_int8(-9223372036854775808n) == bytes([128, 0, 0, 0, 0, 0, 0, 0])
+  assert encode_int8(4503599627370497) == bytes([0, 16, 0, 0, 0, 0, 0, 1])
+
+  for outside in [9223372036854775808n, -9223372036854775809n, 2 ** 63] {
+    var raised = nil
+
+    catch {
+      encode_int8(outside)
+    } as error {
+      raised = error
+    }
+
+    assert instance_of(raised, QueryError)
+  }
+
+  # Floats are read from their fields, which has to agree with the
+  # encoder at the extremes as well as in the middle.
+  for value in [0, 1.5, -2.25, 5e-324, 2.2250738585072014e-308,
+    1.7976931348623157e308, 1 / 0, -1 / 0] {
+    assert registry_roundtrip(value, OIDS.Float8) == value
+  }
+
+  var negative_zero = registry_roundtrip(-0.0, OIDS.Float8)
+  assert negative_zero == 0 and 1 / negative_zero < 0
+
+  var nan = registry_roundtrip(0 / 0, OIDS.Float8)
+  assert nan != nan
+  assert registry_roundtrip(0.5, OIDS.Float4) == 0.5
+  assert registry_roundtrip(-1 / 0, OIDS.Float4) == -1 / 0
 
   echo 'test_integers passed'
 }
@@ -122,7 +193,17 @@ def test_value_codecs() {
   var registry = DEFAULT_REGISTRY
 
   def roundtrip(value, oid) {
-    return registry.decode(bytes(registry.encode(value, oid)), oid)
+    var encoded = as_bytes(registry.encode(value, oid))
+    var decoded = registry.decode(encoded, oid)
+
+    # A row is read where it arrived, so the same value has to come back
+    # from the middle of a larger buffer.
+    var padded = bytes([7, 7, 7]) + encoded + bytes([9])
+    var read = registry.reader_for(oid)(padded, 3, encoded.length(), oid)
+
+    assert read == decoded or (is_number(read) and read != read)
+
+    return decoded
   }
 
   assert roundtrip(true, OIDS.Bool) == true
@@ -142,6 +223,29 @@ def test_value_codecs() {
   assert roundtrip([1, 2, 3], OIDS.Int4Array) == [1, 2, 3]
   assert roundtrip(['a', nil, 'c'], OIDS.TextArray) == ['a', nil, 'c']
   assert roundtrip([], OIDS.Int4Array) == []
+  assert roundtrip(-1.25, OIDS.Float4) == -1.25
+  assert roundtrip(2 ** 64, OIDS.Float8) == 2 ** 64
+
+  # A codec a program registers takes the place of the built-in one,
+  # and its decoder is handed only the bytes of its own value. Its
+  # encoder may return a list.
+  var custom = TypeRegistry()
+  var seen = []
+
+  custom.register(OIDS.Int4, @(buffer, oid) {
+    seen.append(buffer.length())
+    return 'int ${read_int32(buffer, 0)}'
+  }, @(value) => write_int32(value).to_list())
+
+  var listed = custom.encode(5, OIDS.Int4)
+  assert is_list(listed)
+
+  var row = bytes([1]) + as_bytes(listed) + bytes([2, 3])
+  assert custom.reader_for(OIDS.Int4)(row, 1, 4, OIDS.Int4) == 'int 5'
+  assert seen == [4]
+
+  # And with no binary decoder at all, a type is read as text.
+  assert custom.reader_for(999999) == nil
 
   echo 'test_value_codecs passed'
 }
@@ -155,7 +259,7 @@ def test_numeric() {
     '123456789.123456789', '0.10', '99999999999999999999.99'] {
     var original = Decimal(text)
     var back = registry.decode(
-      bytes(registry.encode(original, OIDS.Numeric)), OIDS.Numeric
+      as_bytes(registry.encode(original, OIDS.Numeric)), OIDS.Numeric
     )
 
     assert instance_of(back, Decimal)
@@ -261,7 +365,32 @@ def test_framing() {
   assert first.value == 'select 1'
   assert first.next == query.length()
 
+  # Two messages arriving in one read are taken one after the other,
+  # each left where it lies in the reader's buffer.
+  var reader = Reader(OneRead(query + Writer().byte(73).frame('Z')))
+
+  assert reader.next_message() == 81
+  assert reader.buffer[reader.start, reader.end - 1].to_string() == 'select 1'
+  assert reader.next_message() == 90
+  assert reader.end - reader.start == 1
+  assert reader.buffer[reader.start].chr() == 'I'
+
   echo 'test_framing passed'
+}
+
+# A stream that has one reply to give and then nothing.
+class OneRead {
+  var _reply
+
+  @new(reply) {
+    self._reply = reply
+  }
+
+  read(length) {
+    var reply = self._reply
+    self._reply = bytes(0)
+    return reply
+  }
 }
 
 def test_command_tags() {

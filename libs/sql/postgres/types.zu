@@ -26,6 +26,7 @@ import struct
 
 import ..decimal { Decimal }
 import ..errors { QueryError }
+import ..ieee { double_of, single_of }
 import ..types { to_iso }
 
 /**
@@ -101,29 +102,29 @@ var OIDS = {
  * The element type each array OID holds.
  */
 var ARRAY_ELEMENTS = {
-  '1000': 16,
-  '1001': 17,
-  '1002': 18,
-  '1003': 19,
-  '1005': 21,
-  '1007': 23,
-  '1009': 25,
-  '1014': 1042,
-  '1015': 1043,
-  '1016': 20,
-  '1017': 600,
-  '1021': 700,
-  '1022': 701,
-  '1028': 26,
-  '1115': 1114,
-  '1182': 1082,
-  '1183': 1083,
-  '1185': 1184,
-  '1187': 1186,
-  '1231': 1700,
-  '2951': 2950,
-  '199': 114,
-  '3807': 3802,
+  1000: 16,
+  1001: 17,
+  1002: 18,
+  1003: 19,
+  1005: 21,
+  1007: 23,
+  1009: 25,
+  1014: 1042,
+  1015: 1043,
+  1016: 20,
+  1017: 600,
+  1021: 700,
+  1022: 701,
+  1028: 26,
+  1115: 1114,
+  1182: 1082,
+  1183: 1083,
+  1185: 1184,
+  1187: 1186,
+  1231: 1700,
+  2951: 2950,
+  199: 114,
+  3807: 3802,
 }
 
 /**
@@ -203,39 +204,67 @@ def read_int64(buffer, at: number) {
 }
 
 /**
+ * Reads a signed 64 bit big-endian integer exactly: as a number while
+ * a double holds it exactly, which is up to 2 ** 53 either side of
+ * zero, and as a bigint beyond that.
+ *
+ * @param bytes buffer
+ * @param number at
+ * @returns number|bigint
+ */
+def int8_at(buffer, at: number) {
+  var high = read_int32(buffer, at)
+  var low = read_uint32(buffer, at + 4)
+
+  # Whatever the low half holds, these high halves keep the value within
+  # 2 ** 53 either side of zero, and 2 ** 53 itself is the one value with
+  # a high half of 2 ** 21.
+  if (high >= -2097152 and high < 2097152) or (high == 2097152 and low == 0) {
+    return high * 4294967296 + low
+  }
+
+  return high.to_bigint() * 4294967296n + low.to_bigint()
+}
+
+/**
  * Writes a signed 16 bit big-endian integer.
  *
  * @param number value
- * @returns list[number]
+ * @returns bytes
  */
 def write_int16(value: number) {
   var v = value < 0 ? value + 0x10000 : value
+  var out = bytes(2)
 
-  return [(v >> 8) & 0xff, v & 0xff]
+  out[0] = (v >> 8) & 0xff
+  out[1] = v & 0xff
+
+  return out
 }
 
 /**
  * Writes a signed 32 bit big-endian integer.
  *
  * @param number value
- * @returns list[number]
+ * @returns bytes
  */
 def write_int32(value: number) {
   var v = value < 0 ? value + 0x100000000 : value
+  var out = bytes(4)
 
-  return [
-    (v // 16777216) & 0xff,
-    (v >> 16) & 0xff,
-    (v >> 8) & 0xff,
-    v & 0xff,
-  ]
+  out[0] = (v // 16777216) & 0xff
+  out[1] = (v >> 16) & 0xff
+  out[2] = (v >> 8) & 0xff
+  out[3] = v & 0xff
+
+  return out
 }
 
 /**
  * Writes a signed 64 bit big-endian integer.
  *
  * @param number value
- * @returns list[number]
+ * @returns bytes
  */
 def write_int64(value: number) {
   var v = value
@@ -497,6 +526,28 @@ def micros_from_date(moment) {
 }
 
 /**
+ * Reads a big-endian IEEE 754 single at `at`.
+ *
+ * @param bytes buffer
+ * @param number at
+ * @returns number
+ */
+def float4_at(buffer, at: number) {
+  return single_of(read_uint32(buffer, at))
+}
+
+/**
+ * Reads a big-endian IEEE 754 double at `at`.
+ *
+ * @param bytes buffer
+ * @param number at
+ * @returns number
+ */
+def float8_at(buffer, at: number) {
+  return double_of(read_uint32(buffer, at), read_uint32(buffer, at + 4))
+}
+
+/**
  * A decoder reads one column value from its binary form.
  *
  * Each takes the value's bytes and the OID it arrived under, and
@@ -515,7 +566,7 @@ def decode_int4(buffer, _oid) {
 }
 
 def decode_int8(buffer, _oid) {
-  return read_int64(buffer, 0)
+  return int8_at(buffer, 0)
 }
 
 def decode_oid(buffer, _oid) {
@@ -523,11 +574,11 @@ def decode_oid(buffer, _oid) {
 }
 
 def decode_float4(buffer, _oid) {
-  return struct.unpack('G', buffer)['1']
+  return float4_at(buffer, 0)
 }
 
 def decode_float8(buffer, _oid) {
-  return struct.unpack('E', buffer)['1']
+  return float8_at(buffer, 0)
 }
 
 def decode_text(buffer, _oid) {
@@ -668,8 +719,8 @@ def decode_macaddr(buffer, _oid) {
 
 def decode_point(buffer, _oid) {
   return {
-    x: struct.unpack('E', buffer[0, 8])['1'],
-    y: struct.unpack('E', buffer[8, 16])['1'],
+    x: float8_at(buffer, 0),
+    y: float8_at(buffer, 8),
   }
 }
 
@@ -690,7 +741,7 @@ def decode_box(buffer, _oid) {
 def decode_circle(buffer, _oid) {
   return {
     center: decode_point(buffer[0, 16], nil),
-    radius: struct.unpack('E', buffer[16, 24])['1'],
+    radius: float8_at(buffer, 16),
   }
 }
 
@@ -698,41 +749,74 @@ def decode_circle(buffer, _oid) {
  * An encoder turns a Zuri value into the bytes of its binary form.
  */
 def encode_bool(value) {
-  return [value ? 1 : 0]
+  return bytes([value ? 1 : 0])
 }
 
 def encode_int2(value) {
-  return write_int16(_whole(value, 'an int2'))
+  return write_int16(_ranged(value, 'an int2', -32768, 32768))
 }
 
 def encode_int4(value) {
-  return write_int32(_whole(value, 'an int4'))
+  return write_int32(_ranged(value, 'an int4', -2147483648, 2147483648))
 }
 
+/**
+ * `int8` takes a bigint exactly, by its own two's-complement bytes. A
+ * number past 2 ** 53 has already lost its low digits, so only a bigint
+ * carries every value the type holds.
+ */
 def encode_int8(value) {
-  return write_int64(_whole(value, 'an int8'))
+  if is_bigint(value) {
+    if value < _INT8_LOW or value > _INT8_HIGH {
+      raise QueryError(
+        '${value.to_string()} is out of range for an int8, which holds ' +
+          '${_INT8_LOW.to_string()} to ${_INT8_HIGH.to_string()}',
+      )
+    }
+
+    var raw = value.to_bytes('big')
+    var out = bytes(8 - raw.length())
+
+    # The shortest form is sign-extended to the full eight bytes.
+    if value < 0n {
+      iter var index = 0; index < out.length(); index++ {
+        out[index] = 0xff
+      }
+    }
+
+    out.extend(raw)
+
+    return out
+  }
+
+  return write_int64(_ranged(value, 'an int8', -(2 ** 63), 2 ** 63))
+}
+
+/**
+ * `oid` is unsigned, from 0 to 4294967295.
+ */
+def encode_oid(value) {
+  return write_int32(_ranged(value, 'an oid', 0, 4294967296))
 }
 
 def encode_float4(value) {
-  return struct.pack('G', value).to_list()
+  return struct.pack('G', value)
 }
 
 def encode_float8(value) {
-  return struct.pack('E', value).to_list()
+  return struct.pack('E', value)
 }
 
 def encode_text(value) {
-  return is_string(value)
-    ? value.to_bytes().to_list()
-    : '${value}'.to_bytes().to_list()
+  return is_string(value) ? value.to_bytes() : '${value}'.to_bytes()
 }
 
 def encode_bytea(value) {
-  return is_bytes(value) ? value.to_list() : value.to_bytes().to_list()
+  return is_bytes(value) ? value : value.to_bytes()
 }
 
 def encode_json(value) {
-  return json.encode(value, false).to_bytes().to_list()
+  return json.encode(value, false).to_bytes()
 }
 
 /**
@@ -740,7 +824,7 @@ def encode_json(value) {
  * expects.
  */
 def encode_jsonb(value) {
-  return [1] + encode_json(value)
+  return bytes([1]) + encode_json(value)
 }
 
 def encode_uuid(value) {
@@ -750,10 +834,10 @@ def encode_uuid(value) {
     raise QueryError('${value} is not a uuid')
   }
 
-  var out = []
+  var out = bytes(16)
 
   for index in 0..16 {
-    out.append(_hex_byte(hex[index * 2, index * 2 + 2]))
+    out[index] = _hex_byte(hex[index * 2, index * 2 + 2])
   }
 
   return out
@@ -767,6 +851,17 @@ def encode_date(value) {
 
 def encode_timestamp(value) {
   return write_int64(micros_from_date(_as_date(value, 'a timestamp')))
+}
+
+/**
+ * What an encoder returned, as `bytes`. The built-in encoders return
+ * `bytes`; one a program registers may return a list of byte values.
+ *
+ * @param bytes|list encoded
+ * @returns bytes
+ */
+def as_bytes(encoded) {
+  return is_list(encoded) ? bytes(encoded) : encoded
 }
 
 /**
@@ -790,7 +885,7 @@ def encode_array(value, element_oid, registry) {
       continue
     }
 
-    var encoded = registry.encode(item, element_oid)
+    var encoded = as_bytes(registry.encode(item, element_oid))
 
     out.extend(write_int32(encoded.length()))
     out.extend(encoded)
@@ -872,6 +967,29 @@ def _whole(value, what) {
   return number
 }
 
+var _INT8_LOW = -9223372036854775808n
+var _INT8_HIGH = 9223372036854775807n
+
+# A whole number from `low` up to, but not including, `limit`: the range
+# the type holds. A value outside it raises rather than being cut down to
+# its low bytes, which would store a different number without saying so.
+#
+# Exclusive, because the top of the int8 range is 2 ** 63 - 1, which a
+# double cannot hold, while 2 ** 63 itself is exact.
+def _ranged(value, what, low, limit) {
+  var number = _whole(value, what)
+
+  if number < low or number >= limit {
+    raise QueryError(
+      '${value.to_string()} is out of range for ${what}, which holds ' +
+        '${low.to_bigint().to_string()} to ' +
+        '${(limit.to_bigint() - 1n).to_string()}',
+    )
+  }
+
+  return number
+}
+
 def _as_date(value, what) {
   if instance_of(value, date.Date) {
     return value
@@ -891,6 +1009,53 @@ def _hex_byte(pair) {
   }
 
   return high * 16 + low
+}
+
+# The registry's readers: each reads `size` bytes at `at` of a larger
+# buffer, the value a decoder of the same type reads from a buffer of
+# its own.
+def _bool_at(buffer, at, _size, _oid) {
+  return buffer[at] != 0
+}
+
+def _int2_at(buffer, at, _size, _oid) {
+  return read_int16(buffer, at)
+}
+
+def _int4_at(buffer, at, _size, _oid) {
+  return read_int32(buffer, at)
+}
+
+def _int8_at(buffer, at, _size, _oid) {
+  return int8_at(buffer, at)
+}
+
+def _oid_at(buffer, at, _size, _oid) {
+  return read_uint32(buffer, at)
+}
+
+def _float4_at(buffer, at, _size, _oid) {
+  return float4_at(buffer, at)
+}
+
+def _float8_at(buffer, at, _size, _oid) {
+  return float8_at(buffer, at)
+}
+
+def _text_at(buffer, at, size, _oid) {
+  return size == 0 ? '' : buffer[at, at + size].to_string()
+}
+
+def _bytea_at(buffer, at, size, _oid) {
+  return buffer[at, at + size]
+}
+
+def _date_at(buffer, at, _size, _oid) {
+  return date_from_micros(read_int32(buffer, at) * 86400000000)
+}
+
+def _timestamp_at(buffer, at, _size, _oid) {
+  return date_from_micros(read_int64(buffer, at))
 }
 
 /**
@@ -913,6 +1078,12 @@ class TypeRegistry {
   var _decoders = {}
   var _encoders = {}
 
+  # The built-in decoders that read a value where it lies inside a
+  # larger buffer, taking `(buffer, at, size, oid)`, so a row decodes
+  # without each column being copied out of it first. Registering a
+  # decoder for one of these OIDs replaces its entry here.
+  var _readers = {}
+
   # Moves whenever a codec is added or replaced, so whoever resolved
   # codecs once knows to resolve them again.
   var _version = 0
@@ -926,15 +1097,17 @@ class TypeRegistry {
    *
    * @param number oid
    * @param function decoder Takes `(bytes, oid)` and returns a value.
-   * @param function encoder Takes a value and returns a list of bytes.
+   * @param function encoder Takes a value and returns its binary form,
+   *    as `bytes` or as a list of byte values.
    */
   register(oid: number, decoder, encoder) {
     if decoder != nil {
-      self._decoders.set('${oid}', decoder)
+      self._decoders.set(oid, decoder)
+      self._readers.remove(oid)
     }
 
     if encoder != nil {
-      self._encoders.set('${oid}', encoder)
+      self._encoders.set(oid, encoder)
     }
 
     self._version++
@@ -959,32 +1132,59 @@ class TypeRegistry {
    * @returns function|nil
    */
   decoder_for(oid: number) {
-    if ARRAY_ELEMENTS.contains('${oid}') {
+    if ARRAY_ELEMENTS.contains(oid) {
       var registry = self
       return @(buffer, array_oid) => decode_array(buffer, array_oid, registry)
     }
 
-    return self._decoders.get('${oid}', nil)
+    return self._decoders.get(oid, nil)
+  }
+
+  /**
+   * The function that reads `oid` in binary where the value lies inside
+   * a larger buffer, taking `(buffer, at, size, oid)`, or nil when the
+   * type is read as text. A decoder that only takes the value's own
+   * bytes is handed a copy of them.
+   *
+   * @param number oid
+   * @returns function|nil
+   */
+  reader_for(oid: number) {
+    var reader = self._readers.get(oid, nil)
+
+    if reader != nil {
+      return reader
+    }
+
+    var decoder = self.decoder_for(oid)
+
+    if decoder == nil {
+      return nil
+    }
+
+    return @(buffer, at, size, value_oid) {
+      return decoder(buffer[at, at + size], value_oid)
+    }
   }
 
   /**
    * The function that writes a value for a parameter of type `oid`,
-   * taking the value and returning a list of bytes. A type with no
-   * binary encoder gets the one that writes text, which the server
-   * reads for every type it knows.
+   * taking the value and returning its binary form, as `bytes` or as a
+   * list of byte values. A type with no binary encoder gets the one
+   * that writes text, which the server reads for every type it knows.
    *
    * @param number oid
    * @returns function
    */
   encoder_for(oid: number) {
-    var element = ARRAY_ELEMENTS.get('${oid}', nil)
+    var element = ARRAY_ELEMENTS.get(oid, nil)
 
     if element != nil {
       var registry = self
       return @(value) => encode_array(value, element, registry)
     }
 
-    return self._encoders.get('${oid}', encode_text)
+    return self._encoders.get(oid, encode_text)
   }
 
   /**
@@ -994,8 +1194,7 @@ class TypeRegistry {
    * @returns bool
    */
   knows(oid: number) {
-    return self._decoders.contains('${oid}')
-      or ARRAY_ELEMENTS.contains('${oid}')
+    return self._decoders.contains(oid) or ARRAY_ELEMENTS.contains(oid)
   }
 
   /**
@@ -1008,8 +1207,7 @@ class TypeRegistry {
    * @returns bool
    */
   can_encode(oid: number) {
-    return self._encoders.contains('${oid}')
-      or ARRAY_ELEMENTS.contains('${oid}')
+    return self._encoders.contains(oid) or ARRAY_ELEMENTS.contains(oid)
   }
 
   /**
@@ -1020,11 +1218,11 @@ class TypeRegistry {
    * @returns any
    */
   decode(buffer, oid: number) {
-    if ARRAY_ELEMENTS.contains('${oid}') {
+    if ARRAY_ELEMENTS.contains(oid) {
       return decode_array(buffer, oid, self)
     }
 
-    var decoder = self._decoders.get('${oid}', nil)
+    var decoder = self._decoders.get(oid, nil)
 
     if decoder == nil {
       # Nothing knows this type, and the bytes are whatever the server
@@ -1040,16 +1238,17 @@ class TypeRegistry {
    *
    * @param any value
    * @param number oid
-   * @returns list[number]
+   * @returns bytes|list The encoder's result: `bytes` from a built-in
+   *    encoder, and whichever of the two a registered one returns.
    */
   encode(value, oid: number) {
-    var element = ARRAY_ELEMENTS.get('${oid}', nil)
+    var element = ARRAY_ELEMENTS.get(oid, nil)
 
     if element != nil {
       return encode_array(value, element, self)
     }
 
-    var encoder = self._encoders.get('${oid}', nil)
+    var encoder = self._encoders.get(oid, nil)
 
     if encoder == nil {
       # With no encoder the value is sent as text and the server is
@@ -1108,7 +1307,7 @@ class TypeRegistry {
     self.register(OIDS.Int2, decode_int2, encode_int2)
     self.register(OIDS.Int4, decode_int4, encode_int4)
     self.register(OIDS.Int8, decode_int8, encode_int8)
-    self.register(OIDS.Oid, decode_oid, encode_int4)
+    self.register(OIDS.Oid, decode_oid, encode_oid)
     self.register(OIDS.Float4, decode_float4, encode_float4)
     self.register(OIDS.Float8, decode_float8, encode_float8)
     self.register(OIDS.Numeric, decode_numeric_value, encode_numeric)
@@ -1138,6 +1337,25 @@ class TypeRegistry {
     self.register(OIDS.Lseg, decode_lseg, nil)
     self.register(OIDS.Box, decode_box, nil)
     self.register(OIDS.Circle, decode_circle, nil)
+
+    # The types results are mostly made of read straight out of the
+    # row they arrive in.
+    self._readers.set(OIDS.Bool, _bool_at)
+    self._readers.set(OIDS.Int2, _int2_at)
+    self._readers.set(OIDS.Int4, _int4_at)
+    self._readers.set(OIDS.Int8, _int8_at)
+    self._readers.set(OIDS.Oid, _oid_at)
+    self._readers.set(OIDS.Float4, _float4_at)
+    self._readers.set(OIDS.Float8, _float8_at)
+    self._readers.set(OIDS.Bytea, _bytea_at)
+    self._readers.set(OIDS.Date, _date_at)
+    self._readers.set(OIDS.Timestamp, _timestamp_at)
+    self._readers.set(OIDS.Timestamptz, _timestamp_at)
+
+    for oid in [OIDS.Text, OIDS.Varchar, OIDS.BpChar, OIDS.Char,
+      OIDS.Name, OIDS.Xml, OIDS.Unknown, OIDS.Bit, OIDS.Varbit] {
+      self._readers.set(oid, _text_at)
+    }
   }
 }
 

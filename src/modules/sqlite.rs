@@ -200,16 +200,31 @@ fn db_of(ctx: &ZuriContext) -> *mut ffi::sqlite3 {
   cell.downcast_ref::<SqliteConn>().unwrap().db()
 }
 
-/// The raw `sqlite3_stmt*` behind argument zero.
+/// The raw `sqlite3_stmt*` behind argument zero, or null once the
+/// connection it belongs to has closed and released it.
 ///
 /// Copied out rather than borrowed across the call that uses it: a
 /// statement native can re-enter Zuri through a user-defined function,
 /// and a collection running in there relocates the `Ptr` object this
 /// borrow points into. The C pointer itself is SQLite's, outside the
 /// Zuri heap, so it stays valid across anything the VM does.
-fn stmt_of(ctx: &ZuriContext) -> *mut ffi::sqlite3_stmt {
+fn stmt_or_null(ctx: &ZuriContext) -> *mut ffi::sqlite3_stmt {
   let cell = ctx.args[0].as_ptr_cell().borrow();
-  cell.downcast_ref::<SqliteStmt>().unwrap().stmt
+  cell.downcast_ref::<SqliteStmt>().unwrap().stmt()
+}
+
+/// The statement behind argument zero, for a native that needs it
+/// live.
+fn stmt_of(ctx: &ZuriContext) -> Result<*mut ffi::sqlite3_stmt, String> {
+  let stmt = stmt_or_null(ctx);
+
+  if stmt.is_null() {
+    return Err(String::from(
+      "the connection this statement belongs to was closed",
+    ));
+  }
+
+  Ok(stmt)
 }
 
 /// The connection state a statement belongs to, for reading back an
@@ -543,7 +558,10 @@ fn prepare(ctx: &mut ZuriContext) -> Result<Value, String> {
   let statement = if stmt.is_null() {
     Value::nil()
   } else {
-    ctx.heap().alloc_ptr(STATEMENT, SqliteStmt { stmt, state })
+    // SAFETY: `state` is the live state of the connection that just
+    // prepared `stmt`.
+    let statement = unsafe { SqliteStmt::track(stmt, state) };
+    ctx.heap().alloc_ptr(STATEMENT, statement)
   };
 
   let tail_value = ctx.heap().alloc_string(remaining);
@@ -581,7 +599,14 @@ fn reset(ctx: &mut ZuriContext) -> Result<Value, String> {
   // sqlite3_reset reports the error of the statement's last run rather
   // than an error of its own, and the caller has already seen that one
   // from step. Deliberately not checked here.
-  unsafe { ffi::sqlite3_reset(stmt_of(ctx)) };
+  //
+  // A statement its connection released has nothing left to rewind,
+  // and closing a cursor over one has to stay safe.
+  let stmt = stmt_or_null(ctx);
+
+  if !stmt.is_null() {
+    unsafe { ffi::sqlite3_reset(stmt) };
+  }
 
   Ok(Value::nil())
 }
@@ -590,7 +615,11 @@ fn clear_bindings(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  unsafe { ffi::sqlite3_clear_bindings(stmt_of(ctx)) };
+  let stmt = stmt_or_null(ctx);
+
+  if !stmt.is_null() {
+    unsafe { ffi::sqlite3_clear_bindings(stmt) };
+  }
 
   Ok(Value::nil())
 }
@@ -601,7 +630,7 @@ fn step(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let state = stmt_state(ctx);
 
   let code = {
@@ -614,9 +643,12 @@ fn step(ctx: &mut ZuriContext) -> Result<Value, String> {
     return Err(message);
   }
 
+  // Interned, since every row a result has costs a step: a result of a
+  // thousand rows would otherwise allocate a thousand strings to say
+  // there is another row.
   match code {
-    ffi::SQLITE_ROW => Ok(ctx.heap().alloc_string("row")),
-    ffi::SQLITE_DONE => Ok(ctx.heap().alloc_string("done")),
+    ffi::SQLITE_ROW => Ok(ctx.heap().intern_str("row")),
+    ffi::SQLITE_DONE => Ok(ctx.heap().intern_str("done")),
     _ => {
       let db = unsafe { ffi::sqlite3_db_handle(stmt) };
       Err(util::last_error(db))
@@ -630,7 +662,7 @@ fn bind(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let index = ctx.args[1].as_number();
 
   if !index.is_finite() || index < 1.0 {
@@ -652,7 +684,7 @@ fn bind_parameter_count(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_bind_parameter_count(stmt_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_bind_parameter_count(stmt_of(ctx)?) } as f64,
   ))
 }
 
@@ -663,7 +695,7 @@ fn bind_parameter_index(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::String);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let name = util::to_cstring("a parameter name", ctx.args[1].as_str())?;
 
   let index = unsafe { ffi::sqlite3_bind_parameter_index(stmt, name.as_ptr()) };
@@ -678,7 +710,7 @@ fn bind_parameter_name(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let index = ctx.args[1].as_number() as c_int;
 
   let name = unsafe { ffi::sqlite3_bind_parameter_name(stmt, index) };
@@ -696,7 +728,7 @@ fn column_count(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_column_count(stmt_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_column_count(stmt_of(ctx)?) } as f64,
   ))
 }
 
@@ -709,7 +741,7 @@ fn column_names(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let count = unsafe { ffi::sqlite3_column_count(stmt) };
 
   let mut names = Vec::with_capacity(count as usize);
@@ -731,7 +763,7 @@ fn column_decltypes(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let count = unsafe { ffi::sqlite3_column_count(stmt) };
 
   let mut types = Vec::with_capacity(count as usize);
@@ -757,7 +789,7 @@ fn column_type(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let index = column_index(ctx, stmt, 1)?;
 
   let code = unsafe { ffi::sqlite3_column_type(stmt, index) };
@@ -770,7 +802,7 @@ fn column_value(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let index = column_index(ctx, stmt, 1)?;
 
   Ok(value::column(ctx, stmt, index))
@@ -783,7 +815,7 @@ fn row(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let count = unsafe { ffi::sqlite3_data_count(stmt) };
 
   let mut values = Vec::with_capacity(count as usize);
@@ -803,7 +835,7 @@ fn column_origin(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let stmt = stmt_of(ctx);
+  let stmt = stmt_of(ctx)?;
   let index = column_index(ctx, stmt, 1)?;
 
   let database = unsafe { ffi::sqlite3_column_database_name(stmt, index) };
@@ -836,7 +868,7 @@ fn data_count(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_data_count(stmt_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_data_count(stmt_of(ctx)?) } as f64,
   ))
 }
 
@@ -844,7 +876,7 @@ fn stmt_sql(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let text = unsafe { util::cstr_to_string(ffi::sqlite3_sql(stmt_of(ctx))) };
+  let text = unsafe { util::cstr_to_string(ffi::sqlite3_sql(stmt_of(ctx)?)) };
   Ok(ctx.heap().alloc_string(text))
 }
 
@@ -857,7 +889,7 @@ fn expanded_sql(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
-  let expanded = unsafe { ffi::sqlite3_expanded_sql(stmt_of(ctx)) };
+  let expanded = unsafe { ffi::sqlite3_expanded_sql(stmt_of(ctx)?) };
 
   if expanded.is_null() {
     return Ok(Value::nil());
@@ -878,7 +910,7 @@ fn stmt_readonly(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   Ok(Value::bool(
-    unsafe { ffi::sqlite3_stmt_readonly(stmt_of(ctx)) } != 0,
+    unsafe { ffi::sqlite3_stmt_readonly(stmt_of(ctx)?) } != 0,
   ))
 }
 
@@ -889,7 +921,7 @@ fn stmt_busy(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   Ok(Value::bool(
-    unsafe { ffi::sqlite3_stmt_busy(stmt_of(ctx)) } != 0,
+    unsafe { ffi::sqlite3_stmt_busy(stmt_of(ctx)?) } != 0,
   ))
 }
 
@@ -902,7 +934,7 @@ fn reprepare_count(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(STATEMENT));
 
   let count =
-    unsafe { ffi::sqlite3_stmt_status(stmt_of(ctx), ffi::SQLITE_STMTSTATUS_REPREPARE, 0) };
+    unsafe { ffi::sqlite3_stmt_status(stmt_of(ctx)?, ffi::SQLITE_STMTSTATUS_REPREPARE, 0) };
 
   Ok(Value::number(count as f64))
 }
@@ -967,7 +999,11 @@ fn blob_open(ctx: &mut ZuriContext) -> Result<Value, String> {
 
   util::check(db, code)?;
 
-  Ok(ctx.heap().alloc_ptr(BLOB, SqliteBlob { blob }))
+  // SAFETY: the state is that of the connection that just opened
+  // `blob`.
+  let blob = unsafe { SqliteBlob::track(blob, conn_state(ctx)) };
+
+  Ok(ctx.heap().alloc_ptr(BLOB, blob))
 }
 
 /// The size of the open blob, which is fixed for its lifetime.
@@ -976,7 +1012,7 @@ fn blob_bytes(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(BLOB));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_blob_bytes(blob_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_blob_bytes(blob_of(ctx)?) } as f64,
   ))
 }
 
@@ -989,7 +1025,7 @@ fn blob_read(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
   enforce_method_arg_type!(ctx, 2, ArgType::Number);
 
-  let blob = blob_of(ctx);
+  let blob = blob_of(ctx)?;
   let size = unsafe { ffi::sqlite3_blob_bytes(blob) } as i64;
 
   let offset = whole(ctx.args[1].as_number(), "an offset")?;
@@ -1027,7 +1063,7 @@ fn blob_write(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
   enforce_method_arg_type!(ctx, 2, ArgType::Bytes);
 
-  let blob = blob_of(ctx);
+  let blob = blob_of(ctx)?;
   let size = unsafe { ffi::sqlite3_blob_bytes(blob) } as i64;
   let offset = whole(ctx.args[1].as_number(), "an offset")?;
   let data = ctx.args[2].with_bytes(|b| b.to_vec());
@@ -1064,7 +1100,7 @@ fn blob_reopen(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(BLOB));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let blob = blob_of(ctx);
+  let blob = blob_of(ctx)?;
   let rowid = whole(ctx.args[1].as_number(), "a rowid")?;
 
   let code = unsafe { ffi::sqlite3_blob_reopen(blob, rowid) };
@@ -1133,7 +1169,16 @@ fn backup_init(ctx: &mut ZuriContext) -> Result<Value, String> {
     return Err(util::last_error(destination));
   }
 
-  Ok(ctx.heap().alloc_ptr(BACKUP, SqliteBackup { backup }))
+  let source_state = {
+    let mut cell = ctx.args[2].as_ptr_cell().borrow_mut();
+    cell.downcast_mut::<SqliteConn>().unwrap().state_ptr()
+  };
+
+  // SAFETY: both states belong to the open connections the backup was
+  // just started between.
+  let backup = unsafe { SqliteBackup::track(backup, conn_state(ctx), source_state) };
+
+  Ok(ctx.heap().alloc_ptr(BACKUP, backup))
 }
 
 /// Copies up to `pages` pages, or all of them when `pages` is negative.
@@ -1148,7 +1193,7 @@ fn backup_step(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(BACKUP));
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
-  let backup = backup_of(ctx);
+  let backup = backup_of(ctx)?;
   let pages = whole(ctx.args[1].as_number(), "a page count")?;
 
   let code = unsafe { ffi::sqlite3_backup_step(backup, pages as c_int) };
@@ -1170,7 +1215,7 @@ fn backup_remaining(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(BACKUP));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_backup_remaining(backup_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_backup_remaining(backup_of(ctx)?) } as f64,
   ))
 }
 
@@ -1180,7 +1225,7 @@ fn backup_pagecount(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(BACKUP));
 
   Ok(Value::number(
-    unsafe { ffi::sqlite3_backup_pagecount(backup_of(ctx)) } as f64,
+    unsafe { ffi::sqlite3_backup_pagecount(backup_of(ctx)?) } as f64,
   ))
 }
 
@@ -1221,14 +1266,38 @@ fn whole(n: f64, what: &str) -> Result<i64, String> {
   Ok(n as i64)
 }
 
-fn blob_of(ctx: &ZuriContext) -> *mut ffi::sqlite3_blob {
-  let cell = ctx.args[0].as_ptr_cell().borrow();
-  cell.downcast_ref::<SqliteBlob>().unwrap().blob
+/// The open blob behind argument zero, or an error once its connection
+/// has closed and released it.
+fn blob_of(ctx: &ZuriContext) -> Result<*mut ffi::sqlite3_blob, String> {
+  let blob = {
+    let cell = ctx.args[0].as_ptr_cell().borrow();
+    cell.downcast_ref::<SqliteBlob>().unwrap().blob()
+  };
+
+  if blob.is_null() {
+    return Err(String::from(
+      "the connection this blob handle belongs to was closed",
+    ));
+  }
+
+  Ok(blob)
 }
 
-fn backup_of(ctx: &ZuriContext) -> *mut ffi::sqlite3_backup {
-  let cell = ctx.args[0].as_ptr_cell().borrow();
-  cell.downcast_ref::<SqliteBackup>().unwrap().backup
+/// The backup behind argument zero, or an error once either of its
+/// connections has closed and ended it.
+fn backup_of(ctx: &ZuriContext) -> Result<*mut ffi::sqlite3_backup, String> {
+  let backup = {
+    let cell = ctx.args[0].as_ptr_cell().borrow();
+    cell.downcast_ref::<SqliteBackup>().unwrap().backup()
+  };
+
+  if backup.is_null() {
+    return Err(String::from(
+      "a connection this backup copies between was closed",
+    ));
+  }
+
+  Ok(backup)
 }
 
 /// Registers `registration` on the connection behind argument zero,

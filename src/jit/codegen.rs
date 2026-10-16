@@ -9161,6 +9161,30 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     let ip_c = self.u64c(ip as u64);
     let new_base = self.fb.ins().iadd_imm_s(base, obj as i64 + 1);
     let cache = self.invoke_cache_addr(ip);
+
+    // `zuri_jit_invoke_prepare` only ever finds a compiled method on an
+    // instance. A list, a string, a byte stream or a dict skips it and
+    // the call it costs, going straight to the resolver that answers
+    // their built-in methods.
+    let recv = self.load_reg(obj);
+    let is_obj = self.is_obj(recv);
+    let tag_block = self.fb.create_block();
+    let instance_block = self.fb.create_block();
+    let other_block = self.fb.create_block();
+    let done_block = self.fb.create_block();
+    self.fb.ins().brif(is_obj, tag_block, &[], other_block, &[]);
+
+    self.fb.switch_to_block(tag_block);
+    let ptr = self.obj_ptr(recv);
+    let tag = self.obj_tag(ptr);
+    let tag_instance = self.i64c(object::OBJ_TAG_INSTANCE as i64);
+    let is_instance = self.fb.ins().icmp(IntCC::Equal, tag, tag_instance);
+    self
+      .fb
+      .ins()
+      .brif(is_instance, instance_block, &[], other_block, &[]);
+
+    self.fb.switch_to_block(instance_block);
     self.emit_fast_call(
       "zuri_jit_invoke_prepare",
       &[vm_p, base, obj_i, num_args_i, dst_i, name, func_ptr, ip_c],
@@ -9171,6 +9195,17 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       "zuri_jit_invoke",
       &[vm_p, base, obj_i, num_args_i, dst_i, name, cache],
     );
+    self.fb.ins().jump(done_block, &[]);
+
+    self.fb.switch_to_block(other_block);
+    self.call_checked(
+      "zuri_jit_invoke",
+      &[vm_p, base, obj_i, num_args_i, dst_i, name, cache],
+    );
+    self.resync_dst_from_memory(dst);
+    self.fb.ins().jump(done_block, &[]);
+
+    self.fb.switch_to_block(done_block);
   }
 
   /// How many bytecode ops an invoke-inlined accessor may have, and how
@@ -9863,6 +9898,11 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// whole call collapses to the couple of loads `emit_list_intrinsic_
   /// value` computes, no branch at all.
   fn emit_list_append(&mut self, ip: usize, dst: u8, obj: u8, method_const: u16) {
+    if self.proven_bytes(ip, obj) {
+      self.emit_bytes_append(ip, dst, obj, method_const);
+      return;
+    }
+
     let recv = self.load_reg(obj);
     let item = self.load_reg(obj + 2);
 
@@ -9887,10 +9927,25 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       let tag = self.obj_tag(ptr);
       let tag_list = self.i64c(object::OBJ_TAG_LIST as i64);
       let is_list = self.fb.ins().icmp(IntCC::Equal, tag, tag_list);
+      let not_list_block = self.fb.create_block();
       self
         .fb
         .ins()
-        .brif(is_list, push_block, &[], slow_block, &[]);
+        .brif(is_list, push_block, &[], not_list_block, &[]);
+
+      // `append` is a byte stream's method too, and one is answered
+      // inline the same way.
+      self.fb.switch_to_block(not_list_block);
+      let tag_bytes = self.i64c(object::OBJ_TAG_BYTES as i64);
+      let is_bytes = self.fb.ins().icmp(IntCC::Equal, tag, tag_bytes);
+      let bytes_block = self.fb.create_block();
+      self
+        .fb
+        .ins()
+        .brif(is_bytes, bytes_block, &[], slow_block, &[]);
+
+      self.fb.switch_to_block(bytes_block);
+      self.emit_bytes_append_body(ip, dst, obj, ptr, item, done_block, slow_block);
       ptr
     };
 
@@ -9950,6 +10005,97 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     self.fb.ins().jump(done_block, &[]);
 
     self.fb.switch_to_block(done_block);
+  }
+
+  /// `append` on a receiver `typeflow::BytesFacts` proves is a byte
+  /// stream, so no tag check is needed before the inline path.
+  fn emit_bytes_append(&mut self, ip: usize, dst: u8, obj: u8, method_const: u16) {
+    let recv = self.load_reg(obj);
+    let item = self.load_reg(obj + 2);
+
+    let slow_block = self.fb.create_block();
+    let done_block = self.fb.create_block();
+
+    let ptr = self.obj_ptr(recv);
+    self.emit_bytes_append_body(ip, dst, obj, ptr, item, done_block, slow_block);
+
+    self.fb.switch_to_block(slow_block);
+    self.emit_safepoint();
+    self.emit_generic_invoke(ip, dst, obj, method_const, 1);
+    self.resync_dst_from_memory(dst);
+    self.resync_receiver_from_memory(obj);
+    self.fb.ins().jump(done_block, &[]);
+
+    self.fb.switch_to_block(done_block);
+  }
+
+  /// `append` on a byte stream already known to be one, at `ptr`: the
+  /// byte is checked and written in place while the buffer has room,
+  /// and pushed by the runtime, which grows the buffer, once it is
+  /// full. Anything that is not a byte goes to `slow_block`, where the
+  /// interpreter's own method raises.
+  ///
+  /// Nothing here allocates on the collected heap, so the push needs
+  /// no safepoint and goes through `call_helper_raw`.
+  #[allow(clippy::too_many_arguments)]
+  fn emit_bytes_append_body(
+    &mut self,
+    ip: usize,
+    dst: u8,
+    obj: u8,
+    ptr: IrValue,
+    item: IrValue,
+    done_block: cranelift_codegen::ir::Block,
+    slow_block: cranelift_codegen::ir::Block,
+  ) {
+    if !self.proven_byte_value(ip, obj + 2) {
+      let checked = self.fb.create_block();
+      self.emit_byte_value_guard(ip, obj + 2, item, checked, slow_block);
+      self.fb.switch_to_block(checked);
+    }
+
+    let f = self.to_f64(item);
+    let byte = self.fb.ins().fcvt_to_sint_sat(types::I64, f);
+
+    let flags = cranelift_codegen::ir::MemFlagsData::trusted();
+    let len = self
+      .fb
+      .ins()
+      .load(types::I64, flags, ptr, object::obj_bytes_len_offset());
+    let cap = self
+      .fb
+      .ins()
+      .load(types::I64, flags, ptr, object::obj_bytes_cap_offset());
+    let fits = self.fb.ins().icmp(IntCC::UnsignedLessThan, len, cap);
+
+    let store_block = self.fb.create_block();
+    let grow_block = self.fb.create_block();
+    self.fb.ins().brif(fits, store_block, &[], grow_block, &[]);
+
+    self.fb.switch_to_block(store_block);
+    let data = self
+      .fb
+      .ins()
+      .load(types::I64, flags, ptr, object::obj_bytes_ptr_offset());
+    let addr = self.fb.ins().iadd(data, len);
+    let b8 = self.fb.ins().ireduce(types::I8, byte);
+    self.fb.ins().store(flags, b8, addr, 0);
+    let new_len = self.fb.ins().iadd_imm_s(len, 1);
+    self
+      .fb
+      .ins()
+      .store(flags, new_len, ptr, object::obj_bytes_len_offset());
+    let nil = self.u64c(value::NIL_VAL);
+    self.store_reg(dst, nil);
+    self.fb.ins().jump(done_block, &[]);
+
+    self.fb.switch_to_block(grow_block);
+    self.fb.set_cold_block(grow_block);
+    let vm_p = self.vm_param;
+    self.call_helper_raw("zuri_jit_bytes_push", &[vm_p, ptr, byte]);
+    let nil = self.u64c(value::NIL_VAL);
+    self.store_reg(dst, nil);
+    self.fb.ins().jump(done_block, &[]);
   }
 
   /// `Instr::Invoke` of a `DictIntrinsic`, laid out the same way

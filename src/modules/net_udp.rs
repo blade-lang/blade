@@ -7,7 +7,7 @@ use crate::builtins::enforce::{
   enforce_method_arg_type_any_of,
 };
 use crate::enforce_arg_count;
-use crate::modules::{BuiltinModuleDef, native, optional_number};
+use crate::modules::{BuiltinModuleDef, native, optional_number, read_partial};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
@@ -666,13 +666,12 @@ fn udp_peek(ctx: &mut ZuriContext) -> Result<Value, String> {
   let udp = ptr.downcast_ref::<ZuriUdp>().unwrap();
   let length = optional_number(ctx, 1, 1.0)? as usize;
 
-  let mut buffer = vec![0u8; length];
-  let len = udp.peek(&mut buffer)?;
+  let data = read_partial(length, |buffer| udp.peek(buffer))?;
 
-  if len > 0 {
-    Ok(ctx.heap().alloc_bytes(&buffer[0..len]))
-  } else {
+  if data.is_empty() {
     Ok(Value::nil())
+  } else {
+    Ok(ctx.heap().alloc_bytes(data))
   }
 }
 
@@ -684,9 +683,13 @@ fn udp_peek_from(ctx: &mut ZuriContext) -> Result<Value, String> {
   let udp = ptr.downcast_ref::<ZuriUdp>().unwrap();
   let length = optional_number(ctx, 1, 1.0)? as usize;
 
-  let mut buffer = vec![0u8; length];
-  let (received, addr) = udp.peek_from(&mut buffer)?;
-  buffer.truncate(received);
+  let mut sender = None;
+  let buffer = read_partial(length, |buffer| {
+    let (received, addr) = udp.peek_from(buffer)?;
+    sender = Some(addr);
+    Ok::<usize, String>(received)
+  })?;
+  let addr = sender.unwrap();
 
   let data_key = ctx.heap().alloc_string("data");
   let data_value = ctx.heap().alloc_bytes(buffer);
@@ -737,14 +740,9 @@ fn udp_receive(ctx: &mut ZuriContext) -> Result<Value, String> {
 
   let length = ctx.args[1].as_number() as usize;
 
-  let mut buffer = vec![0u8; length];
-  let bytes_read = udp.receive(buffer.as_mut_slice())?;
+  let data = read_partial(length, |buffer| udp.receive(buffer))?;
 
-  if bytes_read > 0 {
-    return Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]));
-  }
-
-  Ok(ctx.heap().alloc_bytes(Vec::new()))
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn udp_receive_from(ctx: &mut ZuriContext) -> Result<Value, String> {
@@ -757,10 +755,11 @@ fn udp_receive_from(ctx: &mut ZuriContext) -> Result<Value, String> {
 
   let length = ctx.args[1].as_number() as usize;
 
-  let mut buffer = vec![0u8; length];
-  let (bytes_read, _) = udp.receive_from(buffer.as_mut_slice())?;
+  let data = read_partial(length, |buffer| {
+    udp.receive_from(buffer).map(|(received, _)| received)
+  })?;
 
-  Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]))
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn udp_send(ctx: &mut ZuriContext) -> Result<Value, String> {

@@ -607,6 +607,10 @@ impl<'a, 'b> Lowering<'a, 'b> {
         self.fb.ins().store(flags, b, addr, 0);
         None
       },
+      Op::BytesAppend => {
+        self.bytes_append(av[0], av[1]);
+        None
+      },
       Op::ListGetOr => Some(self.list_get_or(av[0], av[1], av[2])),
       Op::DictGet => {
         let (d, k, fallback) = (
@@ -878,12 +882,12 @@ impl<'a, 'b> Lowering<'a, 'b> {
             let cell = cell as *const _ as u64;
             let (miss, done) = self.direct_call(DirectCallee::Cached(cell), call, ip, frame);
             self.fb.switch_to_block(miss);
-            let status = self.fast_call("zuri_jit_invoke_prepare", prepare, call, name, &args);
+            let status = self.invoke_resolved(offset + obj, prepare, call, name, &args);
             self.fb.ins().jump(done, &[status.into()]);
             self.fb.switch_to_block(done);
             self.fb.block_params(done)[0]
           },
-          _ => self.fast_call("zuri_jit_invoke_prepare", prepare, call, name, &args),
+          _ => self.invoke_resolved(offset + obj, prepare, call, name, &args),
         }
       },
       _ => self.call(name, &args),
@@ -995,6 +999,39 @@ impl<'a, 'b> Lowering<'a, 'b> {
     self.fb.ins().jump(done, &[status.into()]);
 
     self.fb.switch_to_block(slow_block);
+    let status = self.call(slow, slow_args);
+    self.fb.ins().jump(done, &[status.into()]);
+
+    self.fb.switch_to_block(done);
+    self.fb.block_params(done)[0]
+  }
+
+  /// An `Invoke` no compiled callee answered: the prepare-and-call path
+  /// for an instance, and the resolver alone for anything else. A list,
+  /// a string, a byte stream, a dict or a module never has a compiled
+  /// method for `zuri_jit_invoke_prepare` to find, so the call to it
+  /// would only ever come back empty.
+  fn invoke_resolved(
+    &mut self,
+    receiver: u8,
+    prepare: Vec<IrValue>,
+    call: FastCall,
+    slow: &'static str,
+    slow_args: &[IrValue],
+  ) -> IrValue {
+    let recv = self.load_reg(receiver);
+    let is_instance = self.obj_tag_is(recv, object::OBJ_TAG_INSTANCE);
+    let instance = self.fb.create_block();
+    let other = self.fb.create_block();
+    let done = self.fb.create_block();
+    self.fb.append_block_param(done, types::I64);
+    self.fb.ins().brif(is_instance, instance, &[], other, &[]);
+
+    self.fb.switch_to_block(instance);
+    let status = self.fast_call("zuri_jit_invoke_prepare", prepare, call, slow, slow_args);
+    self.fb.ins().jump(done, &[status.into()]);
+
+    self.fb.switch_to_block(other);
     let status = self.call(slow, slow_args);
     self.fb.ins().jump(done, &[status.into()]);
 
@@ -3115,6 +3152,47 @@ impl<'a, 'b> Lowering<'a, 'b> {
     self.fb.switch_to_block(grow);
     self.fb.set_cold_block(grow);
     self.call_pure("zuri_jit_list_push", &[self.vm, list, val]);
+    self.fb.ins().jump(done, &[]);
+    self.fb.switch_to_block(done);
+  }
+
+  /// `append()` on a byte stream: written in place while the buffer has
+  /// room, and pushed by the runtime, which grows it, once it is full.
+  fn bytes_append(&mut self, bytes: IrValue, byte: IrValue) {
+    let flags = MemFlagsData::trusted();
+    let len = self
+      .fb
+      .ins()
+      .load(types::I64, flags, bytes, object::obj_bytes_len_offset());
+    let cap = self
+      .fb
+      .ins()
+      .load(types::I64, flags, bytes, object::obj_bytes_cap_offset());
+    let fits = self.fb.ins().icmp(IntCC::UnsignedLessThan, len, cap);
+
+    let store = self.fb.create_block();
+    let grow = self.fb.create_block();
+    let done = self.fb.create_block();
+    self.fb.ins().brif(fits, store, &[], grow, &[]);
+
+    self.fb.switch_to_block(store);
+    let data = self
+      .fb
+      .ins()
+      .load(types::I64, flags, bytes, object::obj_bytes_ptr_offset());
+    let addr = self.fb.ins().iadd(data, len);
+    let b = self.fb.ins().ireduce(types::I8, byte);
+    self.fb.ins().store(flags, b, addr, 0);
+    let new_len = self.fb.ins().iadd_imm_s(len, 1);
+    self
+      .fb
+      .ins()
+      .store(flags, new_len, bytes, object::obj_bytes_len_offset());
+    self.fb.ins().jump(done, &[]);
+
+    self.fb.switch_to_block(grow);
+    self.fb.set_cold_block(grow);
+    self.call_pure("zuri_jit_bytes_push", &[self.vm, bytes, byte]);
     self.fb.ins().jump(done, &[]);
     self.fb.switch_to_block(done);
   }

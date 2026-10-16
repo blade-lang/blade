@@ -29,6 +29,7 @@ import .protocol { CURSOR_NONE, CURSOR_READ_ONLY, Protocol }
 import .results { exec_result, select_result }
 import .schema { MySqlSchema }
 import .statement { MySqlStatement }
+import .types { describe_columns }
 
 /**
  * How many compiled statements a connection keeps before releasing the
@@ -49,8 +50,11 @@ class MySqlConnection < DriverConnection {
   var _options = {}
   var _closed = false
 
+  # Compiled statements by their text, each
+  # `{ id, columns, described, used }`. `used` counts from `_clock`, so
+  # the one used longest ago is the one to let go.
   var _cache = {}
-  var _cache_order = []
+  var _clock = 0
   var _counter = 0
 
   var _savepoints = []
@@ -135,12 +139,14 @@ class MySqlConnection < DriverConnection {
     self._open()
 
     if values == nil or values.is_empty() {
-      return select_result(self._query(sql))
+      return select_result(self._query(sql), nil)
     }
 
     var compiled = self._compile(sql)
 
-    return select_result(self._run(compiled, values, CURSOR_NONE, sql))
+    return select_result(
+      self._run(compiled, values, CURSOR_NONE, sql), compiled,
+    )
   }
 
   open_cursor(sql: string, values: list, options: dict) {
@@ -296,7 +302,6 @@ class MySqlConnection < DriverConnection {
 
     self._closed = true
     self._cache = {}
-    self._cache_order = []
     self._protocol.quit()
   }
 
@@ -336,9 +341,12 @@ class MySqlConnection < DriverConnection {
   select_statement(statement, values: list) {
     self._open()
 
-    return select_result(self._run(
-      self._compiled_of(statement), values or [], CURSOR_NONE, statement.sql(),
-    ))
+    var compiled = self._compiled_of(statement)
+
+    return select_result(
+      self._run(compiled, values or [], CURSOR_NONE, statement.sql()),
+      compiled,
+    )
   }
 
   /**
@@ -437,6 +445,7 @@ class MySqlConnection < DriverConnection {
     return {
       id: statement.id(),
       columns: statement.raw_columns(),
+      described: statement.columns(),
     }
   }
 
@@ -464,43 +473,41 @@ class MySqlConnection < DriverConnection {
 
   # Compiles `sql`, reusing an already compiled copy when there is one.
   _compile(sql) {
+    self._clock++
+
     var cached = self._cache.get(sql, nil)
 
     if cached != nil {
-      self._touch(sql)
-
+      cached.used = self._clock
       return cached
     }
 
-    var prepared = self._protocol.prepare(sql)
-    var compiled = { id: prepared.id, columns: prepared.columns }
+    if self._cache.length() >= CACHE_LIMIT {
+      var oldest = nil
 
-    if self._cache_order.length() >= CACHE_LIMIT {
-      var oldest = self._cache_order[0]
-      self._cache_order = self._cache_order[1, self._cache_order.length()]
-
-      var evicted = self._cache.get(oldest, nil)
-
-      if evicted != nil {
-        self._cache.remove(oldest)
-        self._protocol.close_statement(evicted.id)
+      for text, entry in self._cache {
+        if oldest == nil or entry.used < self._cache[oldest].used {
+          oldest = text
+        }
       }
+
+      var evicted = self._cache[oldest]
+
+      self._cache.remove(oldest)
+      self._protocol.close_statement(evicted.id)
+    }
+
+    var prepared = self._protocol.prepare(sql)
+    var compiled = {
+      id: prepared.id,
+      columns: prepared.columns,
+      described: describe_columns(prepared.columns),
+      used: self._clock,
     }
 
     self._cache.set(sql, compiled)
-    self._cache_order.append(sql)
 
     return compiled
-  }
-
-  _touch(sql) {
-    var at = self._cache_order.index_of(sql)
-
-    if at != -1 {
-      self._cache_order.remove_at(at)
-    }
-
-    self._cache_order.append(sql)
   }
 
   _release_cache() {
@@ -513,7 +520,6 @@ class MySqlConnection < DriverConnection {
     }
 
     self._cache = {}
-    self._cache_order = []
   }
 
   _next_name(kind) {

@@ -19,7 +19,7 @@ use crate::builtins::enforce::{
 };
 use crate::enforce_arg_count;
 use crate::modules::net_tcp::{TCP_STREAM, TCP_STREAM_UPGRADED, ZuriTcp};
-use crate::modules::{BuiltinModuleDef, native, socket_error};
+use crate::modules::{BuiltinModuleDef, native, read_partial, socket_error};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
@@ -868,9 +868,8 @@ fn tls_read(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
   let length = ctx.args[1].as_number() as usize;
-  let mut buffer = vec![0u8; length];
-  let bytes_read = with_stream(ctx, |s| s.read(&mut buffer))?;
-  Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]))
+  let data = read_partial(length, |buffer| with_stream(ctx, |s| s.read(buffer)))?;
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn tls_read_exact(ctx: &mut ZuriContext) -> Result<Value, String> {

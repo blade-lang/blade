@@ -37,13 +37,20 @@ var DEFAULT_PAGES = 256
  */
 class Backup {
   var _handle
+  var _source
+  var _destination
   var _closed = false
 
   /**
    * @param ptr handle The native backup handle.
+   * @param SqliteConnection source The connection being copied.
+   * @param SqliteConnection destination The connection being copied
+   *    into.
    */
-  @new(handle) {
+  @new(handle, source, destination) {
     self._handle = handle
+    self._source = source
+    self._destination = destination
   }
 
   /**
@@ -166,6 +173,13 @@ class Backup {
     if self._closed {
       raise ClosedError(
         'this backup has already finished', { driver: 'sqlite' },
+      )
+    }
+
+    if self._source.is_closed() or self._destination.is_closed() {
+      raise ClosedError(
+        'a connection this backup copies between was closed',
+        { driver: 'sqlite' },
       )
     }
   }

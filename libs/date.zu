@@ -2911,6 +2911,17 @@ def _format_parse(s, fmt) {
  * @throws ValueError When the string cannot be parsed as a date.
  */
 def parse(date_string) {
+  # The shape nearly every machine writes is read before the general
+  # parser has to trim or classify anything. Whatever it does not take
+  # goes on to `_auto_parse`, which reads it the same way.
+  if is_string(date_string) {
+    var plain = _parse_plain_iso(date_string)
+
+    if plain != nil {
+      return plain
+    }
+  }
+
   return _auto_parse(date_string)
 }
 

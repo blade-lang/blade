@@ -246,6 +246,7 @@ class SqliteStatement < DriverStatement {
     self._lent = true
 
     return SqliteCursor(
+      self._connection,
       self._statement,
       self._columns,
       self._decoders,
@@ -300,6 +301,13 @@ class SqliteStatement < DriverStatement {
     if self._closed {
       raise ClosedError(
         'this prepared statement was closed',
+        { driver: 'sqlite', query: self._query },
+      )
+    }
+
+    if self._connection.is_closed() {
+      raise ClosedError(
+        'the connection this prepared statement belongs to was closed',
         { driver: 'sqlite', query: self._query },
       )
     }

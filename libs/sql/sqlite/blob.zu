@@ -40,15 +40,19 @@ import .errors { reraise }
  * @printable
  */
 class Blob {
+  var _connection
   var _handle
   var _closed = false
   var _writable = false
 
   /**
+   * @param SqliteConnection connection The connection the blob was
+   *    opened on.
    * @param ptr handle The native blob handle.
    * @param bool writable Whether it was opened for writing.
    */
-  @new(handle, writable) {
+  @new(connection, handle, writable) {
+    self._connection = connection
     self._handle = handle
     self._writable = writable
   }
@@ -160,6 +164,13 @@ class Blob {
   _open() {
     if self._closed {
       raise ClosedError('this blob handle was closed', { driver: 'sqlite' })
+    }
+
+    if self._connection.is_closed() {
+      raise ClosedError(
+        'the connection this blob handle belongs to was closed',
+        { driver: 'sqlite' },
+      )
     }
   }
 

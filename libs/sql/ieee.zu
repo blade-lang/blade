@@ -1,0 +1,76 @@
+/**
+ * @module ieee
+ *
+ * IEEE 754 floating point numbers from the bits a server sends.
+ *
+ * PostgreSQL and MySQL both send a `real` or `double precision` value
+ * in binary as its IEEE 754 bit pattern: big-endian for PostgreSQL and
+ * little-endian for MySQL. The adapters read the bits as integers in
+ * whichever order applies and hand them here, so the numbers come out
+ * the same either way.
+ *
+ * ```zuri
+ * import sql.ieee { double_of, single_of }
+ *
+ * echo double_of(0x3ff80000, 0)
+ * echo single_of(0xc0200000)
+ * ```
+ *
+ * Every pattern has an answer, including the ones for zero with either
+ * sign, the subnormal numbers, both infinities and NaN, and that answer
+ * is exactly the number the pattern encodes.
+ *
+ * @copyright 2026, Richard Ore and Zuri contributors
+ */
+
+/**
+ * The double whose bit pattern is `high` followed by `low`.
+ *
+ * The significand is at most 53 bits, which a double holds exactly, and
+ * scaling it by a power of two is exact as well, so assembling a value
+ * from its fields gives the number itself rather than an approximation.
+ *
+ * @param number high The upper 32 bits, from 0 to 4294967295: the sign,
+ *    the exponent and the top 20 bits of the fraction.
+ * @param number low The lower 32 bits of the fraction, from 0 to
+ *    4294967295.
+ * @returns number
+ */
+def double_of(high: number, low: number) {
+  var exponent = (high // 1048576) % 2048
+  var fraction = (high % 1048576) * 4294967296 + low
+  var magnitude
+
+  if exponent == 2047 {
+    magnitude = fraction == 0 ? 1 / 0 : 0 / 0
+  } else if exponent == 0 {
+    magnitude = fraction * 2 ** -1074
+  } else {
+    magnitude = (fraction + 4503599627370496) * 2 ** (exponent - 1075)
+  }
+
+  return high >= 2147483648 ? -magnitude : magnitude
+}
+
+/**
+ * The single precision number whose bit pattern is `bits`, as a double,
+ * which holds every single precision value exactly.
+ *
+ * @param number bits The 32 bits, from 0 to 4294967295.
+ * @returns number
+ */
+def single_of(bits: number) {
+  var exponent = (bits // 8388608) % 256
+  var fraction = bits % 8388608
+  var magnitude
+
+  if exponent == 255 {
+    magnitude = fraction == 0 ? 1 / 0 : 0 / 0
+  } else if exponent == 0 {
+    magnitude = fraction * 2 ** -149
+  } else {
+    magnitude = (fraction + 8388608) * 2 ** (exponent - 150)
+  }
+
+  return bits >= 2147483648 ? -magnitude : magnitude
+}

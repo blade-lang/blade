@@ -490,6 +490,11 @@ pub enum Op {
   /// Stores a byte. Operands: bytes pointer, index, the byte as an
   /// `I64` already checked to be in range.
   BytesStore,
+  /// `append()` on a byte stream: adds a byte to the end, growing the
+  /// buffer when it is full. Growing takes memory outside the collected
+  /// heap, so it never collects. Operands: bytes pointer, the byte as an
+  /// `I64` already checked to be in range.
+  BytesAppend,
   /// `get(idx, fallback)` on a list: the element, or the fallback when
   /// the index is out of range. Operands: list pointer, index, fallback.
   ListGetOr,
@@ -603,6 +608,7 @@ impl Op {
         | Op::BytesLen
         | Op::BytesLoad
         | Op::BytesStore
+        | Op::BytesAppend
         | Op::DictGet
         | Op::DictSet
         | Op::DictContains
@@ -638,6 +644,7 @@ impl Op {
         | Op::TaggedEq
         | Op::ListAppend
         | Op::BytesStore
+        | Op::BytesAppend
         | Op::DictSet
         | Op::NewList { .. }
         | Op::StoreElem

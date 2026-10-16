@@ -27,6 +27,7 @@ import compress.zlib
 import compress.zstd
 
 import ..errors { ConnectionError, ProtocolError }
+import ..ieee { double_of, single_of }
 
 /**
  * The largest payload a single packet can carry. A payload of exactly
@@ -331,7 +332,12 @@ class Cursor {
    * @returns number
    */
   int2() {
-    return self._little(2)
+    var at = self._at
+    self._need(2)
+    self._at = at + 2
+
+    var data = self._data
+    return data[at] + data[at + 1] * 256
   }
 
   /**
@@ -340,7 +346,12 @@ class Cursor {
    * @returns number
    */
   int3() {
-    return self._little(3)
+    var at = self._at
+    self._need(3)
+    self._at = at + 3
+
+    var data = self._data
+    return data[at] + data[at + 1] * 256 + data[at + 2] * 65536
   }
 
   /**
@@ -349,7 +360,13 @@ class Cursor {
    * @returns number
    */
   int4() {
-    return self._little(4)
+    var at = self._at
+    self._need(4)
+    self._at = at + 4
+
+    var data = self._data
+    return data[at] + data[at + 1] * 256 + data[at + 2] * 65536 +
+      data[at + 3] * 16777216
   }
 
   /**
@@ -360,6 +377,26 @@ class Cursor {
    */
   int8() {
     return self._little(8)
+  }
+
+  /**
+   * Reads a little-endian IEEE 754 single.
+   *
+   * @returns number
+   */
+  float4() {
+    return single_of(self.int4())
+  }
+
+  /**
+   * Reads a little-endian IEEE 754 double.
+   *
+   * @returns number
+   */
+  float8() {
+    var low = self.int4()
+
+    return double_of(self.int4(), low)
   }
 
   /**
@@ -661,6 +698,25 @@ class PacketStream {
    * @returns bytes
    */
   read_packet() {
+    # Nearly every packet is one an earlier read already brought in
+    # whole, and nearly every message is a single packet.
+    if self._compression == 'none' {
+      var raw = self._raw
+      var at = self._raw_at
+      var held = raw.length() - at
+
+      if held >= 4 {
+        var length = raw[at] + raw[at + 1] * 256 + raw[at + 2] * 65536
+
+        if length < MAX_PAYLOAD and held - 4 >= length {
+          self._sequence = (raw[at + 3] + 1) & 0xff
+          self._raw_at = at + 4 + length
+
+          return length == 0 ? bytes(0) : raw[at + 4, at + 4 + length]
+        }
+      }
+    }
+
     var parts = nil
     var size = MAX_PAYLOAD
 
@@ -812,6 +868,18 @@ class PacketStream {
       return bytes(0)
     }
 
+    if self._raw.length() - self._raw_at < count {
+      self._fill(count)
+    }
+
+    var at = self._raw_at
+    self._raw_at = at + count
+
+    return self._raw[at, at + count]
+  }
+
+  # Reads from the stream until at least `count` bytes are held.
+  _fill(count: number) {
     while self._raw.length() - self._raw_at < count {
       var chunk
 
@@ -838,10 +906,5 @@ class PacketStream {
 
       self._raw.extend(chunk)
     }
-
-    var at = self._raw_at
-    self._raw_at = at + count
-
-    return self._raw[at, at + count]
   }
 }

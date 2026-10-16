@@ -15,6 +15,8 @@ pub mod value;
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Arc, Weak};
 
 use libsqlite3_sys as ffi;
 
@@ -79,6 +81,95 @@ pub struct Trapped {
   pub message: String,
 }
 
+/// A handle SQLite gave out against a connection, shared between the
+/// Zuri object that uses it and the connection it belongs to.
+///
+/// A connection has to release whatever is still open on it when it
+/// closes. Otherwise `sqlite3_close_v2` keeps the database open as a
+/// zombie until the collector happens to reach the last statement, and
+/// a WAL database keeps its log, and its lock, until then. Both sides
+/// read the pointer through this slot, and whichever releases it first
+/// swaps in null, so the other sees it gone and nothing is released
+/// twice.
+pub struct Handle<T> {
+  ptr: AtomicPtr<T>,
+}
+
+impl<T> Handle<T> {
+  pub fn new(ptr: *mut T) -> Arc<Self> {
+    Arc::new(Handle {
+      ptr: AtomicPtr::new(ptr),
+    })
+  }
+
+  /// The live pointer, or null once it has been released.
+  pub fn get(&self) -> *mut T {
+    self.ptr.load(Ordering::Acquire)
+  }
+
+  /// Takes the pointer out and leaves null behind, so whoever gets a
+  /// non-null pointer here is the one that releases it.
+  pub fn take(&self) -> *mut T {
+    self.ptr.swap(std::ptr::null_mut(), Ordering::AcqRel)
+  }
+}
+
+/// Something open against a connection, held weakly so a handle the
+/// program drops is still collected and finalized as before.
+pub enum Owned {
+  Statement(Weak<Handle<ffi::sqlite3_stmt>>),
+  Blob(Weak<Handle<ffi::sqlite3_blob>>),
+  Backup(Weak<Handle<ffi::sqlite3_backup>>),
+}
+
+impl Owned {
+  fn alive(&self) -> bool {
+    match self {
+      Owned::Statement(handle) => handle.strong_count() > 0,
+      Owned::Blob(handle) => handle.strong_count() > 0,
+      Owned::Backup(handle) => handle.strong_count() > 0,
+    }
+  }
+
+  /// Releases the handle if its Zuri object is still alive and has not
+  /// released it already.
+  fn release(&self) {
+    match self {
+      Owned::Statement(handle) => {
+        if let Some(handle) = handle.upgrade() {
+          let stmt = handle.take();
+
+          if !stmt.is_null() {
+            unsafe { ffi::sqlite3_finalize(stmt) };
+          }
+        }
+      },
+      Owned::Blob(handle) => {
+        if let Some(handle) = handle.upgrade() {
+          let blob = handle.take();
+
+          if !blob.is_null() {
+            unsafe { ffi::sqlite3_blob_close(blob) };
+          }
+        }
+      },
+      Owned::Backup(handle) => {
+        if let Some(handle) = handle.upgrade() {
+          let backup = handle.take();
+
+          if !backup.is_null() {
+            unsafe { ffi::sqlite3_backup_finish(backup) };
+          }
+        }
+      },
+    }
+  }
+}
+
+/// The fewest entries `ConnState::owned` holds before it is swept for
+/// handles that have gone.
+const SWEEP_FLOOR: usize = 64;
+
 /// Per-connection state that callbacks reach without touching the Zuri
 /// heap at all.
 ///
@@ -102,6 +193,12 @@ pub struct ConnState {
   /// torn down with the connection, and boxed so the addresses handed
   /// to SQLite as user data stay put as the vector grows.
   pub registrations: Vec<Box<callback::Registration>>,
+  /// Every statement, blob and backup opened against this connection
+  /// that may still be open. Swept of the ones that have gone whenever
+  /// it doubles, so a connection preparing statements it never closes
+  /// does not grow this without bound.
+  owned: Vec<Owned>,
+  sweep_at: usize,
 }
 
 impl ConnState {
@@ -123,6 +220,29 @@ impl ConnState {
   /// cue to fail immediately rather than run more Zuri code.
   pub fn poisoned(&self) -> bool {
     self.trapped.is_some()
+  }
+
+  /// Records a handle opened against this connection, so closing the
+  /// connection releases it.
+  pub fn track(&mut self, owned: Owned) {
+    if self.owned.len() >= self.sweep_at {
+      self.owned.retain(Owned::alive);
+      self.sweep_at = (self.owned.len() * 2).max(SWEEP_FLOOR);
+    }
+
+    self.owned.push(owned);
+  }
+
+  /// Releases every handle still open against this connection.
+  ///
+  /// This runs while the callback registrations are still in place.
+  /// Finalizing a statement in the middle of an aggregate ends that
+  /// aggregate, which calls its final step, and the registration it
+  /// calls through has to still be there.
+  fn release_owned(&mut self) {
+    for owned in self.owned.drain(..) {
+      owned.release();
+    }
   }
 }
 
@@ -147,6 +267,8 @@ impl SqliteConn {
         db,
         trapped: None,
         registrations: Vec::new(),
+        owned: Vec::new(),
+        sweep_at: SWEEP_FLOOR,
       }),
     }
   }
@@ -161,13 +283,16 @@ impl SqliteConn {
     self.state.as_mut() as *mut ConnState
   }
 
-  /// Closes the connection and releases every callback slot it held.
+  /// Closes the connection, releasing every statement, blob and backup
+  /// still open on it and every callback slot it held.
   ///
-  /// `sqlite3_close_v2` rather than `sqlite3_close` so an unfinalized
-  /// statement leaves the handle to be reclaimed once the statement
-  /// goes, instead of refusing to close and leaking the database file
-  /// handle for the life of the process.
+  /// Once the open handles are released the connection closes
+  /// outright. `sqlite3_close_v2` is still the call, for the handles
+  /// this module does not hand out, such as a statement a virtual table
+  /// keeps.
   pub fn close(&mut self, vm: &mut VM) {
+    self.state.release_owned();
+
     for registration in self.state.registrations.drain(..) {
       registration.release(vm);
     }
@@ -193,6 +318,8 @@ impl Drop for SqliteConn {
   /// VM and there is none here; those slots stay occupied until the VM
   /// ends. Closing a connection explicitly is what frees them.
   fn drop(&mut self) {
+    self.state.release_owned();
+
     if !self.state.db.is_null() {
       close_db(self.state.db);
       self.state.db = std::ptr::null_mut();
@@ -205,8 +332,12 @@ impl Drop for SqliteConn {
 /// It keeps the connection's state pointer so a native driving this
 /// statement can find a trapped error after `sqlite3_step` returns
 /// without having to be handed the connection as well.
+///
+/// `state` is only read after a call on the statement itself has
+/// succeeded, and the statement is released before its connection
+/// goes, so a statement whose connection has closed never reaches it.
 pub struct SqliteStmt {
-  pub stmt: *mut ffi::sqlite3_stmt,
+  pub handle: Arc<Handle<ffi::sqlite3_stmt>>,
   pub state: *mut ConnState,
 }
 
@@ -215,10 +346,30 @@ pub struct SqliteStmt {
 unsafe impl Send for SqliteStmt {}
 
 impl SqliteStmt {
+  /// Wraps a freshly prepared statement and records it on `state`.
+  ///
+  /// # Safety
+  ///
+  /// `state` must be the live state of the connection that prepared
+  /// `stmt`.
+  pub unsafe fn track(stmt: *mut ffi::sqlite3_stmt, state: *mut ConnState) -> Self {
+    let handle = Handle::new(stmt);
+
+    unsafe { &mut *state }.track(Owned::Statement(Arc::downgrade(&handle)));
+
+    SqliteStmt { handle, state }
+  }
+
+  /// The statement, or null once it or its connection has closed.
+  pub fn stmt(&self) -> *mut ffi::sqlite3_stmt {
+    self.handle.get()
+  }
+
   pub fn finalize(&mut self) {
-    if !self.stmt.is_null() {
-      unsafe { ffi::sqlite3_finalize(self.stmt) };
-      self.stmt = std::ptr::null_mut();
+    let stmt = self.handle.take();
+
+    if !stmt.is_null() {
+      unsafe { ffi::sqlite3_finalize(stmt) };
     }
   }
 }
@@ -232,17 +383,37 @@ impl Drop for SqliteStmt {
 /// An open blob handle, for incremental reads and writes against a
 /// single blob-valued cell.
 pub struct SqliteBlob {
-  pub blob: *mut ffi::sqlite3_blob,
+  pub handle: Arc<Handle<ffi::sqlite3_blob>>,
 }
 
 // SAFETY: as for `SqliteConn`.
 unsafe impl Send for SqliteBlob {}
 
 impl SqliteBlob {
+  /// Wraps a freshly opened blob and records it on `state`.
+  ///
+  /// # Safety
+  ///
+  /// `state` must be the live state of the connection that opened
+  /// `blob`.
+  pub unsafe fn track(blob: *mut ffi::sqlite3_blob, state: *mut ConnState) -> Self {
+    let handle = Handle::new(blob);
+
+    unsafe { &mut *state }.track(Owned::Blob(Arc::downgrade(&handle)));
+
+    SqliteBlob { handle }
+  }
+
+  /// The blob, or null once it or its connection has closed.
+  pub fn blob(&self) -> *mut ffi::sqlite3_blob {
+    self.handle.get()
+  }
+
   pub fn close(&mut self) {
-    if !self.blob.is_null() {
-      unsafe { ffi::sqlite3_blob_close(self.blob) };
-      self.blob = std::ptr::null_mut();
+    let blob = self.handle.take();
+
+    if !blob.is_null() {
+      unsafe { ffi::sqlite3_blob_close(blob) };
     }
   }
 }
@@ -254,22 +425,50 @@ impl Drop for SqliteBlob {
 }
 
 /// An online backup in progress between two connections.
+///
+/// Recorded on both, since closing either one ends the copy.
 pub struct SqliteBackup {
-  pub backup: *mut ffi::sqlite3_backup,
+  pub handle: Arc<Handle<ffi::sqlite3_backup>>,
 }
 
 // SAFETY: as for `SqliteConn`.
 unsafe impl Send for SqliteBackup {}
 
 impl SqliteBackup {
+  /// Wraps a freshly started backup and records it on both of its
+  /// connections.
+  ///
+  /// # Safety
+  ///
+  /// `destination` and `source` must be the live states of the two
+  /// connections `backup` copies between.
+  pub unsafe fn track(
+    backup: *mut ffi::sqlite3_backup,
+    destination: *mut ConnState,
+    source: *mut ConnState,
+  ) -> Self {
+    let handle = Handle::new(backup);
+
+    unsafe { &mut *destination }.track(Owned::Backup(Arc::downgrade(&handle)));
+    unsafe { &mut *source }.track(Owned::Backup(Arc::downgrade(&handle)));
+
+    SqliteBackup { handle }
+  }
+
+  /// The backup, or null once it has finished or either connection has
+  /// closed.
+  pub fn backup(&self) -> *mut ffi::sqlite3_backup {
+    self.handle.get()
+  }
+
   pub fn finish(&mut self) -> i32 {
-    if self.backup.is_null() {
+    let backup = self.handle.take();
+
+    if backup.is_null() {
       return ffi::SQLITE_OK;
     }
 
-    let code = unsafe { ffi::sqlite3_backup_finish(self.backup) };
-    self.backup = std::ptr::null_mut();
-    code
+    unsafe { ffi::sqlite3_backup_finish(backup) }
   }
 }
 

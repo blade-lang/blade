@@ -232,6 +232,7 @@ class SqliteConnection < DriverConnection {
     }
 
     return SqliteCursor(
+      self,
       statement,
       described.columns,
       described.decoders,
@@ -450,7 +451,7 @@ class SqliteConnection < DriverConnection {
       reraise(error, nil)
     }
 
-    return Blob(handle, wanted)
+    return Blob(self, handle, wanted)
   }
 
   /**
@@ -479,7 +480,7 @@ class SqliteConnection < DriverConnection {
       reraise(error, nil)
     }
 
-    return Backup(handle)
+    return Backup(handle, self, destination)
   }
 
   /**
@@ -696,7 +697,13 @@ class SqliteConnection < DriverConnection {
   }
 
   /**
-   * Closes the connection, releasing every statement it cached.
+   * Closes the connection.
+   *
+   * Everything still open on it closes with it: prepared statements,
+   * cursors, blob handles and backups. Using one afterwards raises
+   * `ClosedError`, and closing one is still safe. When this is the
+   * last connection to a database in WAL mode, SQLite checkpoints the
+   * log and removes the `-wal` and `-shm` files as it closes.
    *
    * Safe to call more than once.
    */

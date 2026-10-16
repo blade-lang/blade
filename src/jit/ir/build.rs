@@ -2171,6 +2171,22 @@ impl<'a> Builder<'a> {
         let c = self.value(Op::DictContains, vec![d, key], Ty::Bool);
         self.set_cond(dst, c);
       },
+      (_, Builtin::Append) => {
+        // A byte is a whole number from 0 to 255; anything else raises,
+        // which the guards leave to the interpreter.
+        let b = self.int(obj + 2, ip);
+        let zero = self.value(Op::ConstI64(0), vec![], Ty::I64);
+        let top = self.value(Op::ConstI64(255), vec![], Ty::I64);
+        let low = self.value(Op::ICmp(Cmp::Ge), vec![b, zero], Ty::Bool);
+        let high = self.value(Op::ICmp(Cmp::Le), vec![b, top], Ty::Bool);
+        for ok in [low, high] {
+          let state = self.state(ip);
+          self.push(Op::Guard(GuardKind::True), vec![ok], None, Some(state));
+        }
+        self.push(Op::BytesAppend, vec![p, b], None, None);
+        let nil = self.value(Op::ConstTagged(Value::nil().to_bits()), vec![], Ty::Tagged);
+        self.set_tagged(dst, nil);
+      },
       (_, Builtin::Key) => {
         let len = match tag {
           OBJ_TAG_STR => {
@@ -2862,6 +2878,7 @@ enum Builtin {
   Contains,
   Key,
   Value,
+  Append,
 }
 
 impl Builtin {
@@ -2877,12 +2894,13 @@ impl Builtin {
       (OBJ_TAG_DICT, "contains") => Builtin::Contains,
       (OBJ_TAG_STR | OBJ_TAG_BYTES | OBJ_TAG_RANGE, "@key") => Builtin::Key,
       (OBJ_TAG_STR | OBJ_TAG_BYTES | OBJ_TAG_RANGE, "@value") => Builtin::Value,
+      (OBJ_TAG_BYTES, "append") => Builtin::Append,
       _ => return None,
     };
     let fits = match method {
       Builtin::Length | Builtin::IsEmpty | Builtin::Ord => num_args == 0,
       Builtin::Set => num_args == 2,
-      Builtin::Contains | Builtin::Key | Builtin::Value => num_args == 1,
+      Builtin::Contains | Builtin::Key | Builtin::Value | Builtin::Append => num_args == 1,
       // Bytes take no fallback.
       Builtin::Get => num_args == 1 || (num_args == 2 && tag == OBJ_TAG_DICT),
     };

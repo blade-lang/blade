@@ -163,6 +163,10 @@ fn visit(
         versions.elems = bump(next);
       },
       Op::BytesStore => versions.elems = bump(next),
+      Op::BytesAppend => {
+        versions.header = bump(next);
+        versions.elems = bump(next);
+      },
       Op::DictSet => versions.dicts = bump(next),
       Op::StoreUpval => versions.upvals = bump(next),
       Op::StoreGlobal(slot) => {

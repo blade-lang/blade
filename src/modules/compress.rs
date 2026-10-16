@@ -14,6 +14,7 @@ use crate::{
   enforce_arg_count, enforce_arg_range, enforce_arg_type, enforce_arg_type_any_of,
   modules::{
     BuiltinModuleDef, compress_util::DeflateDecoderError, native, optional_bool, optional_number,
+    read_partial,
   },
   vm::{object::ZuriContext, value::Value, vm::VM},
 };
@@ -1364,17 +1365,11 @@ fn zstd_decoder_read(ctx: &mut ZuriContext) -> Result<Value, String> {
     .unwrap();
 
   let length = ctx.args[1].as_number() as usize;
+  let data = read_partial(length, |buffer| {
+    decoder.read(buffer).map_err(|x| x.to_string())
+  })?;
 
-  let mut buffer = vec![0u8; length];
-  let bytes_read = decoder
-    .read(buffer.as_mut_slice())
-    .map_err(|x| x.to_string())?;
-
-  if bytes_read > 0 {
-    return Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]));
-  }
-
-  Ok(ctx.heap().alloc_bytes(Vec::new()))
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn zstd_decoder_read_exact(ctx: &mut ZuriContext) -> Result<Value, String> {
@@ -1554,17 +1549,11 @@ fn lz4_decoder_read(ctx: &mut ZuriContext) -> Result<Value, String> {
     .unwrap();
 
   let length = ctx.args[1].as_number() as usize;
+  let data = read_partial(length, |buffer| {
+    decoder.read(buffer).map_err(|x| x.to_string())
+  })?;
 
-  let mut buffer = vec![0u8; length];
-  let bytes_read = decoder
-    .read(buffer.as_mut_slice())
-    .map_err(|x| x.to_string())?;
-
-  if bytes_read > 0 {
-    return Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]));
-  }
-
-  Ok(ctx.heap().alloc_bytes(Vec::new()))
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn lz4_decoder_read_exact(ctx: &mut ZuriContext) -> Result<Value, String> {

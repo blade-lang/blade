@@ -73,17 +73,30 @@ class ResultSet {
     self.columns = columns or []
     self.command = command
 
-    var names = self.columns.map(@(column) => column.name)
+    var names = []
 
-    self.rows = (rows or []).map(@(values) {
+    for column in self.columns {
+      names.append(column.name)
+    }
+
+    # Plain loops rather than map() with a closure: every query builds
+    # one of these, and calling back into Zuri from map() for each row
+    # and column costs more than the rows themselves.
+    var count = names.length()
+    var built = []
+
+    for values in rows or [] {
       var row = {}
+      var present = values.length()
 
-      for index, name in names {
-        row.set(name, index < values.length() ? values[index] : nil)
+      iter var index = 0; index < count; index++ {
+        row.set(names[index], index < present ? values[index] : nil)
       }
 
-      return row
-    })
+      built.append(row)
+    }
+
+    self.rows = built
   }
 
   /**

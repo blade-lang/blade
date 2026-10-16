@@ -28,11 +28,24 @@ import .errors { raise_for }
 import .messages { * }
 import .types {
   read_int16, read_uint16, read_int32, read_uint32, text_of, write_int16,
-  write_int32,
+  write_int32, as_bytes,
 }
 
 # Every column read as text, which is what a simple query returns.
-var _AS_TEXT = { decode: [], oids: [] }
+var _AS_TEXT = { read: [], oids: [] }
+
+# The tags a reply to a query is mostly made of, as the bytes
+# `Reader.next_message()` returns.
+var _DATA_ROW = DATA_ROW.ord()
+var _COMMAND_COMPLETE = COMMAND_COMPLETE.ord()
+var _READY_FOR_QUERY = READY_FOR_QUERY.ord()
+var _BIND_COMPLETE = BIND_COMPLETE.ord()
+
+# Where a message's length goes, filled in once the body is finished.
+var _LENGTH_SLOT = bytes(4)
+
+# A NULL in a DataRow: a length of -1, read unsigned.
+var _NULL_SIZE = 4294967295
 
 # What ends nearly every request: run the unnamed portal to the end,
 # then Sync. Built once, since it never varies.
@@ -196,7 +209,7 @@ class Protocol {
       }
 
       if message.tag == DATA_ROW {
-        rows.append(self._read_data_row(message.payload, _AS_TEXT))
+        rows.append(self._read_data_row(message.payload, 0, _AS_TEXT))
         continue
       }
 
@@ -331,38 +344,50 @@ class Protocol {
     var portal = request.get('portal', '')
     var limit = request.get('limit', 0)
 
-    var body = portal.to_bytes().to_list()
-    body.append(0)
-    body.extend(codecs.formats)
+    var message = bytes(0)
+    message.append(66)
+    message.extend(_LENGTH_SLOT)
+
+    if portal != '' {
+      message.extend(portal.to_bytes())
+    }
+
+    message.append(0)
+    message.extend(codecs.formats)
 
     iter var index = 0; index < values.length(); index++ {
       var value = values[index]
 
       if value == nil {
-        body.extend(_NULL_LENGTH)
+        message.extend(_NULL_LENGTH)
         continue
       }
 
-      var encoded = encoders[index](value)
+      var encoded = as_bytes(encoders[index](value))
 
-      body.extend(write_int32(encoded.length()))
-      body.extend(encoded)
+      message.extend(write_int32(encoded.length()))
+      message.extend(encoded)
     }
 
-    body.extend(codecs.results)
+    message.extend(codecs.results)
+
+    # The length counts itself but not the tag.
+    var length = message.length() - 1
+    message[1] = (length // 16777216) & 0xff
+    message[2] = (length >> 16) & 0xff
+    message[3] = (length >> 8) & 0xff
+    message[4] = length & 0xff
 
     # Bind, Execute and Sync go out in one write, so the server reads
     # the whole request at once.
-    var bind = frame('B', body)
-
     if portal == '' and limit == 0 {
-      self._send(bind + _EXECUTE_ALL)
+      message.extend(_EXECUTE_ALL)
     } else {
-      self._send(
-        bind + Writer().cstring(portal).int32(limit).frame('E') +
-          Writer().frame('S'),
-      )
+      message.extend(Writer().cstring(portal).int32(limit).frame('E'))
+      message.extend(Writer().frame('S'))
     }
+
+    self._send(message)
 
     return self._collect(request, codecs.decoders)
   }
@@ -515,7 +540,7 @@ class Protocol {
     # the registry can encode the type the server inferred, text
     # otherwise. The parameter count that follows is part of it too,
     # since every request binds exactly that many.
-    var formats = name.to_bytes().to_list()
+    var formats = name.to_bytes()
     formats.append(0)
     formats.extend(write_int16(parameters.length()))
 
@@ -550,44 +575,68 @@ class Protocol {
     return codecs
   }
 
-  # The decoder for each column, nil for one read as text, and the
-  # OIDs the decoders are handed.
+  # The reader for each column, nil for one read as text, and the OIDs
+  # the readers are handed.
   _decoders_of(columns) {
-    var decode = []
+    var read = []
     var oids = []
 
     for column in columns {
-      decode.append(self._registry.decoder_for(column.oid))
+      read.append(self._registry.reader_for(column.oid))
       oids.append(column.oid)
     }
 
-    return { decode, oids }
+    return { read, oids }
   }
 
   # Reads everything up to ReadyForQuery, gathering rows.
+  #
+  # The messages nearly every reply is made of are read where they
+  # arrived in the reader's buffer. The rest are rare enough to be
+  # copied out first.
   _collect(request, decoders) {
     var columns = request.get('columns', [])
     var rows = []
     var tag = ''
     var suspended = false
     var failure = nil
+    var reader = self._reader
 
     while true {
-      var message = self._read()
+      var kind = reader.next_message()
 
-      if message.tag == DATA_ROW {
-        rows.append(self._read_data_row(message.payload, decoders))
+      if kind == _DATA_ROW {
+        rows.append(self._read_data_row(reader.buffer, reader.start, decoders))
+        continue
+      }
+
+      if kind == _COMMAND_COMPLETE {
+        # A string, and the zero byte that ends it.
+        tag = reader.buffer[reader.start, reader.end - 1].to_string()
+        continue
+      }
+
+      if kind == _READY_FOR_QUERY {
+        self._status = reader.buffer[reader.start].chr()
+        break
+      }
+
+      if kind == _BIND_COMPLETE {
+        continue
+      }
+
+      var message = {
+        tag: kind.chr(),
+        payload: reader.buffer[reader.start, reader.end],
+      }
+
+      if self._absorb(message) {
         continue
       }
 
       if message.tag == ROW_DESCRIPTION {
         columns = self._read_row_description(message.payload)
         decoders = self._decoders_of(columns)
-        continue
-      }
-
-      if message.tag == COMMAND_COMPLETE {
-        tag = read_cstring(message.payload, 0).value
         continue
       }
 
@@ -599,11 +648,6 @@ class Protocol {
       if message.tag == ERROR_RESPONSE {
         failure = self._read_error(message.payload)
         continue
-      }
-
-      if message.tag == READY_FOR_QUERY {
-        self._status = message.payload[0].chr()
-        break
       }
     }
 
@@ -669,40 +713,41 @@ class Protocol {
     return columns
   }
 
-  # Reads a DataRow into a list of values.
+  # Reads the DataRow whose body starts at `at` in `buffer` into a list
+  # of values.
   #
   # Each column is read the way this connection asked for it in Bind,
-  # binary wherever `decoders` has a decoder for it. That is decided
+  # binary wherever `decoders` has a reader for it. That is decided
   # here rather than read off the column descriptor: the descriptor
   # comes from Describe, which runs before Bind and therefore always
   # reports text, whatever the values actually arrive as.
-  _read_data_row(payload, decoders) {
-    var count = read_int16(payload, 0)
-    var decode = decoders.decode
+  _read_data_row(buffer, at: number, decoders) {
+    var count = (buffer[at] << 8) | buffer[at + 1]
+    var readers = decoders.read
     var oids = decoders.oids
-    var known = decode.length()
+    var known = readers.length()
     var values = []
-    var at = 2
+    var offset = at + 2
 
     iter var index = 0; index < count; index++ {
-      var size = read_int32(payload, at)
-      at += 4
+      var size = (buffer[offset] * 16777216) + (buffer[offset + 1] << 16) +
+        (buffer[offset + 2] << 8) + buffer[offset + 3]
+      offset += 4
 
-      if size == -1 {
+      if size == _NULL_SIZE {
         values.append(nil)
         continue
       }
 
-      var slice = payload[at, at + size]
-      at += size
+      var reader = index < known ? readers[index] : nil
 
-      var decoder = index < known ? decode[index] : nil
-
-      if decoder == nil {
-        values.append(text_of(slice))
+      if reader == nil {
+        values.append(size == 0 ? '' : buffer[offset, offset + size].to_string())
       } else {
-        values.append(decoder(slice, oids[index]))
+        values.append(reader(buffer, offset, size, oids[index]))
       }
+
+      offset += size
     }
 
     return values
@@ -746,47 +791,56 @@ class Protocol {
     }
   }
 
-  # Reads the next message, absorbing the three the server may send at
+  # Reads the next message, absorbing the ones the server may send at
   # any point so that no caller has to expect them.
   _read() {
     while true {
       var message = self._reader.read_message()
 
-      if message.tag == PARAMETER_STATUS {
-        var name = read_cstring(message.payload, 0)
-        var value = read_cstring(message.payload, name.next)
-        self.parameters.set(name.value, value.value)
-
-        continue
+      if !self._absorb(message) {
+        return message
       }
-
-      if message.tag == NOTICE_RESPONSE {
-        self.notices.append(self._read_error(message.payload))
-        continue
-      }
-
-      if message.tag == NOTIFICATION_RESPONSE {
-        var channel = read_cstring(message.payload, 4)
-        var body = read_cstring(message.payload, channel.next)
-
-        self.notifications.append({
-          pid: read_uint32(message.payload, 0),
-          channel: channel.value,
-          payload: body.value,
-        })
-
-        continue
-      }
-
-      if message.tag == BACKEND_KEY_DATA {
-        self._pid = read_uint32(message.payload, 0)
-        self._secret = read_uint32(message.payload, 4)
-
-        continue
-      }
-
-      return message
     }
+  }
+
+  # Takes in a message the server may send at any point: a setting it
+  # changed, a notice, a notification or the key for cancelling. True
+  # when `message` was one of them.
+  _absorb(message) {
+    if message.tag == PARAMETER_STATUS {
+      var name = read_cstring(message.payload, 0)
+      var value = read_cstring(message.payload, name.next)
+      self.parameters.set(name.value, value.value)
+
+      return true
+    }
+
+    if message.tag == NOTICE_RESPONSE {
+      self.notices.append(self._read_error(message.payload))
+      return true
+    }
+
+    if message.tag == NOTIFICATION_RESPONSE {
+      var channel = read_cstring(message.payload, 4)
+      var body = read_cstring(message.payload, channel.next)
+
+      self.notifications.append({
+        pid: read_uint32(message.payload, 0),
+        channel: channel.value,
+        payload: body.value,
+      })
+
+      return true
+    }
+
+    if message.tag == BACKEND_KEY_DATA {
+      self._pid = read_uint32(message.payload, 0)
+      self._secret = read_uint32(message.payload, 4)
+
+      return true
+    }
+
+    return false
   }
 
   # Works through whatever the server asks for until it says the

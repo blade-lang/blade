@@ -59,6 +59,11 @@
 - The optimizing tier tests a parameter annotated with a class inline, as that class or any class descending from it, where it used to leave the whole function to the baseline tier. A call to a function with such a parameter is built into a hot loop like any other, and a class imported into the file is checked the same way.
 - A function a loop made hot is no longer kept in the baseline tier by an instance it constructs once a call, outside every loop, such as before the loop starts. The construction goes through its helper, and the loop is built in the optimizing tier.
 - The optimizing tier keeps track of globals one at a time. Storing a global leaves what it knows about every other global alone, a read straight after a store uses the value stored, and a loop that stores to one global no longer reloads every other one on each pass.
+- Closing a SQLite connection closes everything still open on it: prepared statements, cursors, blob handles and backups, each of which raises `ClosedError` from then on and is still safe to close. With nothing left holding the database, the last connection to a WAL database checkpoints it and removes its `-wal` and `-shm` files as it closes.
+- A MariaDB connection has the server keep each prepared statement's column definitions, which the server then sends only when they change instead of with every execution. MySQL has no equivalent for prepared statements and sends them every time.
+- A PostgreSQL encoder registered on a `TypeRegistry` returns the value's binary form as `bytes` or as a list of byte values, and the built-in encoders return `bytes`.
+- A PostgreSQL integer parameter is checked against the type the server expects. A value an `int2`, `int4`, `int8` or `oid` cannot hold raises `QueryError`, where it was cut down to its low bytes and stored as a different number. A bigint bound to an `int8` is sent exactly, and an `int8` beyond 2 ** 53 either side of zero reads back as a bigint, as it does on SQLite and MySQL.
+- `bytes.append()` is compiled inline by both tiers, as `list.append()` is. A method called on a list, string, byte stream, dictionary or module goes straight to its built-in method, without first trying the path that finds a compiled method on an instance.
 
 # CHANGELOGS
 

@@ -64,12 +64,12 @@ var SSL_REQUEST = 80877103
 /**
  * Builds one outgoing message.
  *
- * Bytes accumulate in a list and `frame()` puts the tag and length on
- * the front, since the length cannot be known until the body is
+ * The body accumulates as bytes and `frame()` puts the tag and length
+ * on the front, since the length cannot be known until the body is
  * finished.
  */
 class Writer {
-  var _bytes = []
+  var _bytes = bytes(0)
 
   /**
    * Appends one byte.
@@ -114,7 +114,7 @@ class Writer {
    * @returns Writer
    */
   cstring(value: string) {
-    self._bytes.extend(value.to_bytes().to_list())
+    self._bytes.extend(value.to_bytes())
     self._bytes.append(0)
 
     return self
@@ -123,11 +123,11 @@ class Writer {
   /**
    * Appends raw bytes.
    *
-   * @param list values
+   * @param bytes|list values The bytes, or a list of byte values.
    * @returns Writer
    */
-  raw(values: list) {
-    self._bytes.extend(values)
+  raw(values) {
+    self._bytes.extend(is_list(values) ? bytes(values) : values)
 
     return self
   }
@@ -149,7 +149,7 @@ class Writer {
    * @returns bytes
    */
   frame(tag) {
-    var out = []
+    var out = bytes(0)
 
     if tag != nil {
       out.append(tag.ord())
@@ -159,27 +159,28 @@ class Writer {
     out.extend(write_int32(self._bytes.length() + 4))
     out.extend(self._bytes)
 
-    return bytes(out)
+    return out
   }
 }
 
 /**
- * A finished message from a body already built as a list of bytes.
+ * A finished message from a body already built.
  *
  * The same framing `Writer.frame()` gives, for a body put together
  * without a `Writer`.
  *
  * @param string tag
- * @param list body
+ * @param bytes body
  * @returns bytes
  */
-def frame(tag: string, body: list) {
-  var out = [tag.ord()]
+def frame(tag: string, body: bytes) {
+  var out = bytes(0)
 
+  out.append(tag.ord())
   out.extend(write_int32(body.length() + 4))
   out.extend(body)
 
-  return bytes(out)
+  return out
 }
 
 /**
@@ -197,7 +198,32 @@ var READ_SIZE = 65536
  */
 class Reader {
   var _stream
-  var _buffer = bytes(0)
+
+  /**
+   * What has been read from the stream and not yet taken, with the
+   * body of the message `next_message()` last returned inside it.
+   *
+   * Valid until the next read, which may replace it.
+   *
+   * @type bytes
+   */
+  var buffer = bytes(0)
+
+  /**
+   * Where the body of the message `next_message()` last returned
+   * starts in `buffer`.
+   *
+   * @type number
+   */
+  var start = 0
+
+  /**
+   * Where that body ends in `buffer`, exclusive.
+   *
+   * @type number
+   */
+  var end = 0
+
   var _at = 0
 
   /**
@@ -217,7 +243,7 @@ class Reader {
    *    nothing that follows may treat them as protected.
    */
   upgrade(stream) {
-    if self._at < self._buffer.length() {
+    if self._at < self.buffer.length() {
       raise ConnectionError(
         'the server sent data before the TLS handshake finished',
         { driver: 'postgres' },
@@ -225,7 +251,7 @@ class Reader {
     }
 
     self._stream = stream
-    self._buffer = bytes(0)
+    self.buffer = bytes(0)
     self._at = 0
   }
 
@@ -246,36 +272,61 @@ class Reader {
     var at = self._at
     self._at = at + count
 
-    return self._buffer[at, at + count]
+    return self.buffer[at, at + count]
   }
 
   /**
-   * Reads the next message.
+   * Reads the next message and returns its tag as a number, leaving its
+   * body where it arrived: from `start` to `end` in `buffer`.
+   *
+   * Nothing is copied, which is what a reply of many rows wants. The
+   * body is only there until the next read; `read_message()` is the
+   * form to use for one that has to outlast it.
+   *
+   * @returns number The tag's byte, such as 68 for a `DataRow`.
+   * @throws ConnectionError if the server closes first.
+   */
+  next_message() {
+    if self.buffer.length() - self._at < 5 {
+      self._fill(5)
+    }
+
+    var buffer = self.buffer
+    var at = self._at
+    var length = read_uint32(buffer, at + 1)
+
+    if buffer.length() - at < length + 1 {
+      self._fill(length + 1)
+      buffer = self.buffer
+      at = self._at
+    }
+
+    self.start = at + 5
+    self.end = at + length + 1
+    self._at = self.end
+
+    return buffer[at]
+  }
+
+  /**
+   * Reads the next message as a copy of its own.
    *
    * @returns dict `{ tag, payload }`
+   * @throws ConnectionError if the server closes first.
    */
   read_message() {
-    self._fill(5)
-
-    var length = read_uint32(self._buffer, self._at + 1)
-
-    self._fill(length + 1)
-
-    var buffer = self._buffer
-    var at = self._at
-
-    self._at = at + length + 1
+    var tag = self.next_message()
 
     return {
-      tag: buffer[at].chr(),
-      payload: buffer[at + 5, at + length + 1],
+      tag: tag.chr(),
+      payload: self.buffer[self.start, self.end],
     }
   }
 
   # Reads from the stream until at least `count` unread bytes are
   # buffered.
   _fill(count) {
-    while self._buffer.length() - self._at < count {
+    while self.buffer.length() - self._at < count {
       var chunk
 
       catch {
@@ -297,11 +348,11 @@ class Reader {
       # What was read already is dropped before more is added, so the
       # buffer only ever holds what has not been read yet.
       if self._at > 0 {
-        self._buffer = self._buffer[self._at, self._buffer.length()]
+        self.buffer = self.buffer[self._at, self.buffer.length()]
         self._at = 0
       }
 
-      self._buffer.extend(chunk)
+      self.buffer.extend(chunk)
     }
   }
 }

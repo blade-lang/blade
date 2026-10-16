@@ -7,7 +7,7 @@ use crate::builtins::enforce::{
   enforce_method_arg_type_any_of,
 };
 use crate::enforce_arg_count;
-use crate::modules::{BuiltinModuleDef, native, optional_number, socket_error};
+use crate::modules::{BuiltinModuleDef, native, optional_number, read_partial, socket_error};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
@@ -630,13 +630,12 @@ fn tcp_peek(ctx: &mut ZuriContext) -> Result<Value, String> {
   let tcp = ptr.downcast_ref::<ZuriTcp>().unwrap();
   let length = optional_number(ctx, 1, 1.0)? as usize;
 
-  let mut buffer = vec![0u8; length];
-  let len = tcp.peek(&mut buffer)?;
+  let data = read_partial(length, |buffer| tcp.peek(buffer))?;
 
-  if len > 0 {
-    Ok(ctx.heap().alloc_bytes(buffer))
-  } else {
+  if data.is_empty() {
     Ok(Value::nil())
+  } else {
+    Ok(ctx.heap().alloc_bytes(data))
   }
 }
 
@@ -676,15 +675,9 @@ fn tcp_read(ctx: &mut ZuriContext) -> Result<Value, String> {
   let tcp = ptr.downcast_mut::<ZuriTcp>().unwrap();
 
   let length = ctx.args[1].as_number() as usize;
+  let data = read_partial(length, |buffer| tcp.read(buffer))?;
 
-  let mut buffer = vec![0u8; length];
-  let bytes_read = tcp.read(buffer.as_mut_slice())?;
-
-  if bytes_read > 0 {
-    return Ok(ctx.heap().alloc_bytes(&buffer[0..bytes_read]));
-  }
-
-  Ok(ctx.heap().alloc_bytes(Vec::new()))
+  Ok(ctx.heap().alloc_bytes(data))
 }
 
 fn tcp_read_exact(ctx: &mut ZuriContext) -> Result<Value, String> {

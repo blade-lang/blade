@@ -290,6 +290,73 @@ def test_backup() {
   echo 'test_backup passed'
 }
 
+def test_close_releases_open_handles() {
+  var path = os.join_paths(ROOT, 'closing.db')
+  var db = sql.open('sqlite://${path}?journal_mode=wal')
+
+  db.exec('create table t (id integer primary key, n integer, data blob)', nil)
+
+  for n in 0..(5) {
+    db.exec('insert into t (n, data) values (?, zeroblob(8))', [n])
+  }
+
+  # Everything here is still open when the connection closes.
+  var prepared = db.prepare('select n from t where id = ?')
+  assert prepared.fetch_value([2], nil) == 1
+
+  var cursor = db.stream('select n from t order by id', nil, nil)
+  assert cursor.next().n == 0
+
+  var blob = db.native().blob('main', 't', 'data', 1, false)
+  assert blob.length() == 8
+
+  var destination = sql.open(':memory:')
+  var copying = db.native().backup(destination.native(), nil)
+  copying.step(1)
+
+  assert file(path + '-wal').exists()
+
+  db.close()
+
+  # SQLite checkpoints and removes the log only once nothing is left
+  # open on the last connection, so its absence shows the close
+  # released every one of them.
+  assert !file(path + '-wal').exists()
+  assert !file(path + '-shm').exists()
+
+  var uses = [
+    @() => prepared.fetch_value([2], nil),
+    @() => cursor.next(),
+    @() => blob.read(0, 8),
+    @() => copying.step(1),
+  ]
+
+  for attempt in uses {
+    var raised = nil
+
+    catch {
+      attempt()
+    } as error {
+      raised = error
+    }
+
+    assert instance_of(raised, ClosedError)
+  }
+
+  # Closing each of them afterwards stays safe.
+  prepared.close()
+  cursor.close()
+  blob.close()
+  copying.close()
+  destination.close()
+
+  var reopened = sql.open('sqlite://${path}')
+  assert reopened.count('t', nil) == 5
+  reopened.close()
+
+  echo 'test_close_releases_open_handles passed'
+}
+
 test_scalar_functions()
 test_function_errors()
 test_aggregates()
@@ -298,5 +365,6 @@ test_hooks()
 test_authorizer()
 test_blobs()
 test_backup()
+test_close_releases_open_handles()
 
 os.remove_dir(ROOT, true)

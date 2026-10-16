@@ -1,0 +1,62 @@
+# bytes.append() in compiled code: written in place while the buffer has
+# room and grown when it is full, with the interpreter's own error for a
+# value that is not a byte, and lists sharing the same call site.
+
+def fill(count, step) {
+  var out = bytes(0)
+  iter var i = 0; i < count; i++ {
+    out.append((i * step) % 256)
+  }
+  return out
+}
+
+def push_all(target, values) {
+  for v in values {
+    target.append(v)
+  }
+  return target
+}
+
+def checksum(b) {
+  var total = 0
+  iter var i = 0; i < b.length(); i++ {
+    total = total + b[i] * (i % 7 + 1)
+  }
+  return total
+}
+
+var result = nil
+iter var r = 0; r < 400; r++ {
+  result = fill(r * 3, 7)
+}
+echo result.length()
+echo checksum(result)
+
+# The receiver here is never proven a byte stream.
+var grown = bytes(0)
+iter var r = 0; r < 300; r++ {
+  push_all(grown, [r % 256, 255 - r % 256])
+}
+echo grown.length()
+echo checksum(grown)
+echo grown.append(1)
+
+# A list and a byte stream at the same site.
+var mixed = []
+iter var r = 0; r < 200; r++ {
+  push_all(r % 2 == 0 ? mixed : grown, [r % 256])
+}
+echo mixed.length()
+echo grown.length()
+
+for bad in [256, -1, 1.5, 'a', nil] {
+  catch {
+    push_all(bytes(0), [3, bad])
+  } as e {
+    echo '${bad}: ${e.type}: ${e.message}'
+  }
+}
+
+var after = bytes(0)
+push_all(after, [1, 2, 3])
+echo after

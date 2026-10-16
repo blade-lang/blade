@@ -362,6 +362,50 @@ def test_prepared() {
   echo 'test_prepared passed'
 }
 
+def test_columns_under_statements() {
+  var db = connect()
+
+  db.exec_script('create table shapes (id int primary key, name varchar(20))')
+  db.exec("insert into shapes values (1, 'one')", nil)
+
+  # Run more than once, so a server that caches column definitions has
+  # left them out by the time the table changes.
+  var all = db.prepare('select * from shapes where id = ?')
+  assert all.fetch_one([1]).keys() == ['id', 'name']
+  assert all.fetch_one([1]).keys() == ['id', 'name']
+
+  db.exec('alter table shapes add column made datetime', nil)
+  db.exec("update shapes set made = '2026-01-02 03:04:05'", nil)
+
+  for round in 0..2 {
+    var row = all.fetch_one([1])
+    assert row.keys() == ['id', 'name', 'made']
+    assert instance_of(row.made, date.Date)
+    assert row.made.day == 2
+  }
+
+  db.exec('alter table shapes drop column name', nil)
+  assert all.fetch_one([1]).keys() == ['id', 'made']
+
+  # And through a server-side cursor, twice over the same statement.
+  var range = db.prepare('select id from shapes where id >= ? order by id')
+
+  for round in 0..2 {
+    var ids = []
+
+    for row in range.stream([1], { batch: 1 }) {
+      ids.append(row.id)
+    }
+
+    assert ids == [1]
+  }
+
+  all.close()
+  range.close()
+  finish(db)
+  echo 'test_columns_under_statements passed'
+}
+
 def test_errors() {
   var db = connect()
 
@@ -670,6 +714,7 @@ def run_against(dsn, label) {
   test_transactions()
   test_cursors()
   test_prepared()
+  test_columns_under_statements()
   test_errors()
   test_multiple_results()
   test_schema()

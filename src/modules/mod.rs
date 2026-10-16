@@ -41,9 +41,67 @@ mod zuri_parse;
 mod zuri_reflect;
 mod zuri_watch;
 
+use std::cell::RefCell;
+
 use crate::vm::object::{NativeFn, NativeFunction, ZuriContext};
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
+
+/// The largest read that goes through the reused buffer. A bigger one
+/// gets a buffer of its own, so a single huge read does not hold that
+/// much memory for the rest of the thread's life.
+const READ_SCRATCH_LIMIT: usize = 1 << 20;
+
+thread_local! {
+  static READ_SCRATCH: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Runs a read of at most `length` bytes and returns the bytes that
+/// arrived.
+///
+/// The length a socket or decoder read takes is an upper bound, and the
+/// read usually returns far less: a database client asks for 64 KiB to
+/// receive a reply of a few hundred bytes. Zeroing a fresh buffer of
+/// the whole length on every call costs more than the read itself, so
+/// the bytes land in a buffer reused across calls and only the filled
+/// part is copied out. A read that runs while another is using that
+/// buffer, which a callback during a TLS handshake could cause, takes a
+/// fresh one instead.
+pub(crate) fn read_partial<E>(
+  length: usize,
+  read: impl FnOnce(&mut [u8]) -> Result<usize, E>,
+) -> Result<Vec<u8>, E> {
+  let mut read = Some(read);
+
+  let reused = READ_SCRATCH.with(|cell| {
+    if length > READ_SCRATCH_LIMIT {
+      return None;
+    }
+
+    let mut scratch = cell.try_borrow_mut().ok()?;
+
+    if scratch.len() < length {
+      scratch.resize(length, 0);
+    }
+
+    let read = read.take().unwrap();
+
+    Some(read(&mut scratch[..length]).map(|count| scratch[..count].to_vec()))
+  });
+
+  if let Some(result) = reused {
+    return result;
+  }
+
+  let mut buffer = vec![0u8; length];
+  let count = (read.take().unwrap())(&mut buffer)?;
+
+  if count == length {
+    return Ok(buffer);
+  }
+
+  Ok(buffer[..count].to_vec())
+}
 
 #[derive(Clone, Copy)]
 pub struct BuiltinModuleDef {

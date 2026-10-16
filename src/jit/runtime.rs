@@ -3195,6 +3195,21 @@ pub unsafe extern "C" fn zuri_jit_list_push(_vm_ptr: *mut VM, list_ptr: u64, ite
   OK
 }
 
+/// `bytes.append(b)` once the buffer is full: pushes the byte, growing
+/// the buffer. Compiled code has already checked `byte` is a whole
+/// number from 0 to 255 and writes in place itself while there is room.
+///
+/// # Safety
+///
+/// `bytes_ptr` is a live byte stream object's pointer.
+pub unsafe extern "C" fn zuri_jit_bytes_push(_vm_ptr: *mut VM, bytes_ptr: u64, byte: u64) -> u64 {
+  let obj = bytes_ptr as *const crate::vm::object::Obj;
+  if let crate::vm::object::Obj::Bytes(data) = unsafe { &*obj } {
+    data.borrow_mut().push(byte as u8);
+  }
+  OK
+}
+
 pub unsafe extern "C" fn zuri_jit_write_barrier(_vm_ptr: *mut VM, obj_ptr: u64) -> u64 {
   crate::vm::object::write_barrier(obj_ptr as *const crate::vm::object::Obj);
   OK
@@ -3334,6 +3349,7 @@ pub fn helper_table() -> Vec<HelperSpec> {
     spec2!(zuri_jit_wrap_i64),
     spec2!(zuri_jit_ensure_registers),
     spec3!(zuri_jit_list_push),
+    spec3!(zuri_jit_bytes_push),
     spec2!(zuri_jit_str_ascii),
     spec2!(zuri_jit_str_length),
     spec2!(zuri_jit_str_ord),

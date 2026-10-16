@@ -541,6 +541,34 @@ def test_auth_switch() {
   echo 'test_auth_switch passed'
 }
 
+def test_ed25519_switch_keeps_every_byte() {
+  var stream = ScriptedStream()
+
+  # MariaDB's ed25519 scramble is 32 random bytes with nothing after
+  # them, so one that happens to end in zero is still 32 bytes long.
+  var nonce = bytes(32)
+
+  for index in 0..31 {
+    nonce[index] = index * 7 + 1
+  }
+
+  stream.feed(greeting('5.5.5-11.4.2-MariaDB', auth.NATIVE, SERVER_CAPS), 0)
+
+  var switch = p.Writer()
+  switch.byte(0xfe).cstring(auth.ED25519).raw(nonce)
+  stream.feed(switch.payload(), 2)
+  stream.feed(ok_packet(0, 0, 2), 4)
+
+  connected(stream, { user: 'alice', password: 'secret' })
+
+  var sent = sent_packets(stream)
+  assert sent.length() == 2
+  assert sent[1].payload == auth.ed25519_password('secret', nonce)
+  assert sent[1].payload != auth.ed25519_password('secret', nonce[0, 31])
+
+  echo 'test_ed25519_switch_keeps_every_byte passed'
+}
+
 def test_query_result() {
   var stream = ScriptedStream()
   stream.feed(greeting('8.0.36', auth.NATIVE, SERVER_CAPS), 0)
@@ -885,6 +913,7 @@ test_mariadb_is_recognised()
 test_caching_sha2_fast_path()
 test_caching_sha2_full_path()
 test_auth_switch()
+test_ed25519_switch_keeps_every_byte()
 test_query_result()
 test_long_trailer_is_not_a_row()
 test_server_errors_map_to_classes()

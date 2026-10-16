@@ -26,7 +26,7 @@ use crate::builtins::enforce::{
 };
 #[cfg(unix)]
 use crate::enforce_arg_count;
-use crate::modules::{BuiltinModuleDef, native};
+use crate::modules::{BuiltinModuleDef, native, read_partial};
 use crate::vm::object::ZuriContext;
 use crate::vm::value::Value;
 use crate::vm::vm::VM;
@@ -522,19 +522,16 @@ fn unix_read(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 1, ArgType::Number);
 
   let length = ctx.args[1].as_number() as usize;
-  let mut buffer = vec![0u8; length];
 
-  let read = {
+  let buffer = {
     let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
     let socket = ptr.downcast_mut::<ZuriUnix>().unwrap();
+    let stream = socket.stream_mut()?;
 
-    socket
-      .stream_mut()?
-      .read(buffer.as_mut_slice())
-      .map_err(|e| e.to_string())?
+    read_partial(length, |buffer| {
+      stream.read(buffer).map_err(|e| e.to_string())
+    })?
   };
-
-  buffer.truncate(read);
 
   Ok(ctx.heap().alloc_bytes(buffer))
 }

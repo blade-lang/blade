@@ -18,6 +18,7 @@
 import _sqlite
 
 import ..driver { DriverCursor }
+import ..errors { ClosedError }
 import .errors { reraise }
 import .types { decode_row }
 
@@ -27,6 +28,7 @@ import .types { decode_row }
  * @printable
  */
 class SqliteCursor < DriverCursor {
+  var _connection
   var _statement
   var _columns = []
   var _decoders = []
@@ -39,6 +41,8 @@ class SqliteCursor < DriverCursor {
   var _first
 
   /**
+   * @param SqliteConnection connection The connection the statement
+   *    belongs to.
    * @param ptr statement A prepared native statement, already bound.
    * @param list columns Column descriptors.
    * @param list decoders The columns that need converting, from
@@ -52,7 +56,8 @@ class SqliteCursor < DriverCursor {
    *    taken, `row` being the row it read or nil when it found none;
    *    nil when the cursor takes every step itself.
    */
-  @new(statement, columns, decoders, query, owned, first) {
+  @new(connection, statement, columns, decoders, query, owned, first) {
+    self._connection = connection
     self._statement = statement
     self._columns = columns
     self._decoders = decoders
@@ -96,6 +101,16 @@ class SqliteCursor < DriverCursor {
       outcome = _sqlite.step(self._statement)
     } as error {
       self.close()
+
+      # Closing the connection releases the statement, so a step that
+      # failed on a closed connection failed for that reason.
+      if self._connection.is_closed() {
+        raise ClosedError(
+          'the connection this cursor reads from was closed',
+          { driver: 'sqlite', query: self._query },
+        )
+      }
+
       reraise(error, self._query)
     }
 

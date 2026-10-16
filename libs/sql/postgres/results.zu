@@ -49,11 +49,13 @@ var _NAMES = {}
 def type_name_of(oid: number) {
   if _NAMES.is_empty() {
     for name, value in OIDS {
-      _NAMES.set('${value}', name.lower())
+      _NAMES.set(value, name.lower())
     }
   }
 
-  return _NAMES.get('${oid}', '${oid}')
+  var name = _NAMES.get(oid, nil)
+
+  return name != nil ? name : '${oid}'
 }
 
 /**

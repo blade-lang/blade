@@ -1,0 +1,13 @@
+1197
+607284
+600
+306047
+nil
+100
+701
+256: Error: 'append' expects an integer in 0..=255, got 256
+-1: Error: 'append' expects an integer in 0..=255, got -1
+1.5: Error: 'append' expects an integer in 0..=255, got 1.5
+a: Error: 'append' expects a number, got string
+nil: Error: 'append' expects a number, got nil
+(01 02 03)
