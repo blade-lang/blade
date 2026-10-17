@@ -40,8 +40,13 @@ def _field(head: string, name: string) {
 }
 
 def _answer(socket, body: string) {
-  socket.write_all('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: '
-    + body.to_bytes().length().to_string() + '\r\nConnection: close\r\n\r\n' + body)
+  socket.write_all(
+    'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: '
+      + body
+        .to_bytes()
+        .length()
+        .to_string() + '\r\nConnection: close\r\n\r\n' + body,
+  )
 }
 
 def serve(ready, seen, count) {

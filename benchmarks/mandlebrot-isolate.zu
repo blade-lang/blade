@@ -36,8 +36,7 @@ class Mandelbrot {
     self.shift = size % 8 == 0 ? 0 : (8 - size % 8)
   }
 
-  computeRows(job)
-  {
+  computeRows(job) {
     var rows = []
     iter var y = job[0]; y < job[1]; y++ {
       rows.append(self.computeRow(y))
@@ -45,8 +44,7 @@ class Mandelbrot {
     return rows
   }
 
-  computeRow(y)
-  {
+  computeRow(y) {
     var bits = 0
     var row = []
 
@@ -63,10 +61,12 @@ class Mandelbrot {
         Zr = ZrN - ZiN + Cr
         ZiN = Zi * Zi
         ZrN = Zr * Zr
-      } while (!(ZiN + ZrN > 4.0) and i--> 0)
+      } while (!(ZiN + ZrN > 4.0) and i-- > 0)
 
       bits = bits << 1
-      if (i == 0) bits++
+      if (i == 0) {
+        bits++
+      }
 
       if (x % 8 == 7) {
         row.append(bits)
@@ -81,8 +81,7 @@ class Mandelbrot {
   }
 }
 
-def compute(size)
-{
+def compute(size) {
   echo "P4\n${size} ${size}\n"
 
   var m = Mandelbrot(size)

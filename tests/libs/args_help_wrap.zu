@@ -9,5 +9,9 @@ import args
 var p = args.Parser('wraptest', false)
 p.set_terminal_width(50)
 p.description = 'A description long enough that it must wrap across more than one line at this width.'
-p.add_option('config', 'A fairly long help description for this option, long enough to wrap too', {short_name: 'c', type: args.STRING})
+p.add_option(
+  'config',
+  'A fairly long help description for this option, long enough to wrap too',
+  { short_name: 'c', type: args.STRING },
+)
 p.parse(['-h'])

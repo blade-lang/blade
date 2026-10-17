@@ -5,5 +5,5 @@
 import args
 
 var p = args.Parser('unknownopt', false)
-p.add_option('name', 'Name', {short_name: 'n', type: args.STRING})
+p.add_option('name', 'Name', { short_name: 'n', type: args.STRING })
 p.parse(['--bogus'])

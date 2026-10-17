@@ -37,7 +37,7 @@ const TARGETS = [
   'GGTA',
   'GGTATT',
   'GGTATTTTAATT',
-  'GGTATTTTAATTTATAGT'
+  'GGTATTTTAATTTATAGT',
 ]
 
 # Size of each read from stdin.

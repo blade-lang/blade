@@ -33,7 +33,7 @@ def emits(value, expected, options) {
 
   assert text == expected,
     'expected ' + expected.replace('/\n/', '\\n') +
-    ' but got ' + text.replace('/\n/', '\\n')
+      ' but got ' + text.replace('/\n/', '\\n')
 
   return toml.parse(text)
 }
@@ -71,7 +71,8 @@ assert escaped['a'] == 'quote" back\\ tab\t', 'escapes round-trip'
 
 var control = toml.dump({ a: (1).chr() })
 
-assert control == 'a = "\\u0001"\n', 'a control character becomes a short escape'
+assert control == 'a = "\\u0001"\n',
+  'a control character becomes a short escape'
 assert toml.parse(control)['a'] == (1).chr(), 'and reads back as itself'
 ok('escaping, including control characters')
 
@@ -120,7 +121,9 @@ emits({ s: 'one\ntwo' }, 's = """one\ntwo"""\n', nil)
 emits({ s: 'one\ntwo' }, 's = "one\\ntwo"\n', { multiline_strings: false })
 ok('multiline_strings chooses between triple quotes and an escape')
 
-emits({ pt: { x: 1, y: 2 } }, 'pt = { x = 1, y = 2 }\n', { inline_threshold: 40 })
+emits(
+  { pt: { x: 1, y: 2 } }, 'pt = { x = 1, y = 2 }\n', { inline_threshold: 40 },
+)
 emits({ pt: { x: 1, y: 2 } }, '[pt]\nx = 1\ny = 2\n', nil)
 emits({ pt: { x: 1, nested: { deep: 1 } } },
   '[pt]\nx = 1\nnested = { deep = 1 }\n', { inline_threshold: 200 })
@@ -153,7 +156,9 @@ emits({ a: toml.DateTime(1979, 5, 27, 0, 32, 0, 0, -420) },
   'a = 1979-05-27T00:32:00-07:00\n', nil)
 ok('all four temporal types write as TOML spells them')
 
-var round = toml.parse(toml.dump({ a: toml.DateTime(2026, 9, 19, 13, 4, 5, 500000000, 60) }))
+var round = toml.parse(toml.dump({
+  a: toml.DateTime(2026, 9, 19, 13, 4, 5, 500000000, 60),
+}))
 
 assert round['a'].equals(toml.DateTime(2026, 9, 19, 13, 4, 5, 500000000, 60)),
   'a timestamp with a fraction and an offset round-trips'
@@ -179,7 +184,8 @@ var loop = [1]
 
 loop.append(loop)
 
-assert raises(@() => toml.dump({ xs: loop })), 'a list holding itself is refused'
+assert raises(@() => toml.dump({ xs: loop })),
+  'a list holding itself is refused'
 ok('a structure that contains itself is refused rather than recursed')
 
 var err = nil

@@ -32,7 +32,8 @@ ok('num_cpus() reports a positive count that agrees with isolate.cpu_count()')
 # hostname()
 # ---------------------------------------------------------------------------
 var host = os.hostname()
-assert is_string(host) and host != '', 'hostname() must return a non-empty string'
+assert is_string(host) and host != '',
+  'hostname() must return a non-empty string'
 ok('hostname() returns a non-empty string')
 
 # ---------------------------------------------------------------------------
@@ -49,15 +50,18 @@ ok('total_memory()/free_memory() report sane, consistent positive byte counts')
 # uptime()
 # ---------------------------------------------------------------------------
 var up = os.uptime()
-assert up > 0, 'uptime() must be positive on any machine that has been running for any time at all'
+assert up > 0,
+  'uptime() must be positive on any machine that has been running for any time at all'
 ok('uptime() reports a positive number of seconds')
 
 # ---------------------------------------------------------------------------
 # info()
 # ---------------------------------------------------------------------------
 var info = os.info()
-assert is_string(info['sysname']) and info['sysname'] != '', 'info().sysname must be a non-empty string'
-assert is_string(info['nodename']) and info['nodename'] != '', 'info().nodename must be a non-empty string'
+assert is_string(info['sysname']) and info['sysname'] != '',
+  'info().sysname must be a non-empty string'
+assert is_string(info['nodename']) and info['nodename'] != '',
+  'info().nodename must be a non-empty string'
 assert info['nodename'] == os.hostname(),
   'info().nodename must agree with hostname(), since they describe the same fact'
 ok('info() returns sysname/nodename consistent with hostname()')
@@ -65,9 +69,12 @@ ok('info() returns sysname/nodename consistent with hostname()')
 # ---------------------------------------------------------------------------
 # version / platform constants
 # ---------------------------------------------------------------------------
-assert is_string(os.version) and os.version != '', 'os.version must be a non-empty string'
-assert is_string(os.vm_version) and os.vm_version != '', 'os.vm_version must be a non-empty string'
-assert is_string(os.platform) and os.platform != '', 'os.platform must be a non-empty string'
+assert is_string(os.version) and os.version != '',
+  'os.version must be a non-empty string'
+assert is_string(os.vm_version) and os.vm_version != '',
+  'os.vm_version must be a non-empty string'
+assert is_string(os.platform) and os.platform != '',
+  'os.platform must be a non-empty string'
 ok('version/vm_version/platform constants are all populated')
 
 # ---------------------------------------------------------------------------

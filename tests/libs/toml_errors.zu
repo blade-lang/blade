@@ -33,7 +33,12 @@ def all_rejected(group, samples) {
 
     assert error != nil, group + ': ' + sample[0] + ' was accepted'
     assert instance_of(error, toml.TomlError),
-      group + ': ' + sample[0] + ' raised ' + typeof(error) + ', not a TomlError'
+      group
+        + ': '
+        + sample[0]
+        + ' raised '
+        + typeof(error)
+        + ', not a TomlError'
   }
 
   ok(group + ' (${samples.length()} cases)')

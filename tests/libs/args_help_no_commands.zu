@@ -4,5 +4,5 @@
 import args
 
 var p = args.Parser('bare', false)
-p.add_option('x', 'X option', {short_name: 'x', type: args.STRING})
+p.add_option('x', 'X option', { short_name: 'x', type: args.STRING })
 p.parse(['-h'])

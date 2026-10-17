@@ -10,7 +10,10 @@ import rpc
 def http_server(ready) {
   var calculator = rpc.Service()
     .on_request('add', @(params) => params[0] + params[1])
-    .on_request('caller', @(params, context) => context.request.header('x-caller', 'nobody'))
+    .on_request(
+      'caller',
+      @(params, context) => context.request.header('x-caller', 'nobody'),
+    )
     .on_request('later', @(params, context) => context.defer())
 
   var server = http.server(0, '127.0.0.1')

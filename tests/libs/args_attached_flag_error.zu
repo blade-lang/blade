@@ -5,5 +5,5 @@
 import args
 
 var p = args.Parser('attached', false)
-p.add_option('verbose', 'Verbose', {short_name: 'v'})
+p.add_option('verbose', 'Verbose', { short_name: 'v' })
 p.parse(['--verbose=loud'])

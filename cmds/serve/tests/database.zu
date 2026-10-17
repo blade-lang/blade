@@ -95,7 +95,8 @@ describe('migrations', @{
 
   it('brings an empty database up to date', @{
     var fresh = Database(os.join_paths(ROOT, 'fresh.db'))
-    var shipped = os.read_dir(os.join_paths(os.dir_name(os.dir_name(__file__)), 'migrations'))
+    var shipped = os
+      .read_dir(os.join_paths(os.dir_name(os.dir_name(__file__)), 'migrations'))
       .filter(@(name) => name.ends_with('.zu'))
 
     expect(fresh.migrate()).to_equal(shipped.length())

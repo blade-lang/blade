@@ -149,7 +149,9 @@ def test_the_main_thread_gives_its_garbage_back_while_it_waits() {
   assert peak - before > 100, 'the records must have taken real memory'
   assert _falls_to(before + (peak - before) / 2, wait),
     'a waiting thread must give its garbage back'
-  assert kept[0].name == 'kept' and kept[0].at == before and kept[1] == 'held ${before}',
+  assert kept[0].name == 'kept'
+    and kept[0].at == before
+    and kept[1] == 'held ${before}',
     'what the program still holds must survive the collections'
   echo 'test_the_main_thread_gives_its_garbage_back_while_it_waits passed'
 }

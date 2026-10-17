@@ -239,7 +239,6 @@ def test_accept_on_a_non_blocking_listener() {
   echo 'test_accept_on_a_non_blocking_listener passed'
 }
 
-
 def test_poll_accepts_a_unix_socket() {
   var ends = net.pair()
 
@@ -318,7 +317,7 @@ def test_postgres_over_a_socket() {
   assert db.fetch_value(
     'select client_addr from pg_stat_activity where pid = pg_backend_pid()',
     nil,
-    nil
+    nil,
   ) == nil
 
   db.close()

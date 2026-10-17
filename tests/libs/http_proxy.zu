@@ -53,13 +53,14 @@ assert forwarded.as_text() == wanted,
 var first = seen.recv()
 var expected = 'Basic ' + base64.encode('ada:s cret'.to_bytes())
 
-assert first.auth == expected, 'the proxy credentials must be sent decoded, got ${first.auth}'
+assert first.auth == expected,
+  'the proxy credentials must be sent decoded, got ${first.auth}'
 ok('a plain request goes to the proxy whole, with its credentials')
 
 # A tunnel: CONNECT to the target, then the request inside it.
 var tunnelled = stream.tunnel(
   { host: '127.0.0.1', port, authorization: nil }, 'packages.example.test', 443,
-  { secure: false }
+  { secure: false },
 )
 
 tunnelled.write('GET /inside HTTP/1.1\r\nHost: packages.example.test\r\n\r\n')
@@ -67,29 +68,32 @@ tunnelled.flush()
 
 var status = tunnelled.read_line(8192)
 
-assert status.starts_with('HTTP/1.1 200'), 'the tunnel must carry the answer back, got ${status}'
+assert status.starts_with('HTTP/1.1 200'),
+  'the tunnel must carry the answer back, got ${status}'
 tunnelled.close()
 
 var second = seen.recv()
 
 assert second.line == 'CONNECT packages.example.test:443 HTTP/1.1',
   'a tunnel must be opened to the target host and port, got ${second.line}'
-assert second.inner == 'GET /inside HTTP/1.1', 'what follows must travel inside the tunnel'
+assert second.inner == 'GET /inside HTTP/1.1',
+  'what follows must travel inside the tunnel'
 ok('a tunnel is opened with CONNECT and carries the request inside it')
 
 # A proxy that refuses the tunnel is a connection error naming it.
 var refused = nil
 
 catch {
-  stream.tunnel({ host: '127.0.0.1', port, authorization: nil }, 'blocked.example.test', 9,
-    { secure: false })
+  stream.tunnel({ host: '127.0.0.1', port, authorization: nil },
+    'blocked.example.test', 9, { secure: false })
 } as error {
   refused = error
 }
 
 assert refused != nil and instance_of(refused, ConnectionError),
   'a refused tunnel must raise ConnectionError'
-assert refused.message.contains('403'), 'the refusal must say what the proxy answered'
+assert refused.message.contains('403'),
+  'the refusal must say what the proxy answered'
 seen.recv()
 ok('a refused tunnel raises, naming the answer')
 
@@ -101,7 +105,8 @@ os.set_env('NO_PROXY', 'internal.test, .corp.test:8080', true)
 var from_env = http.HttpClient(nil, { connect_timeout: 2000 })
 var via_env = from_env.get('http://elsewhere.example.test/')
 
-assert via_env.as_text() == 'forwarded GET http://elsewhere.example.test/ HTTP/1.1',
+assert via_env.as_text()
+  == 'forwarded GET http://elsewhere.example.test/ HTTP/1.1',
   'HTTP_PROXY must be used for a host NO_PROXY does not name'
 seen.recv()
 
@@ -132,7 +137,9 @@ task.join()
 
 # An https proxy is refused rather than used halfway.
 var refused_scheme = failure_of(@() {
-  http.HttpClient(nil, { proxy: 'https://proxy.example.test:443' }).get('http://x.example.test/')
+  http
+    .HttpClient(nil, { proxy: 'https://proxy.example.test:443' })
+    .get('http://x.example.test/')
 })
 
 assert refused_scheme != nil and refused_scheme.contains('plain http'),

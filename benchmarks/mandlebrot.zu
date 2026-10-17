@@ -23,17 +23,17 @@ class Mandelbrot {
     self.shift = size % 8 == 0 ? 0 : (8 - size % 8)
   }
 
-  compute()
-  {
+  compute() {
     echo "P4\n${self.size} ${self.size}\n"
     iter var y = 0; y < self.size; y++ {
       self.computeRow(y)
     }
-    if (self.bufLen != 0) print(self.buf.take(self.bufLen))
+    if (self.bufLen != 0) {
+      print(self.buf.take(self.bufLen))
+    }
   }
 
-  computeRow(y)
-  {
+  computeRow(y) {
     var bits = 0
 
     var Ci = (y * self.fac - 1.0)
@@ -50,13 +50,15 @@ class Mandelbrot {
         Zr = ZrN - ZiN + Cr
         ZiN = Zi * Zi
         ZrN = Zr * Zr
-      } while (!(ZiN + ZrN > 4.0) and i--> 0)
+      } while (!(ZiN + ZrN > 4.0) and i-- > 0)
 
       bits = bits << 1
-      if (i == 0) bits++
+      if (i == 0) {
+        bits++
+      }
 
       if (x % 8 == 7) {
-        bufLocal[self.bufLen++-1] = bits
+        bufLocal[self.bufLen++ - 1] = bits
         if (self.bufLen == BUFFER_SIZE) {
           print(bufLocal)
           self.bufLen = 0
@@ -66,7 +68,7 @@ class Mandelbrot {
     }
     if (self.shift != 0) {
       bits = bits << self.shift
-      bufLocal[self.bufLen++-1] = bits
+      bufLocal[self.bufLen++ - 1] = bits
       if (self.bufLen == BUFFER_SIZE) {
         print(bufLocal)
         self.bufLen = 0

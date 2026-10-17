@@ -44,7 +44,9 @@ def init() {
     }
   }
 
-  if n != 1 center = -1 # no single hole
+  if n != 1 {
+    center = -1 # no single hole
+  }
 }
 
 /* 
@@ -127,6 +129,8 @@ var start = time()
 
 init()
 
-if !solve() echo 'No solution found!'
+if !solve() {
+  echo 'No solution found!'
+}
 
 echo '${moves} moves tried in ${time() - start}s'

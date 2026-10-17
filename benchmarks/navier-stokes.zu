@@ -92,7 +92,9 @@ def lin_solve(b, x, x0, a, c) {
 
       iter var i = 1; i <= WIDTH; i++ {
         const idx = row + i
-        x[idx] = (x0[idx] + a * (x[idx - 1] + x[idx + 1] + x[prev + i] + x[next + i])) * inv_c
+        x[idx] = (x0[idx]
+          + a * (x[idx - 1] + x[idx + 1] + x[prev + i] + x[next + i]))
+          * inv_c
       }
     }
 

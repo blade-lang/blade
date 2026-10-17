@@ -61,10 +61,18 @@ echo '════════════════════════�
 
 var bare = SessionStore()
 
-assert raises(@() { bare.read('k') }), 'an unimplemented read() raises'
-assert raises(@() { bare.write('k', 'p', 1) }), 'an unimplemented write() raises'
-assert raises(@() { bare.destroy('k') }), 'an unimplemented destroy() raises'
-assert raises(@() { bare.gc(1) }), 'an unimplemented gc() raises'
+assert raises(@() {
+  bare.read('k')
+}), 'an unimplemented read() raises'
+assert raises(@() {
+  bare.write('k', 'p', 1)
+}), 'an unimplemented write() raises'
+assert raises(@() {
+  bare.destroy('k')
+}), 'an unimplemented destroy() raises'
+assert raises(@() {
+  bare.gc(1)
+}), 'an unimplemented gc() raises'
 assert instance_of(SessionError('x'), Error), 'SessionError is an Error'
 assert instance_of(SessionError('x'), http.HttpError),
   'and an HttpError, so a server catching those catches this'
@@ -112,7 +120,8 @@ minimal.write('k', 'payload', 100)
 assert minimal.touch('k', 900), 'the default touch() reports that it found one'
 assert minimal.entries['k'][1] == 900, 'and moves the expiry'
 assert minimal.entries['k'][0] == 'payload', 'leaving the payload alone'
-assert !minimal.touch('missing', 900), 'and reports a miss for one that is not there'
+assert !minimal.touch('missing', 900),
+  'and reports a miss for one that is not there'
 ok('SessionStore supplies a working touch() on top of read and write')
 
 # ---------------------------------------------------------------------------
@@ -160,7 +169,8 @@ assert default_directory_path.starts_with(os.temp_dir()),
   'the default directory is under the temporary directory'
 assert default_directory_path != os.temp_dir(),
   'but is never the temporary directory itself'
-assert os.dir_exists(default_directory_path), 'and it exists once a store is made'
+assert os.dir_exists(default_directory_path),
+  'and it exists once a store is made'
 
 if os.platform != 'windows' {
   assert file(default_directory_path).stats().mode & 0c077 == 0,
@@ -180,7 +190,8 @@ assert files.directory() == directory, 'a store reports where it keeps things'
 
 files.write(key_of('one'), 'first payload', time() + 100)
 
-assert files.read(key_of('one')) == 'first payload', 'a session survives a round trip'
+assert files.read(key_of('one')) == 'first payload',
+  'a session survives a round trip'
 
 var names = os.read_dir(directory).filter(@(name) => name.ends_with('.session'))
 
@@ -195,13 +206,19 @@ if os.platform != 'windows' {
 
 files.write(key_of('one'), 'second payload', time() + 100)
 
-assert files.read(key_of('one')) == 'second payload', 'a rewrite replaces the payload'
-assert os.read_dir(directory).filter(@(name) => name.ends_with('.session')).length() == 1,
+assert files.read(key_of('one')) == 'second payload',
+  'a rewrite replaces the payload'
+assert os
+  .read_dir(directory)
+  .filter(@(name) => name.ends_with('.session'))
+  .length()
+  == 1,
   'and leaves no staging file behind'
 
 files.write(key_of('two'), 'gone', time() - 1)
 
-assert files.read(key_of('two')) == nil, 'a file past its expiry reads as nothing'
+assert files.read(key_of('two')) == nil,
+  'a file past its expiry reads as nothing'
 assert !file(os.join_paths(directory, key_of('two') + '.session')).exists(),
   'and is removed rather than left for the sweep'
 
@@ -226,7 +243,8 @@ var damaged = file(os.join_paths(directory, key_of('bad') + '.session'), 'w')
 damaged.write('no header here')
 damaged.close()
 
-assert files.read(key_of('bad')) == nil, 'a file with no expiry header is not a session'
+assert files.read(key_of('bad')) == nil,
+  'a file with no expiry header is not a session'
 assert files.gc(time()) == 0, 'and a sweep leaves it alone'
 assert file(os.join_paths(directory, 'notes.txt')).exists(),
   'as it leaves anything that is not a session file'
@@ -236,9 +254,13 @@ if os.platform != 'windows' {
   var open_directory = os.create_temp_dir('zuri-session-open')
   os.chmod(open_directory, 0c777)
 
-  assert raises(@() { FileStore(open_directory) }),
+  assert raises(@() {
+    FileStore(open_directory)
+  }),
     'a directory every user on the machine can reach is refused'
-  assert message_of(@() { FileStore(open_directory) }).index_of('strict_permissions') > -1,
+  assert message_of(@() {
+    FileStore(open_directory)
+  }).index_of('strict_permissions') > -1,
     'and the refusal says how to override it'
 
   var lenient = FileStore(open_directory, { strict_permissions: false })
@@ -295,13 +317,16 @@ var plain = session({ store })
 
 var untouched = visit(plain, nil, nil)
 
-assert untouched.sent.is_empty(), 'a request that never touches its session sets no cookie'
+assert untouched.sent.is_empty(),
+  'a request that never touches its session sets no cookie'
 assert store.length() == 0, 'and stores nothing'
 assert untouched.response.headers.get('vary', nil) == nil,
   'and does not claim the answer depended on a cookie'
 ok('a request that ignores its session costs nothing')
 
-var looked = visit(plain, nil, @(s) { s.get('anything') })
+var looked = visit(plain, nil, @(s) {
+  s.get('anything')
+})
 
 assert looked.sent.is_empty(), 'reading an empty session still sets no cookie'
 assert store.length() == 0, 'and still stores nothing'
@@ -320,8 +345,10 @@ var first = visit(plain, nil, @(s) {
 
 assert first.cookie != nil, 'a session that was written sends a cookie'
 assert store.length() == 1, 'and leaves exactly one record'
-assert first.sent[0].index_of('HttpOnly') > -1, 'the cookie is hidden from scripts'
-assert first.sent[0].index_of('SameSite=Lax') > -1, 'and is not sent on a cross-site POST'
+assert first.sent[0].index_of('HttpOnly') > -1,
+  'the cookie is hidden from scripts'
+assert first.sent[0].index_of('SameSite=Lax') > -1,
+  'and is not sent on a cross-site POST'
 assert first.sent[0].index_of('Path=/') > -1, 'and covers the whole site'
 assert first.sent[0].index_of('Max-Age') == -1,
   'and ends with the browser session unless asked otherwise'
@@ -329,7 +356,8 @@ ok('the first write starts a session and sends its cookie')
 
 var identifier = first.cookie[first.cookie.index_of('=') + 1,]
 
-assert identifier.length() == ID_LENGTH, 'an identifier is the documented length'
+assert identifier.length() == ID_LENGTH,
+  'an identifier is the documented length'
 assert store.read(storage_key(identifier)) != nil,
   'and the record is filed under its digest'
 assert store.read(identifier) == nil, 'not under the identifier itself'
@@ -358,7 +386,8 @@ visit(plain, first.cookie, @(s) {
 
   copy['user'] = 'tampered'
 
-  assert s.get('user') == 'ada', 'all() hands back a copy, not the session itself'
+  assert s.get('user') == 'ada',
+    'all() hands back a copy, not the session itself'
 })
 
 visit(plain, first.cookie, @(s) {
@@ -437,7 +466,9 @@ visit(plain, restarted.cookie, @(s) {
   assert s.get('user') == 'anonymous', 'and the new session is the one stored'
 })
 
-visit(plain, restarted.cookie, @(s) { s.destroy() })
+visit(plain, restarted.cookie, @(s) {
+  s.destroy()
+})
 
 var from_nothing = visit(plain, nil, @(s) {
   assert s.id() == nil, 'a session with no cookie has no identifier'
@@ -454,7 +485,9 @@ visit(plain, from_nothing.cookie, @(s) {
     'so a sign-in that regenerates first works with no session to start from'
 })
 
-visit(plain, from_nothing.cookie, @(s) { s.destroy() })
+visit(plain, from_nothing.cookie, @(s) {
+  s.destroy()
+})
 ok('a session survives being destroyed and started again in one request')
 
 # ---------------------------------------------------------------------------
@@ -484,14 +517,18 @@ var unread = visit(flashed, set_flash.cookie, @(s) {
   s.flash('notice', 'second try')
 })
 
-visit(flashed, set_flash.cookie, @(s) { s.get('anything else') })
+visit(flashed, set_flash.cookie, @(s) {
+  s.get('anything else')
+})
 
 visit(flashed, set_flash.cookie, @(s) {
   assert s.take_flash('notice', 'gone') == 'gone',
     'a request that read the session spends the flash without asking for it'
 })
 
-visit(flashed, set_flash.cookie, @(s) { s.flash('again', 'x') })
+visit(flashed, set_flash.cookie, @(s) {
+  s.flash('again', 'x')
+})
 visit(flashed, set_flash.cookie, nil)
 
 visit(flashed, set_flash.cookie, @(s) {
@@ -522,10 +559,13 @@ class CountingStore < MemoryStore {
 var counting = CountingStore()
 var signed = session({ store: counting, secret: 'a shared secret' })
 
-var issued = visit(signed, nil, @(s) { s.set('user', 'grace') })
+var issued = visit(signed, nil, @(s) {
+  s.set('user', 'grace')
+})
 var value = issued.cookie[issued.cookie.index_of('=') + 1,]
 
-assert value.length() == ID_LENGTH + 65, 'a signed cookie carries the identifier and its HMAC'
+assert value.length() == ID_LENGTH + 65,
+  'a signed cookie carries the identifier and its HMAC'
 assert value[ID_LENGTH] == '.', 'separated by a dot'
 
 visit(signed, issued.cookie, @(s) {
@@ -554,7 +594,9 @@ ok('a signed cookie is verified before the store is consulted')
 
 var unsigned_store = MemoryStore({ gc_probability: 0 })
 var unsigned = session({ store: unsigned_store })
-var unsigned_issued = visit(unsigned, nil, @(s) { s.set('k', 1) })
+var unsigned_issued = visit(unsigned, nil, @(s) {
+  s.set('k', 1)
+})
 
 visit(unsigned, unsigned_issued.cookie, @(s) {
   assert s.get('k') == 1, 'an unsigned deployment reads its own cookies'
@@ -563,7 +605,8 @@ visit(unsigned, unsigned_issued.cookie, @(s) {
 var other = session({ store: unsigned_store, secret: 'added later' })
 
 visit(other, unsigned_issued.cookie, @(s) {
-  assert s.is_new(), 'and turning signing on refuses the cookies issued before it'
+  assert s.is_new(),
+    'and turning signing on refuses the cookies issued before it'
 })
 ok('signing is all or nothing, in both directions')
 
@@ -585,10 +628,15 @@ ok('a malformed identifier is refused on its shape alone')
 
 var clock_store = MemoryStore({ gc_probability: 0 })
 var idle = session({
-  store: clock_store, idle_timeout: 1, lifetime: nil, touch_interval: 0.5,
+  store: clock_store,
+  idle_timeout: 1,
+  lifetime: nil,
+  touch_interval: 0.5,
 })
 
-var idling = visit(idle, nil, @(s) { s.set('k', 1) })
+var idling = visit(idle, nil, @(s) {
+  s.set('k', 1)
+})
 
 os.sleep(1.2)
 
@@ -598,13 +646,20 @@ visit(idle, idling.cookie, @(s) {
 ok('the idle timeout ends a session that stopped being used')
 
 var live = session({
-  store: clock_store, idle_timeout: 1, lifetime: nil, touch_interval: 0.1,
+  store: clock_store,
+  idle_timeout: 1,
+  lifetime: nil,
+  touch_interval: 0.1,
 })
 
-var living = visit(live, nil, @(s) { s.set('k', 1) })
+var living = visit(live, nil, @(s) {
+  s.set('k', 1)
+})
 
 os.sleep(0.6)
-visit(live, living.cookie, @(s) { s.get('k') })
+visit(live, living.cookie, @(s) {
+  s.get('k')
+})
 os.sleep(0.6)
 
 visit(live, living.cookie, @(s) {
@@ -614,23 +669,37 @@ visit(live, living.cookie, @(s) {
 ok('activity rolls the idle timeout forward')
 
 var capped = session({
-  store: clock_store, idle_timeout: nil, lifetime: 1, touch_interval: 0.1,
+  store: clock_store,
+  idle_timeout: nil,
+  lifetime: 1,
+  touch_interval: 0.1,
 })
 
-var capping = visit(capped, nil, @(s) { s.set('k', 1) })
+var capping = visit(capped, nil, @(s) {
+  s.set('k', 1)
+})
 
 os.sleep(0.5)
-visit(capped, capping.cookie, @(s) { s.get('k') })
+visit(capped, capping.cookie, @(s) {
+  s.get('k')
+})
 os.sleep(0.7)
 
 visit(capped, capping.cookie, @(s) {
-  assert s.is_new(), 'the absolute lifetime ends a session however active it was'
+  assert s.is_new(),
+    'the absolute lifetime ends a session however active it was'
 })
 ok('the absolute lifetime is not rolled forward by activity')
 
 var rare = MemoryStore({ gc_probability: 0 })
-var throttled = session({ store: rare, idle_timeout: 3600, touch_interval: 1800 })
-var throttling = visit(throttled, nil, @(s) { s.set('k', 1) })
+var throttled = session({
+  store: rare,
+  idle_timeout: 3600,
+  touch_interval: 1800,
+})
+var throttling = visit(throttled, nil, @(s) {
+  s.set('k', 1)
+})
 var before_touch = nil
 
 visit(throttled, throttling.cookie, @(s) {
@@ -645,7 +714,9 @@ visit(throttled, throttling.cookie, @(s) {
 })
 ok('a read-only request touches the store at most once per interval')
 
-assert raises(@() { session({ store: rare, idle_timeout: 60, touch_interval: 60 }) }),
+assert raises(@() {
+  session({ store: rare, idle_timeout: 60, touch_interval: 60 })
+}),
   'a touch interval that never fires inside the idle window is refused'
 ok('a touch interval has to be shorter than the idle timeout')
 
@@ -656,33 +727,46 @@ ok('a touch interval has to be shorter than the idle timeout')
 var attribute_store = MemoryStore({ gc_probability: 0 })
 var attributed = session({ store: attribute_store })
 
-var over_tls = request_with(attributed, nil, 'GET', '/', true, @(s) { s.set('k', 1) })
+var over_tls = request_with(attributed, nil, 'GET', '/', true, @(s) {
+  s.set('k', 1)
+})
 
 assert over_tls.sent[0].index_of('Secure') > -1,
   'a request over TLS gets a Secure cookie without being told'
 
-var over_plain = visit(attributed, nil, @(s) { s.set('k', 1) })
+var over_plain = visit(attributed, nil, @(s) {
+  s.set('k', 1)
+})
 
 assert over_plain.sent[0].index_of('Secure') == -1,
   'and one over cleartext does not, so development works'
 
 var forced_secure = session({ store: attribute_store, secure: true })
-var behind_proxy = visit(forced_secure, nil, @(s) { s.set('k', 1) })
+var behind_proxy = visit(forced_secure, nil, @(s) {
+  s.set('k', 1)
+})
 
 assert behind_proxy.sent[0].index_of('Secure') > -1,
   'a deployment behind a terminating proxy can say so'
 ok('Secure follows the request unless the deployment overrides it')
 
 var persistent = session({
-  store: attribute_store, persistent: true, idle_timeout: 60, lifetime: nil,
+  store: attribute_store,
+  persistent: true,
+  idle_timeout: 60,
+  lifetime: nil,
 })
 
-var kept = visit(persistent, nil, @(s) { s.set('k', 1) })
+var kept = visit(persistent, nil, @(s) {
+  s.set('k', 1)
+})
 
 assert kept.sent[0].index_of('Max-Age=60') > -1,
   'a persistent cookie carries the remaining lifetime'
 
-var kept_again = visit(persistent, kept.cookie, @(s) { s.get('k') })
+var kept_again = visit(persistent, kept.cookie, @(s) {
+  s.get('k')
+})
 
 assert !kept_again.sent.is_empty(),
   'and is resent on every request, so the window moves with the visitor'
@@ -695,25 +779,35 @@ var named = session({
   domain: nil,
 })
 
-var prefixed = request_with(named, nil, 'GET', '/', true, @(s) { s.set('k', 1) })
+var prefixed = request_with(named, nil, 'GET', '/', true, @(s) {
+  s.set('k', 1)
+})
 
 assert prefixed.sent[0].starts_with('__Host-session='), 'a cookie can be named'
-assert prefixed.sent[0].index_of('Secure') > -1, 'and the __Host- rules are applied'
+assert prefixed.sent[0].index_of('Secure') > -1,
+  'and the __Host- rules are applied'
 assert prefixed.sent[0].index_of('Domain') == -1, 'including having no Domain'
 ok('the cookie name, and its prefix rules, are honoured')
 
 var strict = session({
-  store: attribute_store, same_site: 'Strict', path: '/app', domain: 'example.com',
+  store: attribute_store,
+  same_site: 'Strict',
+  path: '/app',
+  domain: 'example.com',
 })
 
-var scoped = visit(strict, nil, @(s) { s.set('k', 1) })
+var scoped = visit(strict, nil, @(s) {
+  s.set('k', 1)
+})
 
 assert scoped.sent[0].index_of('SameSite=Strict') > -1, 'SameSite can be set'
 assert scoped.sent[0].index_of('Path=/app') > -1, 'as can the path'
 assert scoped.sent[0].index_of('Domain=example.com') > -1, 'and the domain'
 ok('path, domain and SameSite are configurable')
 
-var varying = visit(plain, nil, @(s) { s.get('k') })
+var varying = visit(plain, nil, @(s) {
+  s.get('k')
+})
 
 assert varying.response.headers.get_all('vary').length() == 1,
   'a session-dependent answer says Vary: Cookie'
@@ -747,7 +841,9 @@ assert streamed.cookie_headers().is_empty(),
 assert streamed_store.length() == 0,
   'so a session started there is not written either, since nothing could present it'
 
-var existing = visit(streamer, nil, @(s) { s.set('k', 1) })
+var existing = visit(streamer, nil, @(s) {
+  s.set('k', 1)
+})
 var late = HttpResponse()
 var late_request = HttpRequest('GET', '/', Headers())
 
@@ -770,32 +866,56 @@ ok('a committed response drops the cookie rather than storing what cannot be rea
 
 var limited = session({ store: attribute_store, max_size: 256 })
 
-assert raises(@() { visit(limited, nil, @(s) { s.set('blob', 'x' * 1000) }) }),
+assert raises(@() {
+  visit(limited, nil, @(s) {
+    s.set('blob', 'x' * 1000)
+  })
+}),
   'a session larger than the ceiling is refused'
-assert message_of(@() { visit(limited, nil, @(s) { s.set('blob', 'x' * 1000) }) })
+assert message_of(@() {
+  visit(limited, nil, @(s) {
+    s.set('blob', 'x' * 1000)
+  })
+})
   .index_of('256') > -1,
   'and the refusal names the ceiling'
 ok('a session that grew too large is refused rather than written')
 
-assert message_of(@() { session({ nmae: 'typo' }) }).index_of('nmae') > -1,
+assert message_of(@() {
+  session({ nmae: 'typo' })
+}).index_of('nmae') > -1,
   'an option that does not exist is named back'
-assert raises(@() { session({ idle_timeout: nil, lifetime: nil }) }),
+assert raises(@() {
+  session({ idle_timeout: nil, lifetime: nil })
+}),
   'a session with neither clock is refused'
-assert raises(@() { session({ same_site: 'Loose' }) }),
+assert raises(@() {
+  session({ same_site: 'Loose' })
+}),
   'SameSite has to be one of the three the standard defines'
-assert raises(@() { session({ same_site: 'None', secure: false }) }),
+assert raises(@() {
+  session({ same_site: 'None', secure: false })
+}),
   'SameSite None without Secure is a cookie no browser stores'
-assert raises(@() { session({ touch_interval: 0 }) }),
+assert raises(@() {
+  session({ touch_interval: 0 })
+}),
   'an interval has to be a positive number of seconds'
-assert raises(@() { session({ idle_timeout: -1 }) }),
+assert raises(@() {
+  session({ idle_timeout: -1 })
+}),
   'as does a timeout'
 ok('a misconfigured session fails where it is registered')
 
 var no_middleware = HttpRequest('GET', '/', Headers())
 
-assert raises(@() { no_middleware.session() }),
+assert raises(@() {
+  no_middleware.session()
+}),
   'asking for a session without the middleware raises'
-assert message_of(@() { no_middleware.session() }).index_of('session()') > -1,
+assert message_of(@() {
+  no_middleware.session()
+}).index_of('session()') > -1,
   'and says what to register'
 ok('a request with no session middleware says so')
 
@@ -813,7 +933,8 @@ assert database.schema.has_table('sessions', nil), 'migrate() creates the table'
 assert database.schema.indexes('sessions', nil)
   .some(@(index) => index.name == 'sessions_expires_at'),
   'and the index the sweep needs'
-assert rows.table() == 'sessions', 'which is named sessions unless told otherwise'
+assert rows.table() == 'sessions',
+  'which is named sessions unless told otherwise'
 ok('migrate() is safe to run on every start')
 
 rows.write(key_of('one'), 'first', time() + 100)
@@ -842,12 +963,16 @@ assert rows.read(key_of('four')) == 'fresh', 'and leaves the rest'
 rows.destroy(key_of('four'))
 assert rows.read(key_of('four')) == nil, 'a destroyed session is gone'
 
-assert raises(@() { SqlStore(database, { table: 'sessions; drop table x' }) }),
+assert raises(@() {
+  SqlStore(database, { table: 'sessions; drop table x' })
+}),
   'a table name that is not a plain identifier is refused'
 ok('SqlStore reads, writes, expires and sweeps')
 
 var sql_session = session({ store: rows })
-var sql_issued = visit(sql_session, nil, @(s) { s.set('user', 'hopper') })
+var sql_issued = visit(sql_session, nil, @(s) {
+  s.set('user', 'hopper')
+})
 
 visit(sql_session, sql_issued.cookie, @(s) {
   assert s.get('user') == 'hopper', 'a session kept in a database comes back'
@@ -884,8 +1009,10 @@ assert browser.get(base + '/').as_text() == 'anonymous',
   'a page that never touches the session answers'
 assert browser.cookie_jar.length() == 0, 'and hands out no cookie'
 
-assert browser.get(base + '/count').as_text() == '1', 'the first visit counts one'
-assert browser.cookie_jar.length() == 1, 'and the browser is now carrying a session'
+assert browser.get(base + '/count').as_text() == '1',
+  'the first visit counts one'
+assert browser.cookie_jar.length() == 1,
+  'and the browser is now carrying a session'
 assert browser.get(base + '/count').as_text() == '2', 'the second counts two'
 assert browser.get(base + '/count').as_text() == '3', 'and so on'
 ok('a session follows a real client across requests')

@@ -91,7 +91,9 @@ echo '════════════════════════�
 # Client/server echo, over a real certificate chain and full handshake
 # ---------------------------------------------------------------------------
 var ch1 = isolate.channel(1)
-var task1 = isolate.spawn(net_dtls_server.echo_server, ch1, server_cert, server_key)
+var task1 = isolate.spawn(
+  net_dtls_server.echo_server, ch1, server_cert, server_key,
+)
 var addr1 = ch1.recv()
 
 var config1 = dtls.DtlsConfig()
@@ -110,13 +112,17 @@ ok('client/server echo round-trip over a verified certificate chain')
 # Certificate rejection: an untrusted root must be refused
 # ---------------------------------------------------------------------------
 var ch2 = isolate.channel(1)
-var task2 = isolate.spawn(net_dtls_server.echo_server, ch2, server_cert, server_key)
+var task2 = isolate.spawn(
+  net_dtls_server.echo_server, ch2, server_cert, server_key,
+)
 var addr2 = ch2.recv()
 
 var config2 = dtls.DtlsConfig() # bundled roots only - does not trust our test CA
 
 var socket2 = dtls.DtlsSocket()
-assert raises(@() { socket2.connect(config2, addr2, 'localhost') }),
+assert raises(@() {
+  socket2.connect(config2, addr2, 'localhost')
+}),
   'connecting without trusting the test CA must raise'
 ok('untrusted certificate is rejected')
 

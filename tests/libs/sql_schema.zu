@@ -126,7 +126,7 @@ def test_composite_key() {
 
   db.exec(
     'create table pairs (a integer, b integer, note text, primary key (b, a))',
-    nil
+    nil,
   )
 
   # In key order, which is not the table's column order.

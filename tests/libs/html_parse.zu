@@ -58,7 +58,8 @@ assert html.parse('').outer_html() == '<html><head></head><body></body></html>',
 assert html.parse('x').outer_html() ==
   '<html><head></head><body>x</body></html>',
   'bare text must land in an implied body'
-assert html.parse('<title>T</title>x').head().inner_html() == '<title>T</title>',
+assert html.parse('<title>T</title>x').head().inner_html()
+  == '<title>T</title>',
   'metadata must land in the implied head'
 assert body('<title>T</title>x') == 'x',
   'and the text that follows it in the body'
@@ -69,27 +70,29 @@ ok('the tree construction algorithm creates the elements the source omits')
 # ---------------------------------------------------------------------------
 assert html.parse('<!DOCTYPE html>').mode == 'no-quirks',
   'the HTML5 doctype must give no-quirks mode'
-assert html.parse('').mode == 'quirks', 'a missing doctype must give quirks mode'
+assert html.parse('').mode == 'quirks',
+  'a missing doctype must give quirks mode'
 assert html.parse('<!DOCTYPE xml>').mode == 'quirks',
   'a doctype named anything but html must give quirks mode'
 assert html.parse(
-  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">'
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">',
 ).mode == 'quirks',
   'HTML 4.01 Transitional with no system identifier must give quirks mode'
 assert html.parse(
-  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://x">'
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://x">',
 ).mode == 'limited-quirks',
   'the same doctype with a system identifier must give limited-quirks mode'
 assert html.parse(
-  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">'
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN">',
 ).mode == 'limited-quirks',
   'XHTML 1.0 Transitional must give limited-quirks mode either way'
-assert html.parse('<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 3.0//EN">').mode == 'quirks',
+assert html.parse('<!DOCTYPE html PUBLIC "-//IETF//DTD HTML 3.0//EN">').mode
+  == 'quirks',
   'a legacy public identifier must give quirks mode'
 ok('quirks mode is decided from the doctype exactly as the standard says')
 
 var typed = html.parse(
-  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://x/y.dtd">'
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://x/y.dtd">',
 ).doctype()
 
 assert typed.name == 'html', 'the doctype node must carry its name'
@@ -100,7 +103,8 @@ assert typed.system_id == 'http://x/y.dtd',
 assert typed.outer_html() ==
   '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://x/y.dtd">',
   'a legacy doctype must serialize with its identifiers, so it round-trips its own mode'
-assert html.parse('<!DOCTYPE html>').doctype().outer_html() == '<!DOCTYPE html>',
+assert html.parse('<!DOCTYPE html>').doctype().outer_html()
+  == '<!DOCTYPE html>',
   'a modern doctype must serialize as just its name'
 ok('doctype nodes keep and round-trip their identifiers')
 
@@ -172,7 +176,8 @@ ok('templates give their content its own insertion mode and clone correctly')
 var svg_doc = html.parse('<svg viewBox="0 0 1 1"><foreignObject><div>x</div></foreignObject></svg>')
 var svg = svg_doc.query_selector('svg')
 
-assert svg.namespace == html.SVG_NAMESPACE, 'an <svg> element must be in the SVG namespace'
+assert svg.namespace == html.SVG_NAMESPACE,
+  'an <svg> element must be in the SVG namespace'
 assert svg.get_attribute('viewBox') == '0 0 1 1',
   'an SVG attribute must have its case repaired'
 assert !svg.has_attribute('viewbox'),
@@ -181,14 +186,17 @@ assert svg.first_element_child().tag_name == 'foreignObject',
   'an SVG tag name must have its case repaired'
 assert svg.first_element_child().namespace == html.SVG_NAMESPACE,
   'the repaired element is still SVG'
-assert svg_doc.query_selector('foreignObject div').namespace == html.HTML_NAMESPACE,
+assert svg_doc.query_selector('foreignObject div').namespace
+  == html.HTML_NAMESPACE,
   'content inside a foreignObject is HTML again'
 assert svg.outer_html() ==
   '<svg viewBox="0 0 1 1"><foreignObject><div>x</div></foreignObject></svg>',
   'foreign content must round-trip with its case intact'
 ok('SVG: namespace, tag name and attribute case repair, and integration points')
 
-var xlinked = html.parse('<svg><a xlink:href="/x"></a></svg>').query_selector('svg a')
+var xlinked = html
+  .parse('<svg><a xlink:href="/x"></a></svg>')
+  .query_selector('svg a')
 
 assert xlinked.get_attribute('xlink:href') == '/x',
   'a namespaced foreign attribute must keep its prefix'
@@ -200,48 +208,56 @@ ok('foreign attributes keep their prefix and namespace')
 
 assert body('<svg><circle/></svg>') == '<svg><circle></circle></svg>',
   'a self-closing foreign element must close immediately and serialize with an end tag'
-assert body('<svg><g><circle/></g></svg>') == '<svg><g><circle></circle></g></svg>',
+assert body('<svg><g><circle/></g></svg>')
+  == '<svg><g><circle></circle></g></svg>',
   'nesting inside foreign content must work'
 ok('self-closing foreign elements')
 
 # ---------------------------------------------------------------------------
 # Foreign content: MathML
 # ---------------------------------------------------------------------------
-var math = html.parse('<math><mi>x</mi><mo>+</mo></math>').query_selector('math')
+var math = html
+  .parse('<math><mi>x</mi><mo>+</mo></math>')
+  .query_selector('math')
 
-assert math.namespace == html.MATHML_NAMESPACE, 'a <math> element must be in the MathML namespace'
+assert math.namespace == html.MATHML_NAMESPACE,
+  'a <math> element must be in the MathML namespace'
 assert math.first_element_child().namespace == html.MATHML_NAMESPACE,
   'its children must be too'
 assert body('<math><mi>x</mi></math>') == '<math><mi>x</mi></math>',
   'MathML must round-trip'
 
 var annotated = html.parse(
-  '<math><annotation-xml encoding="text/html"><b>x</b></annotation-xml></math>'
+  '<math><annotation-xml encoding="text/html"><b>x</b></annotation-xml></math>',
 )
 assert annotated.query_selector('b').namespace == html.HTML_NAMESPACE,
   'an annotation-xml with an HTML encoding is an integration point'
 
 var unannotated = html.parse(
-  '<math><annotation-xml encoding="other"><mi>x</mi></annotation-xml></math>'
+  '<math><annotation-xml encoding="other"><mi>x</mi></annotation-xml></math>',
 )
 assert unannotated.query_selector('mi').namespace == html.MATHML_NAMESPACE,
   'without an HTML encoding it is not, so its children stay MathML'
 assert html.parse(
-  '<math><annotation-xml encoding="other"><b>x</b></annotation-xml></math>'
+  '<math><annotation-xml encoding="other"><b>x</b></annotation-xml></math>',
 ).body().inner_html() ==
   '<math><annotation-xml encoding="other"></annotation-xml></math><b>x</b>',
   'and an HTML formatting element inside it breaks out of the subtree entirely'
 ok('MathML: namespace, and the annotation-xml integration point')
 
-assert html.parse('<math><mi><b>x</b></mi></math>').query_selector('b').namespace ==
-  html.HTML_NAMESPACE, 'a MathML text integration point parses its children as HTML'
+assert html
+  .parse('<math><mi><b>x</b></mi></math>')
+  .query_selector('b').namespace ==
+  html.HTML_NAMESPACE,
+  'a MathML text integration point parses its children as HTML'
 ok('MathML text integration points')
 
 assert body('<svg><g></p></g></svg>') == '<svg><g><p></p></g></svg>',
   'an end tag with no match in the foreign subtree falls through to the HTML rules, which insert at the current point'
 assert body('<svg><g></div></g></svg>') == '<svg><g></g></svg>',
   'and an end tag the HTML rules also cannot place is discarded'
-assert body('<div><svg><g></g></div>after') == '<div><svg><g></g></svg></div>after',
+assert body('<div><svg><g></g></div>after')
+  == '<div><svg><g></g></svg></div>after',
   'closing an HTML ancestor must close the foreign subtree inside it'
 ok('end tags in foreign content')
 
@@ -256,10 +272,12 @@ ok('misplaced HTML elements break out of foreign content')
 # ---------------------------------------------------------------------------
 # Recovery: implied end tags
 # ---------------------------------------------------------------------------
-assert body('<p>a<p>b') == '<p>a</p><p>b</p>', 'a paragraph is closed by the next one'
+assert body('<p>a<p>b') == '<p>a</p><p>b</p>',
+  'a paragraph is closed by the next one'
 assert body('<ul><li>a<li>b</ul>') == '<ul><li>a</li><li>b</li></ul>',
   'a list item is closed by the next one'
-assert body('<dl><dt>a<dd>b<dt>c</dl>') == '<dl><dt>a</dt><dd>b</dd><dt>c</dt></dl>',
+assert body('<dl><dt>a<dd>b<dt>c</dl>')
+  == '<dl><dt>a</dt><dd>b</dd><dt>c</dt></dl>',
   'definition terms and descriptions close each other'
 assert body('<table><tr><td>a<td>b') ==
   '<table><tbody><tr><td>a</td><td>b</td></tr></tbody></table>',
@@ -281,7 +299,8 @@ assert body('<p>a</p></p>b') == '<p>a</p><p></p>b',
 assert body('</div>x') == 'x', 'an end tag with nothing to close is discarded'
 assert body('<div>a</span>b</div>') == '<div>ab</div>',
   'an end tag for something that is not open is discarded'
-assert body('<b>a') == '<b>a</b>', 'an element left open at end of file is closed'
+assert body('<b>a') == '<b>a</b>',
+  'an element left open at end of file is closed'
 assert body('<div><div><div>x') == '<div><div><div>x</div></div></div>',
   'every element left open is closed, innermost first'
 ok('mismatched and stray end tags are recovered from')
@@ -304,7 +323,8 @@ assert body('<p/>x') == '<p>x</p>',
   'and the slash must be ignored, not treated as closing the element'
 ok('a trailing slash is accepted where it means something and reported where it does not')
 
-assert body('</br>x') == '<br>x', 'a </br> end tag is treated as a <br> start tag'
+assert body('</br>x') == '<br>x',
+  'a </br> end tag is treated as a <br> start tag'
 assert body('<image src="a">') == '<img src="a">',
   'the legacy <image> tag is renamed to <img>'
 assert codes('<image>').contains('unexpected-start-tag'),
@@ -316,7 +336,8 @@ ok('the two legacy tag rewrites the standard mandates')
 # ---------------------------------------------------------------------------
 assert body('<b>a<p>b</b>c') == '<b>a</b><p><b>b</b>c</p>',
   'formatting that spans a block boundary is reopened inside the block'
-assert body('<p>1<b>2<i>3</b>4</i>5</p>') == '<p>1<b>2<i>3</i></b><i>4</i>5</p>',
+assert body('<p>1<b>2<i>3</b>4</i>5</p>')
+  == '<p>1<b>2<i>3</i></b><i>4</i>5</p>',
   'misnested formatting elements are untangled'
 assert body('<a><p>X<a>Y</a>Z</p></a>') == '<a></a><p><a>X</a><a>Y</a>Z</p>',
   'a nested anchor closes the outer one first'
@@ -329,7 +350,8 @@ assert body('<b><table><td></b><i></table>') ==
   'the adoption agency must respect the marker a table cell pushes'
 ok('the adoption agency algorithm untangles misnested formatting')
 
-assert body('<b>a<b>b<b>c<b>d<b>e') == '<b>a<b>b<b>c<b>d<b>e</b></b></b></b></b>',
+assert body('<b>a<b>b<b>c<b>d<b>e')
+  == '<b>a<b>b<b>c<b>d<b>e</b></b></b></b></b>',
   'identical formatting elements nest until the Noah\'s Ark limit'
 ok('the Noah\'s Ark clause bounds identical formatting elements')
 
@@ -351,7 +373,7 @@ ok('foster parenting moves illegal table content out rather than dropping it')
 
 assert body('<table><tr><td>a<table><tr><td>b</table>c') ==
   '<table><tbody><tr><td>a<table><tbody><tr><td>b</td></tr></tbody></table>c' +
-  '</td></tr></tbody></table>',
+    '</td></tr></tbody></table>',
   'nested tables must each keep their own content'
 ok('nested tables')
 
@@ -391,7 +413,8 @@ ok('framesets')
 # ---------------------------------------------------------------------------
 # Raw text elements
 # ---------------------------------------------------------------------------
-assert html.parse('<script>x</script>').head().inner_html() == '<script>x</script>',
+assert html.parse('<script>x</script>').head().inner_html()
+  == '<script>x</script>',
   'a script written before any content belongs to the head'
 assert body('<body><script>if (a<b) { x("</p>") }</script>') ==
   '<script>if (a<b) { x("</p>") }</script>',
@@ -399,11 +422,20 @@ assert body('<body><script>if (a<b) { x("</p>") }</script>') ==
 assert body('<body><style>a > b { c: "d" }</style>') ==
   '<style>a > b { c: "d" }</style>',
   'stylesheet content must survive verbatim'
-assert html.parse('<script>x</script>').query_selector('script').children.length() == 1,
+assert html
+  .parse('<script>x</script>')
+  .query_selector('script').children
+  .length()
+  == 1,
   'script content becomes a single inert text node'
-assert html.parse('<script>x</script>').query_selector('script').first_child().is_text(),
+assert html
+  .parse('<script>x</script>')
+  .query_selector('script')
+  .first_child()
+  .is_text(),
   'and it really is a text node, not something executable'
-assert body('<textarea>a &amp; b</textarea>') == '<textarea>a &amp; b</textarea>',
+assert body('<textarea>a &amp; b</textarea>')
+  == '<textarea>a &amp; b</textarea>',
   'textarea content decodes references and re-escapes on the way out'
 assert body('<pre>\nx</pre>') == '<pre>x</pre>',
   'a pre swallows one leading newline'
@@ -415,7 +447,8 @@ assert body('<listing>\nx</listing>') == '<listing>x</listing>',
   'listing behaves the same way as pre'
 ok('raw text and escapable raw text elements')
 
-assert body('<body><noscript><b>x</b></noscript>') == '<noscript><b>x</b></noscript>',
+assert body('<body><noscript><b>x</b></noscript>')
+  == '<noscript><b>x</b></noscript>',
   'with scripting off, noscript content is real markup'
 assert html.parse('<body><noscript><b>x</b></noscript>')
   .query_selector('noscript b') != nil,
@@ -423,7 +456,9 @@ assert html.parse('<body><noscript><b>x</b></noscript>')
 assert body('<noscript><b>x</b></noscript>') == '<b>x</b>',
   'a noscript before any content lands in the head, where "in head noscript" allows almost nothing, so the <b> pops it and starts the body'
 
-var scripted = html.parse('<body><noscript><b>x</b></noscript>', { scripting: true })
+var scripted = html.parse(
+  '<body><noscript><b>x</b></noscript>', { scripting: true },
+)
 assert scripted.query_selector('noscript b') == nil,
   'with scripting on, noscript content is text'
 assert scripted.query_selector('noscript').text_content() == '<b>x</b>',
@@ -439,9 +474,11 @@ assert html.parse_fragment('<td>x', 'div', nil).inner_html() == 'x',
   'the same fragment in a div context loses it'
 assert html.parse_fragment('a<b>c', nil, nil).inner_html() == 'a<b>c</b>',
   'a nil context parses in a body context'
-assert html.parse_fragment('<p>a<p>b', 'div', nil).inner_html() == '<p>a</p><p>b</p>',
+assert html.parse_fragment('<p>a<p>b', 'div', nil).inner_html()
+  == '<p>a</p><p>b</p>',
   'the ordinary recovery rules apply inside a fragment'
-assert html.parse_fragment('a &amp; b', 'title', nil).inner_html() == 'a &amp; b',
+assert html.parse_fragment('a &amp; b', 'title', nil).inner_html()
+  == 'a &amp; b',
   'a fragment parsed in a title context is RCDATA'
 var styled = html.parse_fragment('<b>x</b>', 'style', nil)
 assert styled.children.length() == 1 and styled.first_child().is_text(),
@@ -472,11 +509,14 @@ handle.write('<!DOCTYPE html><title>From file</title><p>body text')
 handle.close()
 
 var from_file = html.parse_file(path, nil)
-assert from_file.title() == 'From file', 'parse_file() must read and parse the file'
+assert from_file.title() == 'From file',
+  'parse_file() must read and parse the file'
 assert from_file.body().inner_html() == '<p>body text</p>',
   'the tree must be built the same way as from a string'
 assert from_file.mode == 'no-quirks', 'the doctype in the file must be honoured'
-assert raises(@() { html.parse_file('tmp/definitely-not-here.html', nil) }),
+assert raises(@() {
+  html.parse_file('tmp/definitely-not-here.html', nil)
+}),
   'a missing file must raise'
 ok('parse_file()')
 
@@ -494,12 +534,17 @@ assert codes('<!DOCTYPE html><div a="1" a="2">').contains('duplicate-attribute')
 
 var located = html.parse('<!DOCTYPE html>\n<p><b>x</p>')
 assert located.errors.length() > 0, 'the error list must not be empty'
-assert located.errors[0].line == 2, 'an error must carry the line it happened on'
+assert located.errors[0].line == 2,
+  'an error must carry the line it happened on'
 ok('parse errors are collected from both stages, with positions')
 
-assert !raises(@() { html.parse('<<<>>><p</p><!--') }),
+assert !raises(@() {
+  html.parse('<<<>>><p</p><!--')
+}),
   'even nonsense must parse without raising'
-assert !raises(@() { html.parse('<table><tr><td><svg><foreignObject><table>') }),
+assert !raises(@() {
+  html.parse('<table><tr><td><svg><foreignObject><table>')
+}),
   'deeply confused markup must parse without raising'
 ok('parsing never raises, whatever the input')
 

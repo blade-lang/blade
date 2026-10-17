@@ -6,7 +6,9 @@ import sql.params { * }
 import sql.errors { QueryError }
 
 def test_positional() {
-  var numbered = translate('select * from t where a = ? and b = ?', [1, 2], NUMBERED)
+  var numbered = translate(
+    'select * from t where a = ? and b = ?', [1, 2], NUMBERED,
+  )
   assert numbered.sql == 'select * from t where a = $1 and b = $2'
   assert numbered.values == [1, 2]
 
@@ -71,7 +73,9 @@ def test_not_placeholders() {
 
 def test_escape() {
   # `?` is a JSON operator in PostgreSQL, so a literal one is doubled.
-  var escaped = translate('select data ?? $1 from t where id = ?', [7], NUMBERED)
+  var escaped = translate(
+    'select data ?? $1 from t where id = ?', [7], NUMBERED,
+  )
   assert escaped.sql == 'select data ? $1 from t where id = $1'
   assert escaped.values == [7]
 
@@ -195,7 +199,8 @@ def test_split_bodies() {
   ).length() == 2
 
   # BEGIN on its own is a transaction, not a body.
-  assert split_statements('BEGIN; insert into x values (1); COMMIT;').length() == 3
+  assert split_statements('BEGIN; insert into x values (1); COMMIT;').length()
+    == 3
 
   # Neither do keywords inside strings count.
   var quoted = split_statements("create trigger t after delete on x begin select 'end;'; end; select 1")

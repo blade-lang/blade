@@ -187,7 +187,8 @@ def test_transaction_reads() {
   var db = fresh()
 
   db.transaction(@(tx) {
-    assert tx.insert_many('t', [{ name: 'a' }, { name: 'b' }, { name: 'c' }]) == 3
+    assert tx.insert_many('t', [{ name: 'a' }, { name: 'b' }, { name: 'c' }])
+      == 3
 
     # A read inside the transaction sees what the transaction has
     # written and nobody else has yet.
@@ -217,10 +218,18 @@ def test_transaction_reads() {
   var tx = db.begin(nil)
   tx.commit()
 
-  assert raises(@() { tx.count('t', nil) })
-  assert raises(@() { tx.find('t', nil, nil) })
-  assert raises(@() { tx.find_one('t', nil, nil) })
-  assert raises(@() { tx.insert_many('t', [{ name: 'e' }]) })
+  assert raises(@() {
+    tx.count('t', nil)
+  })
+  assert raises(@() {
+    tx.find('t', nil, nil)
+  })
+  assert raises(@() {
+    tx.find_one('t', nil, nil)
+  })
+  assert raises(@() {
+    tx.insert_many('t', [{ name: 'e' }])
+  })
 
   db.close()
   echo 'test_transaction_reads passed'
@@ -233,7 +242,7 @@ def test_transaction_scripts_and_cursors() {
   # gone on a rollback.
   db.transaction(@(tx) {
     tx.exec_script(
-      'create table kept (n integer); insert into kept values (1); insert into kept values (2);'
+      'create table kept (n integer); insert into kept values (1); insert into kept values (2);',
     )
   }, nil)
 
@@ -248,13 +257,15 @@ def test_transaction_scripts_and_cursors() {
   }
 
   assert db.fetch_column(
-    "select name from sqlite_master where type = 'table' and name = 'dropped'", nil, nil
+    "select name from sqlite_master where type = 'table' and name = 'dropped'",
+    nil, nil,
   ).is_empty()
 
   db.transaction(@(tx) {
     tx.insert_many('t', [{ name: 'a' }, { name: 'b' }, { name: 'c' }])
 
-    assert tx.fetch_column('select name from t order by name', nil, nil) == ['a', 'b', 'c']
+    assert tx.fetch_column('select name from t order by name', nil, nil)
+      == ['a', 'b', 'c']
 
     var seen = []
 
@@ -275,13 +286,16 @@ def test_transaction_scripts_and_cursors() {
   var tx = db.begin(nil)
   tx.commit()
 
-  assert raises(@() { tx.exec_script('create table late (n integer)') })
-  assert raises(@() { tx.fetch_column('select name from t', nil, nil) })
+  assert raises(@() {
+    tx.exec_script('create table late (n integer)')
+  })
+  assert raises(@() {
+    tx.fetch_column('select name from t', nil, nil)
+  })
 
   db.close()
   echo 'test_transaction_scripts_and_cursors passed'
 }
-
 
 test_commit_and_rollback()
 test_nesting()

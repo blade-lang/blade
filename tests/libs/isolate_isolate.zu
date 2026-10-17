@@ -102,12 +102,20 @@ def make_counter(value) {
 
 class Animal {
   var name
-  @new(name) { self.name = name }
-  speak() { return '${self.name} makes a sound' }
+
+  @new(name) {
+    self.name = name
+  }
+
+  speak() {
+    return '${self.name} makes a sound'
+  }
 }
 
 class Dog < Animal {
-  speak() { return '${self.name} barks' }
+  speak() {
+    return '${self.name} barks'
+  }
 }
 
 def make_dog(name) {

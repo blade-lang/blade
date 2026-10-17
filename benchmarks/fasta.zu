@@ -15,6 +15,7 @@ const IC = 29573
 const SEED = 42
 
 var seed = SEED
+
 def fastaRand(max) {
   seed = (seed * IA + IC) % IM
   return max * seed / IM
@@ -31,7 +32,7 @@ const ALU = 'GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG' +
 const iub = 'acgtBDHKMNRSVWY'
 const iubP = [
   0.27, 0.12, 0.12, 0.27,
-  0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02
+  0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02,
 ]
 
 const homosapiens = 'acgt'
@@ -39,7 +40,7 @@ const homosapiensP = [
   0.3029549426680,
   0.1979883004921,
   0.1975473066391,
-  0.3015094502008
+  0.3015094502008,
 ]
 
 const LINELEN = 60
@@ -51,7 +52,7 @@ def repeatFasta(seq, n) {
   var i = 0
 
   /* explicit line buffer */
-  var b = '';
+  var b = ''
 
   iter ; i < n; i++ {
     b += seq[i % len]
@@ -75,7 +76,7 @@ def randomFasta(seq, probability, n) {
   var i = 0
 
   /* explicit line buffer */
-  var b = '';
+  var b = ''
 
   iter ; i < n; i++ {
     var v = fastaRand(1.0)
@@ -84,7 +85,9 @@ def randomFasta(seq, probability, n) {
     /* slowest idiomatic linear lookup.  Fast if len is short though. */
     iter ; j < len - 1; j++ {
       v -= probability[j]
-      if (v < 0) break
+      if (v < 0) {
+        break
+      }
     }
 
     b += seq[j]

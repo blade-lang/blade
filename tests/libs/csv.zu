@@ -72,7 +72,9 @@ def test_writer_header_and_dicts() {
 def test_stringify() {
   assert csv.stringify([["Alice", 30], ["Bob", 25]]) == "Alice,30\r\nBob,25\r\n"
 
-  var from_dicts = csv.stringify([{ name: "Alice", age: 30 }, { name: "Bob", age: 25 }])
+  var from_dicts = csv.stringify([
+    { name: "Alice", age: 30 }, { name: "Bob", age: 25 },
+  ])
   assert from_dicts == "name,age\r\nAlice,30\r\nBob,25\r\n", from_dicts
 
   echo "test_stringify passed"

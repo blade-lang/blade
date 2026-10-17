@@ -42,7 +42,8 @@ ok('compare() matches a known-answer hash produced by an independent bcrypt impl
 # hash() / compare() round trip
 # ---------------------------------------------------------------------------
 var h1 = bcrypt.hash('correct horse battery staple')
-assert h1.length() == 60, 'hash() must produce a standard 60-character bcrypt string'
+assert h1.length() == 60,
+  'hash() must produce a standard 60-character bcrypt string'
 assert bcrypt.compare('correct horse battery staple', h1) == true,
   'compare() must accept the exact password hash() just produced'
 assert bcrypt.compare('incorrect horse battery staple', h1) == false,
@@ -50,7 +51,8 @@ assert bcrypt.compare('incorrect horse battery staple', h1) == false,
 ok('hash() and compare() round-trip correctly')
 
 var h2 = bcrypt.hash('correct horse battery staple')
-assert h1 != h2, 'two hash() calls on the same password must produce different hashes (random salt)'
+assert h1 != h2,
+  'two hash() calls on the same password must produce different hashes (random salt)'
 assert bcrypt.compare('correct horse battery staple', h2) == true,
   'the second hash must still verify correctly despite having a different salt'
 ok('hash() generates a fresh random salt on every call')
@@ -61,17 +63,21 @@ ok('hash() generates a fresh random salt on every call')
 assert bcrypt.get_rounds(bcrypt.hash('x')) == bcrypt.DEFAULT_LOG2_ROUNDS,
   'hash() with no rounds argument must use DEFAULT_LOG2_ROUNDS'
 var h3 = bcrypt.hash('x', 4)
-assert bcrypt.get_rounds(h3) == 4, 'hash() must honor an explicit rounds argument'
-assert bcrypt.compare('x', h3) == true, 'a hash created with a non-default rounds value must still verify'
+assert bcrypt.get_rounds(h3) == 4,
+  'hash() must honor an explicit rounds argument'
+assert bcrypt.compare('x', h3) == true,
+  'a hash created with a non-default rounds value must still verify'
 ok('hash() honors an explicit rounds parameter, defaulting to DEFAULT_LOG2_ROUNDS otherwise')
 
 # ---------------------------------------------------------------------------
 # get_rounds() / get_salt()
 # ---------------------------------------------------------------------------
-assert bcrypt.get_rounds(known_hash) == 10, 'get_rounds() must read the cost factor out of a hash'
+assert bcrypt.get_rounds(known_hash) == 10,
+  'get_rounds() must read the cost factor out of a hash'
 assert bcrypt.get_salt(known_hash) == known_hash[,29],
   'get_salt() must return exactly the first 29 characters of the hash'
-assert bcrypt.get_salt(known_hash).length() == 29, 'the salt portion of a bcrypt hash is always 29 characters'
+assert bcrypt.get_salt(known_hash).length() == 29,
+  'the salt portion of a bcrypt hash is always 29 characters'
 ok('get_rounds()/get_salt() read metadata back out of an existing hash')
 
 # ---------------------------------------------------------------------------
@@ -91,7 +97,9 @@ ok('needs_rehash() correctly compares a hash\'s cost factor against a target')
 # ---------------------------------------------------------------------------
 assert bcrypt.compare('anything', 'not-a-real-bcrypt-hash') == false,
   'compare() must return false (not raise) for a hash that is not well-formed'
-assert raises(@() { bcrypt.get_salt('too-short') }),
+assert raises(@() {
+  bcrypt.get_salt('too-short')
+}),
   'get_salt() must raise for a hash shorter than a real bcrypt hash'
 ok('malformed hashes are rejected without crashing the caller')
 

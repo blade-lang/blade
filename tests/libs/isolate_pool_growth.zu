@@ -6,7 +6,8 @@ import os
 
 isolate.configure(4)
 
-assert isolate.started_count() == 0, 'a pool nothing has used yet must have started no threads'
+assert isolate.started_count() == 0,
+  'a pool nothing has used yet must have started no threads'
 
 # Isolates run one after another reuse the one thread.
 iter var i = 0; i < 5; i++ {
@@ -45,7 +46,8 @@ iter var i = 0; i < 3; i++ {
 }
 
 settle(4)
-assert isolate.started_count() == 4, 'the pool must never start more threads than its size'
+assert isolate.started_count() == 4,
+  'the pool must never start more threads than its size'
 assert isolate.queued_count() == 2, 'what does not fit must wait in the queue'
 
 iter var i = 0; i < 6; i++ {
@@ -59,6 +61,7 @@ for task in held {
 }
 
 assert total == 15, 'every held isolate must still run to the end'
-assert isolate.started_count() == 4, 'running the queue down must not start more threads'
+assert isolate.started_count() == 4,
+  'running the queue down must not start more threads'
 
 echo 'isolate pool growth passed'

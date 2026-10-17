@@ -49,7 +49,8 @@ var _NULL_SIZE = 4294967295
 
 # What ends nearly every request: run the unnamed portal to the end,
 # then Sync. Built once, since it never varies.
-var _EXECUTE_ALL = Writer().cstring('').int32(0).frame('E') + Writer().frame('S')
+var _EXECUTE_ALL = Writer().cstring('').int32(0).frame('E')
+  + Writer().frame('S')
 
 # The length that stands for a NULL parameter.
 var _NULL_LENGTH = write_int32(-1)
@@ -742,7 +743,9 @@ class Protocol {
       var reader = index < known ? readers[index] : nil
 
       if reader == nil {
-        values.append(size == 0 ? '' : buffer[offset, offset + size].to_string())
+        values.append(
+          size == 0 ? '' : buffer[offset, offset + size].to_string(),
+        )
       } else {
         values.append(reader(buffer, offset, size, oids[index]))
       }

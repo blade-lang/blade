@@ -1,5 +1,4 @@
-def fannkuchredux(n)
-{
+def fannkuchredux(n) {
   var perm = [0] * n
   var perm1 = [0] * n
   var count = [0] * n
@@ -53,7 +52,9 @@ def fannkuchredux(n)
       }
       perm1[r] = perm0
       count[r] = count[r] - 1
-      if count[r] > 0 break
+      if count[r] > 0 {
+        break
+      }
       r++
     }
     permCount++

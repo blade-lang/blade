@@ -62,21 +62,21 @@ def test_types() {
 
   db.exec_script(
     'create table kinds (' +
-    '  id int auto_increment primary key,' +
-    '  small smallint,' +
-    '  big bigint,' +
-    '  unsigned_big bigint unsigned,' +
-    '  real_number double,' +
-    '  exact decimal(20, 6),' +
-    '  words varchar(64),' +
-    '  long_text text,' +
-    '  raw blob,' +
-    '  flag tinyint(1),' +
-    '  when_day date,' +
-    '  when_moment datetime(6),' +
-    '  span time(6),' +
-    '  document json' +
-    ')'
+      '  id int auto_increment primary key,' +
+      '  small smallint,' +
+      '  big bigint,' +
+      '  unsigned_big bigint unsigned,' +
+      '  real_number double,' +
+      '  exact decimal(20, 6),' +
+      '  words varchar(64),' +
+      '  long_text text,' +
+      '  raw blob,' +
+      '  flag tinyint(1),' +
+      '  when_day date,' +
+      '  when_moment datetime(6),' +
+      '  span time(6),' +
+      '  document json' +
+      ')',
   )
 
   var moment = date.Date(2026, 9, 16, 14, 30, 45, 123456, 0, false)
@@ -84,14 +84,14 @@ def test_types() {
 
   db.exec(
     'insert into kinds (small, big, unsigned_big, real_number, exact, ' +
-    '  words, long_text, raw, flag, when_day, when_moment, span, document) ' +
-    'values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      '  words, long_text, raw, flag, when_day, when_moment, span, document) ' +
+      'values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       -32768, 9007199254740993n, 18446744073709551615n, 0.125,
       sql.decimal('12345678901234.567890', nil),
       'hello', 'a longer piece of text', bytes([0, 1, 2, 255]),
       true, moment, moment, span, { a: [1, 2], b: 'c' },
-    ]
+    ],
   )
 
   var row = db.fetch_one('select * from kinds', nil)
@@ -150,10 +150,10 @@ def test_inserts_and_ids() {
 
   db.exec_script(
     'create table people (' +
-    '  id bigint auto_increment primary key,' +
-    '  name varchar(64) not null,' +
-    '  age int' +
-    ')'
+      '  id bigint auto_increment primary key,' +
+      '  name varchar(64) not null,' +
+      '  age int' +
+      ')',
   )
 
   # Both engines report the id of the row just inserted. MariaDB also
@@ -327,7 +327,8 @@ def test_prepared() {
   statement.close()
 
   assert db.fetch_value('select count(*) from squares', nil, nil) == 10
-  assert db.fetch_value('select square from squares where n = ?', [7], nil) == 49
+  assert db.fetch_value('select square from squares where n = ?', [7], nil)
+    == 49
 
   var reader = db.prepare('select n, square from squares where n > ?')
   assert reader.parameter_count() == 1
@@ -355,7 +356,8 @@ def test_prepared() {
   # the connection's cache is for. Running it many times has to give
   # the same answer every time.
   for round in 0..50 {
-    assert db.fetch_value('select square from squares where n = ?', [3], nil) == 9
+    assert db.fetch_value('select square from squares where n = ?', [3], nil)
+      == 9
   }
 
   finish(db)
@@ -411,10 +413,10 @@ def test_errors() {
 
   db.exec_script(
     'create table unique_names (' +
-    '  name varchar(64) not null,' +
-    '  parent varchar(64),' +
-    '  unique key by_name (name)' +
-    ') engine = innodb'
+      '  name varchar(64) not null,' +
+      '  parent varchar(64),' +
+      '  unique key by_name (name)' +
+      ') engine = innodb',
   )
 
   db.exec('insert into unique_names (name) values (?)', ['alice'])
@@ -470,9 +472,9 @@ def test_multiple_results() {
   # rather than through exec_script, which splits on those.
   db.exec(
     'create procedure two_results() begin ' +
-    '  select 1 as a; select 2 as b; ' +
-    'end',
-    nil
+      '  select 1 as a; select 2 as b; ' +
+      'end',
+    nil,
   )
 
   # The call answers with a result set per select and an OK after
@@ -500,19 +502,19 @@ def test_schema() {
 
   db.exec_script(
     'create table owners (' +
-    '  id int auto_increment primary key,' +
-    '  label varchar(32) not null unique' +
-    ') engine = innodb'
+      '  id int auto_increment primary key,' +
+      '  label varchar(32) not null unique' +
+      ') engine = innodb',
   )
 
   db.exec_script(
     'create table owned (' +
-    '  id int auto_increment primary key,' +
-    '  owner_id int not null,' +
-    '  note varchar(64) default \'none\',' +
-    '  constraint owned_owner foreign key (owner_id) references owners (id)' +
-    '    on delete cascade' +
-    ') engine = innodb'
+      '  id int auto_increment primary key,' +
+      '  owner_id int not null,' +
+      '  note varchar(64) default \'none\',' +
+      '  constraint owned_owner foreign key (owner_id) references owners (id)' +
+      '    on delete cascade' +
+      ') engine = innodb',
   )
 
   db.exec_script('create view owned_view as select id, note from owned')
@@ -609,9 +611,9 @@ def test_returning() {
 
   db.exec_script(
     'create table returned (' +
-    '  id int auto_increment primary key,' +
-    '  word varchar(32) not null' +
-    ')'
+      '  id int auto_increment primary key,' +
+      '  word varchar(32) not null' +
+      ')',
   )
 
   assert db.supports('returning')
@@ -624,7 +626,7 @@ def test_returning() {
   # And the clause works written out, which is what a program reaching
   # past the helper would do.
   var row = db.fetch_one(
-    "insert into returned (word) values (?) returning id, word", ['gamma']
+    "insert into returned (word) values (?) returning id, word", ['gamma'],
   )
 
   assert row.id == 3
@@ -656,9 +658,9 @@ def test_ed25519() {
   # connection, so a fallback to a different one could not pass.
   assert db.fetch_value(
     'select plugin from mysql.user where user = current_user()' +
-    "  or concat(user, '@', host) = current_user()",
+      "  or concat(user, '@', host) = current_user()",
     nil,
-    nil
+    nil,
   ) == 'ed25519'
 
   db.close()

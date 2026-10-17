@@ -247,7 +247,8 @@ def test_framing() {
   p.PacketStream(exact).write_packet(bytes(p.MAX_PAYLOAD))
 
   assert exact.written.length() == 4 + p.MAX_PAYLOAD + 4
-  assert exact.written[p.MAX_PAYLOAD + 4, p.MAX_PAYLOAD + 8] == bytes([0, 0, 0, 1])
+  assert exact.written[p.MAX_PAYLOAD + 4, p.MAX_PAYLOAD + 8]
+    == bytes([0, 0, 0, 1])
 
   var rejoined = ScriptedStream().replay(exact.written)
   assert p.PacketStream(rejoined).read_packet().length() == p.MAX_PAYLOAD
@@ -372,7 +373,7 @@ def test_ed25519() {
 
   assert _hex(ed.sign(expanded, bytes(0))) ==
     'e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155' +
-    '5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b'
+      '5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b'
 
   # And it agrees with the implementation the rest of the language
   # uses, over keys neither of them chose.
@@ -381,8 +382,11 @@ def test_ed25519() {
     var key = hash.sha512(_seed_of(pair.private_pem), true)
     var message = crypto.random_bytes(1 + round * 17)
 
-    assert ed.sign(key, message) == crypto.ed25519.sign(pair.private_pem, message)
-    assert crypto.ed25519.verify(pair.public_pem, message, ed.sign(key, message))
+    assert ed.sign(key, message)
+      == crypto.ed25519.sign(pair.private_pem, message)
+    assert crypto.ed25519.verify(
+      pair.public_pem, message, ed.sign(key, message),
+    )
   }
 
   # The signature MariaDB asks for is over the scramble, and is
@@ -655,7 +659,7 @@ def test_server_errors_map_to_classes() {
   var protocol = connected(stream, { user: 'alice', password: '' })
 
   stream.feed(
-    err_packet(1062, '23000', "Duplicate entry 'a' for key 't.name'"), 1
+    err_packet(1062, '23000', "Duplicate entry 'a' for key 't.name'"), 1,
   )
 
   var raised = nil
@@ -755,15 +759,17 @@ def test_types_round_trip() {
   assert round_trip(42, t.TYPES.LONGLONG) == 42
   assert round_trip(-42, t.TYPES.LONGLONG) == -42
   assert round_trip(42.5, t.TYPES.DOUBLE) == 42.5
-  assert round_trip(9223372036854775807n, t.TYPES.LONGLONG) == 9223372036854775807n
-  assert round_trip(-9223372036854775808n, t.TYPES.LONGLONG) == -9223372036854775808n
+  assert round_trip(9223372036854775807n, t.TYPES.LONGLONG)
+    == 9223372036854775807n
+  assert round_trip(-9223372036854775808n, t.TYPES.LONGLONG)
+    == -9223372036854775808n
 
   var w = p.Writer()
   t.write_parameter(w, 18446744073709551615n)
 
   assert t.decode_binary(
     p.Cursor(w.payload()),
-    column(t.TYPES.LONGLONG, t.FLAGS.UNSIGNED, nil)
+    column(t.TYPES.LONGLONG, t.FLAGS.UNSIGNED, nil),
   ) == 18446744073709551615n
 
   var moment = date.Date(2026, 9, 16, 14, 30, 45, 123456, 0, false)
@@ -781,7 +787,8 @@ def test_types_round_trip() {
     sql.time(25, 1, 2, 0, false),
     sql.time(0, 0, 1, 500000, true),
   ] {
-    assert round_trip(span, t.TYPES.TIME).total_seconds() == span.total_seconds(),
+    assert round_trip(span, t.TYPES.TIME).total_seconds()
+      == span.total_seconds(),
       span.to_string()
     assert round_trip(span, t.TYPES.TIME) == span, span.to_string()
   }
@@ -808,7 +815,7 @@ def test_types_round_trip() {
   assert t.type_name_of(column(t.TYPES.BLOB, nil, 33)) == 'text'
   assert t.type_name_of(column(t.TYPES.STRING, t.FLAGS.ENUM, nil)) == 'enum'
   assert t.type_name_of(
-    column(t.TYPES.LONGLONG, t.FLAGS.UNSIGNED | t.FLAGS.NUM, nil)
+    column(t.TYPES.LONGLONG, t.FLAGS.UNSIGNED | t.FLAGS.NUM, nil),
   ) == 'bigint unsigned'
 
   echo 'test_types_round_trip passed'
@@ -818,7 +825,7 @@ def test_dsn() {
   var d = sql.driver('mysql')
 
   var full = d.parse_dsn(
-    'mysql://alice:s%40cret@db.example.com:3307/app?sslmode=verify&compression=zstd'
+    'mysql://alice:s%40cret@db.example.com:3307/app?sslmode=verify&compression=zstd',
   )
 
   assert full.host == 'db.example.com'
@@ -849,9 +856,12 @@ def test_dsn() {
 
   # A query string has no types, so flags arrive as text.
   assert d.parse_dsn('mysql://h/?found_rows=yes').found_rows == true
-  assert d.parse_dsn('host=db multiple_statements=0').multiple_statements == false
+  assert d.parse_dsn('host=db multiple_statements=0').multiple_statements
+    == false
 
-  for bad in ['host=db sslmode=maybe', 'host=db compression=gzip', 'host=db oops'] {
+  for bad in [
+    'host=db sslmode=maybe', 'host=db compression=gzip', 'host=db oops',
+  ] {
     var caught = false
 
     catch {

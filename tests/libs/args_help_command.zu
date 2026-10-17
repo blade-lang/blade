@@ -6,5 +6,5 @@ import args
 
 var p = args.Parser('helpy', false)
 var cmd = p.add_command('run', 'Run it')
-cmd.add_option('fast', 'Go fast', {short_name: 'f'})
+cmd.add_option('fast', 'Go fast', { short_name: 'f' })
 p.parse(['--help', 'run'])

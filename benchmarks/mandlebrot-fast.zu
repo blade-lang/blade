@@ -28,7 +28,7 @@ print('P4\n${w} ${h}\n')
 
 iter var y = 0; y < h; y++ {
   var row = bytes(bytes_per_row)
-  var xbyte = 0;
+  var xbyte = 0
 
   iter var x = 0; x < w; x++ {
     zr = zi = tr = ti = 0
@@ -49,12 +49,12 @@ iter var y = 0; y < h; y++ {
     bit_num++
 
     if bit_num == 8 {
-      row[xbyte++-1] = byte_acc
+      row[xbyte++ - 1] = byte_acc
       byte_acc = 0
       bit_num = 0
     } else if x == w - 1 {
       byte_acc <<= 8 - w % 8
-      row[xbyte++-1] = byte_acc
+      row[xbyte++ - 1] = byte_acc
       byte_acc = 0
       bit_num = 0
     }

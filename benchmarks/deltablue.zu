@@ -26,7 +26,7 @@ class Vector {
     self.last_idx = 0
   }
 
-  static def of(element) {
+  static of(element) {
     var v = Vector(1)
     v.append(element)
     return v

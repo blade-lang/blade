@@ -68,15 +68,19 @@ assert small('<pre>  a\n  b </pre>') == '<pre>  a\n  b </pre>',
   'pre content must be untouched'
 assert small('<textarea>  a  </textarea>') == '<textarea>  a  </textarea>',
   'textarea content must be untouched'
-assert small('<script>  var a = 1;  </script>') == '<script>  var a = 1;  </script>',
+assert small('<script>  var a = 1;  </script>')
+  == '<script>  var a = 1;  </script>',
   'script content must be untouched'
-assert small('<style>  a { b: c }  </style>') == '<style>  a { b: c }  </style>',
+assert small('<style>  a { b: c }  </style>')
+  == '<style>  a { b: c }  </style>',
   'style content must be untouched'
-assert small('<div>  <pre>  x  </pre>  </div>') == '<div><pre>  x  </pre></div>',
+assert small('<div>  <pre>  x  </pre>  </div>')
+  == '<div><pre>  x  </pre></div>',
   'the whitespace around a pre still goes, only the content inside is protected'
 ok('minify() leaves the whitespace-sensitive elements alone')
 
-assert small('<p>a</p>') == '<p>a</p>', 'markup with nothing to remove must be unchanged'
+assert small('<p>a</p>') == '<p>a</p>',
+  'markup with nothing to remove must be unchanged'
 assert small('') == '', 'an empty source must minify to an empty string'
 assert small('   ') == '', 'a whitespace-only source must minify away entirely'
 ok('minify() handles trivial input')
@@ -88,7 +92,9 @@ assert small('<div><!-- gone --></div>') == '<div></div>',
   'comments must be removed by default'
 assert small('<p>a<!-- x -->b</p>') == '<p>ab</p>',
   'a comment between text must go too'
-assert html.minify('<div><!-- kept --></div>', { fragment: true, comments: true }) ==
+assert html.minify(
+  '<div><!-- kept --></div>', { fragment: true, comments: true },
+) ==
   '<div><!-- kept --></div>',
   'comments: true must keep them'
 assert html.minify('<div>  <!-- kept -->  </div>',
@@ -140,7 +146,8 @@ assert small('<p>a &amp; b</p>') == '<p>a &amp; b</p>',
   'escaping must be preserved'
 assert small('<IMG SRC="a">') == '<img src="a">',
   'names are lowercased by the parser, which minify inherits'
-assert small('<svg><circle cx="1"/></svg>') == '<svg><circle cx="1"></circle></svg>',
+assert small('<svg><circle cx="1"/></svg>')
+  == '<svg><circle cx="1"></circle></svg>',
   'foreign content must survive minifying'
 ok('minify() changes whitespace and comments and nothing else')
 
@@ -182,9 +189,13 @@ assert html.format('<div><p>x</p></div>', { fragment: true, indent: '\t' }) ==
   '<div>\n\t<p>x</p>\n</div>', 'a string must be used as the indent unit verbatim'
 assert html.format('<div><p>x</p></div>', { fragment: true, indent: '..' }) ==
   '<div>\n..<p>x</p>\n</div>', 'any string must work as the indent unit'
-assert raises(@() { html.format('<p>x</p>', { fragment: true, indent: -1 }) }),
+assert raises(@() {
+  html.format('<p>x</p>', { fragment: true, indent: -1 })
+}),
   'a negative indent must be refused'
-assert raises(@() { html.format('<p>x</p>', { fragment: true, indent: true }) }),
+assert raises(@() {
+  html.format('<p>x</p>', { fragment: true, indent: true })
+}),
   'an indent that is neither a number nor a string must be refused'
 ok('format() honours the indent option in both its forms')
 
@@ -217,8 +228,8 @@ ok('format() never reflows whitespace-sensitive content')
 assert html.format('<!DOCTYPE html><html><head><title>T</title></head>' +
   '<body><div><p>a</p><p>b</p></div></body></html>', nil) ==
   '<!DOCTYPE html>\n<html>\n  <head>\n    <title>T</title>\n  </head>\n' +
-  '  <body>\n    <div>\n      <p>a</p>\n      <p>b</p>\n    </div>\n' +
-  '  </body>\n</html>',
+    '  <body>\n    <div>\n      <p>a</p>\n      <p>b</p>\n    </div>\n' +
+    '  </body>\n</html>',
   'a whole document must format from the doctype down'
 ok('format() writes a whole document, doctype included')
 
@@ -236,7 +247,8 @@ ok('format() accepts a node and never mutates it')
 # ---------------------------------------------------------------------------
 assert pretty('<p>a &amp; b</p>') == '<p>a &amp; b</p>',
   'text must stay escaped through formatting'
-assert pretty('<div><p>a &lt; b</p></div>') == '<div>\n  <p>a &lt; b</p>\n</div>',
+assert pretty('<div><p>a &lt; b</p></div>')
+  == '<div>\n  <p>a &lt; b</p>\n</div>',
   'the same holds one level down'
 assert pretty('<p title=\'a"b\'>x</p>') == '<p title="a&quot;b">x</p>',
   'attribute values must be escaped on the way out'

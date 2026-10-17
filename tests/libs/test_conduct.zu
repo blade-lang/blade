@@ -93,8 +93,10 @@ write('notes.txt', "not a test file\n")
 var found = conduct.discover(SUITE, nil)
 
 assert found.contains('a.zu'), 'a top-level test file must be discovered'
-assert found.contains(os.join_paths('nested', 'c.zu')), 'and one in a subdirectory'
-assert !found.contains('_helper.zu'), 'a leading underscore keeps a helper out by default'
+assert found.contains(os.join_paths('nested', 'c.zu')),
+  'and one in a subdirectory'
+assert !found.contains('_helper.zu'),
+  'a leading underscore keeps a helper out by default'
 assert !found.contains('notes.txt'), 'and only .zu files are taken'
 assert found.length() == 3, 'three files and no more'
 ok('discovery finds test files, skips helpers, and recurses')
@@ -103,10 +105,12 @@ var narrowed = conduct.discover(SUITE, { match: ['b_*.zu'] })
 assert narrowed == ['b_fails.zu'], 'match narrows to the pattern it was given'
 
 var flat = conduct.discover(SUITE, { recursive: false })
-assert !flat.contains(os.join_paths('nested', 'c.zu')), 'recursive: false stays in the top directory'
+assert !flat.contains(os.join_paths('nested', 'c.zu')),
+  'recursive: false stays in the top directory'
 
 var everything = conduct.discover(SUITE, { ignore: [] })
-assert everything.contains('_helper.zu'), 'an empty ignore list takes the helper too'
+assert everything.contains('_helper.zu'),
+  'an empty ignore list takes the helper too'
 ok('match, ignore and recursive all take effect')
 
 catch {
@@ -129,9 +133,12 @@ assert outcome.totals.failed == 1, 'and so are failures'
 assert outcome.totals.skipped == 1, 'and skips'
 assert outcome.totals.todo == 1, 'and todos'
 assert outcome.totals.total == 7, 'and the total'
-assert outcome.totals.files == 3, 'the file count is kept apart from the test count'
-assert outcome.totals.failed_files == 1, 'only the file with a failing test counts as failed'
-assert !outcome.ok and outcome.exit_code == 1, 'and the run as a whole did not pass'
+assert outcome.totals.files == 3,
+  'the file count is kept apart from the test count'
+assert outcome.totals.failed_files == 1,
+  'only the file with a failing test counts as failed'
+assert !outcome.ok and outcome.exit_code == 1,
+  'and the run as a whole did not pass'
 ok('results are aggregated across files, with test and file counts kept apart')
 
 var alpha = result_for(outcome, 'a.zu')
@@ -142,19 +149,28 @@ assert alpha.code == 0, 'and exited cleanly'
 
 var beta = result_for(outcome, 'b_fails.zu')
 assert !beta.ok(), 'a file with a failing test is not ok'
-assert beta.tests.some(@(one) { return one.status == 'failed' }), 'and says which test failed'
+assert beta.tests.some(@(one) {
+  return one.status == 'failed'
+}), 'and says which test failed'
 
-var failing_test = beta.tests.filter(@(one) { return one.status == 'failed' })[0]
+var failing_test = beta.tests.filter(@(one) {
+  return one.status == 'failed'
+})[0]
 assert failing_test.full_name == 'beta > fails', 'with its full name'
-assert failing_test.failures[0].message.contains('Expected 1 to be 2'), 'and its message'
+assert failing_test.failures[0].message.contains('Expected 1 to be 2'),
+  'and its message'
 assert failing_test.failures[0].line == 3, 'and the line it failed on'
 ok('each file reports its own tests, failures and lines back to the parent')
 
 # The order files are reported in is the order they were discovered,
 # so a report is the same whether or not files ran at the same time.
 var parallel = test.conduct(SUITE, { jobs: 3 })
-assert parallel.files.map(@(one) { return one.path }) ==
-  outcome.files.map(@(one) { return one.path }),
+assert parallel.files.map(@(one) {
+  return one.path
+}) ==
+  outcome.files.map(@(one) {
+    return one.path
+  }),
   'running in parallel must not change the order results are reported in'
 assert parallel.totals.total == outcome.totals.total, 'or what they add up to'
 ok('jobs runs files at the same time without changing the report')
@@ -179,21 +195,26 @@ var misbehaving = test.conduct(SUITE, nil)
 
 var empty = result_for(misbehaving, 'd_no_tests.zu')
 assert !empty.ok(), 'a file that declares no tests is not ok'
-assert empty.problem.contains('declared no tests'), 'and is told what it did not do'
+assert empty.problem.contains('declared no tests'),
+  'and is told what it did not do'
 assert empty.code == 0, 'even though it exited cleanly'
 
 var crashed = result_for(misbehaving, 'e_crashes.zu')
 assert !crashed.ok(), 'a file that crashed is not ok'
 assert crashed.code != 0, 'and its exit status is kept'
-assert crashed.output.contains('this file blows up'), 'along with what it printed on the way out'
+assert crashed.output.contains('this file blows up'),
+  'along with what it printed on the way out'
 
 var late = result_for(misbehaving, 'g_crashes_after.zu')
 assert !late.ok(), 'a file that reported and then crashed is not ok either'
 assert late.summary.get('passed', 0) == 1, 'what it reported is still counted'
-assert late.problem.contains('exited with status'), 'and the crash is still called out'
+assert late.problem.contains('exited with status'),
+  'and the crash is still called out'
 
-assert misbehaving.totals.errored_files == 2, 'both files that never reported are counted as such'
-assert result_for(misbehaving, 'a.zu').ok(), 'and the well-behaved files still ran'
+assert misbehaving.totals.errored_files == 2,
+  'both files that never reported are counted as such'
+assert result_for(misbehaving, 'a.zu').ok(),
+  'and the well-behaved files still ran'
 ok('a file that declares nothing, or crashes before or after reporting, is called out')
 
 # ---------------------------------------------------------------------------
@@ -244,15 +265,15 @@ os.create_dir(SELF, 0c755, true)
 
 file(os.join_paths(SELF, 'index.zu'), 'w').write(
   "import os\n" +
-  "import test\n" +
-  "test.conduct(os.dir_name(__file__))\n"
+    "import test\n" +
+    "test.conduct(os.dir_name(__file__))\n",
 )
 
 file(os.join_paths(SELF, 'one.zu'), 'w').write(
   "import test { * }\n" +
-  "describe('one', @{\n" +
-  "  it('passes', @{ expect(1).to_be(1) })\n" +
-  "})\n"
+    "describe('one', @{\n" +
+    "  it('passes', @{ expect(1).to_be(1) })\n" +
+    "})\n",
 )
 
 assert conduct.discover(SELF, nil) == ['one.zu'],
@@ -265,15 +286,16 @@ var self_code = self_run.wait()
 var self_out = self_run.read_stdout().to_string()
 
 assert self_code == 0, 'a passing suite run through its own index must exit 0'
-assert self_out.contains('1 file'), 'and must have found exactly the one test file'
+assert self_out.contains('1 file'),
+  'and must have found exactly the one test file'
 assert self_out.contains('1 passed'), 'and run it'
 ok('a tests directory can run itself through its own index.zu')
 
 file(os.join_paths(SELF, 'two.zu'), 'w').write(
   "import test { * }\n" +
-  "describe('two', @{\n" +
-  "  it('fails', @{ expect(1).to_be(2) })\n" +
-  "})\n"
+    "describe('two', @{\n" +
+    "  it('fails', @{ expect(1).to_be(2) })\n" +
+    "})\n",
 )
 
 var self_failed = os.spawn(os.exe_path, ['run', SELF], { stdin: 'null' })

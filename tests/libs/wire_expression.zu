@@ -77,12 +77,17 @@ assert value('items.length') == '3', 'a collection answers length by name'
 assert value('missing') == '', 'a name that was never supplied is nothing'
 assert value('missing.deeply.nested') == '',
   'a chain through a missing name stops quietly instead of raising'
-assert value('items[99]') == '', 'a position past the end is nothing, not an error'
+assert value('items[99]') == '',
+  'a position past the end is nothing, not an error'
 ok('lookup, including the chains that go nowhere')
 
-assert raises(@() { value('user._secret') }),
+assert raises(@() {
+  value('user._secret')
+}),
   'an underscore-prefixed member cannot be read'
-assert raises(@() { value('_hidden') }),
+assert raises(@() {
+  value('_hidden')
+}),
   'an underscore-prefixed name cannot be read'
 ok('private names are refused')
 
@@ -118,9 +123,15 @@ assert value("'Ada' in name") == 'true', 'in finds a substring'
 assert value("'age' in user") == 'true', 'in finds a dictionary key'
 ok('the in operator')
 
-assert raises(@() { value("'a' * 2") }), 'arithmetic on a string is refused'
-assert raises(@() { value('1 / 0') }), 'division by zero is refused'
-assert raises(@() { value('items < 3') }), 'ordering a list against a number is refused'
+assert raises(@() {
+  value("'a' * 2")
+}), 'arithmetic on a string is refused'
+assert raises(@() {
+  value('1 / 0')
+}), 'division by zero is refused'
+assert raises(@() {
+  value('items < 3')
+}), 'ordering a list against a number is refused'
 ok('operators refuse what they cannot answer')
 
 # ---------------------------------------------------------------------------
@@ -142,10 +153,12 @@ assert value('yes and no') == 'false', 'and'
 assert value('no or yes') == 'true', 'or'
 assert value('yes && yes') == 'true', '&& is the same as and'
 assert value('no || no') == 'false', '|| is the same as or'
-assert value("missing or 'fallback'") == 'fallback', 'or falls back on a falsy value'
+assert value("missing or 'fallback'") == 'fallback',
+  'or falls back on a falsy value'
 assert value("zero or 'fallback'") == 'fallback', 'or falls back on zero too'
 assert value("missing ?? 'fallback'") == 'fallback', '?? falls back on nil'
-assert value("zero ?? 'fallback'") == '0', '?? keeps a zero, which is the point of it'
+assert value("zero ?? 'fallback'") == '0',
+  '?? keeps a zero, which is the point of it'
 ok('logical operators, and the difference between or and ??')
 
 # ---------------------------------------------------------------------------
@@ -163,12 +176,18 @@ view.register_global('shout', @(text) {
   return text.upper() + '!'
 })
 
-view.register_global('stamp', @() { return 'v1' })
+view.register_global('stamp', @() {
+  return 'v1'
+})
 
-assert out("{{ shout('hi') }}", nil) == 'HI!', 'a registered function is callable'
-assert out('{! stamp !}', nil) == 'v1', '{! name !} calls a function with no arguments'
+assert out("{{ shout('hi') }}", nil) == 'HI!',
+  'a registered function is callable'
+assert out('{! stamp !}', nil) == 'v1',
+  '{! name !} calls a function with no arguments'
 assert out('%{! stamp !}', nil) == '{! stamp !}', 'a call can be escaped with %'
-assert raises(@() { out('{{ name() }}', { name: 'Ada' }) }),
+assert raises(@() {
+  out('{{ name() }}', { name: 'Ada' })
+}),
   'calling something that is not callable is refused'
 ok('function calls, in both spellings')
 
@@ -177,29 +196,38 @@ ok('function calls, in both spellings')
 # ---------------------------------------------------------------------------
 assert value('name|upper') == 'ADA LOVELACE', 'a filter'
 assert value('name|upper|lower') == 'ada lovelace', 'filters chain'
-assert value("name|is='Ada Lovelace'") == 'true', 'the = shorthand for one argument'
-assert value("items|join('-')") == 'a-b-c', 'a filter with a parenthesised argument'
+assert value("name|is='Ada Lovelace'") == 'true',
+  'the = shorthand for one argument'
+assert value("items|join('-')") == 'a-b-c',
+  'a filter with a parenthesised argument'
 assert value('items|length > 2') == 'true',
   'a filter binds tighter than a comparison'
 assert value('1.5|round(0)') == '2', 'a filter taking a number'
-assert raises(@() { value('name|nope') }), 'an unknown filter is refused'
+assert raises(@() {
+  value('name|nope')
+}), 'an unknown filter is refused'
 ok('filter application')
 
 assert out('{{ v|upper }}', { v: 'a' }) == 'A', 'upper'
 assert out('{{ v|lower }}', { v: 'A' }) == 'a', 'lower'
 assert out('{{ v|title }}', { v: 'jane IS here' }) == 'Jane Is Here', 'title'
-assert out('{{ v|capitalize }}', { v: 'hello THERE' }) == 'Hello THERE', 'capitalize'
-assert out('{{ v|trim }}', { v: '  a\n ' }) == 'a', 'trim removes every kind of whitespace'
+assert out('{{ v|capitalize }}', { v: 'hello THERE' }) == 'Hello THERE',
+  'capitalize'
+assert out('{{ v|trim }}', { v: '  a\n ' }) == 'a',
+  'trim removes every kind of whitespace'
 assert out('{{ v|truncate(3) }}', { v: 'abcdef' }) == 'abc…', 'truncate'
-assert out('{{ v|truncate(3, "!") }}', { v: 'abcdef' }) == 'abc!', 'truncate with a suffix'
+assert out('{{ v|truncate(3, "!") }}', { v: 'abcdef' }) == 'abc!',
+  'truncate with a suffix'
 assert out('{{ v|truncate(9) }}', { v: 'abcdef' }) == 'abcdef',
   'truncate leaves a short value alone, suffix and all'
 assert out('{{ v|replace("a", "z") }}', { v: 'aba' }) == 'zbz', 'replace'
-assert out('{{ v|replace(".") }}', { v: 'a.b' }) == 'ab', 'replace with no replacement strips'
+assert out('{{ v|replace(".") }}', { v: 'a.b' }) == 'ab',
+  'replace with no replacement strips'
 assert out('{{ v|lpad(4, ".") }}', { v: 'a' }) == '...a', 'lpad'
 assert out('{{ v|rpad(4, ".") }}', { v: 'a' }) == 'a...', 'rpad'
 assert out('{{ v|repeat(3) }}', { v: 'ab' }) == 'ababab', 'repeat'
-assert out('{{ v|slug }}', { v: 'Hello, World! 12' }) == 'hello-world-12', 'slug'
+assert out('{{ v|slug }}', { v: 'Hello, World! 12' }) == 'hello-world-12',
+  'slug'
 assert out('{{ v|strip_tags }}', { v: '<p title="a>b">x<b>y</b></p>' }) == 'xy',
   'strip_tags really parses rather than pattern-matching'
 ok('the text filters')
@@ -214,8 +242,10 @@ assert out('{{ v|number_format(2, ",", ".") }}', { v: 1234.5 }) == '1.234,50',
   'number_format takes the separators the other way round'
 assert out('{{ v|number_format(0) }}', { v: -1234 }) == '-1,234',
   'number_format keeps the sign'
-assert out('{{ v|filesize }}', { v: 512 }) == '512 B', 'filesize below a kilobyte'
-assert out('{{ v|filesize }}', { v: 1400000 }) == '1.4 MB', 'filesize in decimal units'
+assert out('{{ v|filesize }}', { v: 512 }) == '512 B',
+  'filesize below a kilobyte'
+assert out('{{ v|filesize }}', { v: 1400000 }) == '1.4 MB',
+  'filesize in decimal units'
 assert out('{{ v|filesize(true) }}', { v: 1400000 }) == '1.3 MiB',
   'filesize in binary units'
 ok('the number filters')
@@ -224,31 +254,38 @@ assert out('{{ v|length }}', { v: [1, 2] }) == '2', 'length of a list'
 assert out('{{ v|length }}', { v: nil }) == '0', 'length of nothing is zero'
 assert out('{{ v|first }}', { v: [1, 2] }) == '1', 'first'
 assert out('{{ v|last }}', { v: [1, 2] }) == '2', 'last'
-assert out('{{ v|first }}', { v: [] }) == '', 'first of an empty list is nothing'
+assert out('{{ v|first }}', { v: [] }) == '',
+  'first of an empty list is nothing'
 assert out('{{ v|join(",") }}', { v: [1, 2] }) == '1,2', 'join'
 assert out('{{ v|sort|join(",") }}', { v: [3, 1, 2] }) == '1,2,3', 'sort'
 assert out('{{ v|sort("n")|first|json }}', { v: [{ n: 'b' }, { n: 'a' }] }) ==
   '{"n":"a"}', 'sort by a key'
-assert out('{{ v|reverse|join(",") }}', { v: [1, 2] }) == '2,1', 'reverse a list'
+assert out('{{ v|reverse|join(",") }}', { v: [1, 2] }) == '2,1',
+  'reverse a list'
 assert out('{{ v|reverse }}', { v: 'abc' }) == 'cba', 'reverse a string'
 assert out('{{ v|unique|join(",") }}', { v: [1, 1, 2] }) == '1,2', 'unique'
 assert out('{{ v|keys|join(",") }}', { v: { a: 1, b: 2 } }) == 'a,b', 'keys'
 assert out('{{ v|values|join(",") }}', { v: { a: 1, b: 2 } }) == '1,2', 'values'
-assert out('{{ v|slice(1, 3)|join(",") }}', { v: [1, 2, 3, 4] }) == '2,3', 'slice'
+assert out('{{ v|slice(1, 3)|join(",") }}', { v: [1, 2, 3, 4] }) == '2,3',
+  'slice'
 assert out('{{ v|slice(-2)|join(",") }}', { v: [1, 2, 3, 4] }) == '3,4',
   'slice from a negative position'
 assert out('{{ v|slice(1, 3) }}', { v: 'abcdef' }) == 'bc', 'slice a string'
 assert out('{{ v|sum }}', { v: [1, 2, 3] }) == '6', 'sum'
-assert out('{{ v|sum("p") }}', { v: [{ p: 1 }, { p: 2 }] }) == '3', 'sum by a key'
-assert out('{{ v|split|length }}', { v: 'a  b c' }) == '3', 'split on whitespace'
-assert out('{{ v|split(",")|length }}', { v: 'a,b' }) == '2', 'split on a separator'
+assert out('{{ v|sum("p") }}', { v: [{ p: 1 }, { p: 2 }] }) == '3',
+  'sum by a key'
+assert out('{{ v|split|length }}', { v: 'a  b c' }) == '3',
+  'split on whitespace'
+assert out('{{ v|split(",")|length }}', { v: 'a,b' }) == '2',
+  'split on a separator'
 ok('the collection filters')
 
 assert out('{{ v|default("x") }}', { v: nil }) == 'x', 'default on nil'
 assert out('{{ v|default("x") }}', { v: 0 }) == 'x', 'default on zero'
 assert out('{{ v|default("x") }}', { v: -1 }) == '-1',
   'default keeps a negative number, which is not falsy in Wire'
-assert out('{{ v|alt("x") }}', { v: '' }) == 'x', 'alt is the older name for default'
+assert out('{{ v|alt("x") }}', { v: '' }) == 'x',
+  'alt is the older name for default'
 assert out('{{ v|empty }}', { v: [] }) == 'true', 'empty on a list'
 assert out('{{ v|empty }}', { v: 0 }) == 'false',
   'a number is never empty, however falsy it is'
@@ -258,26 +295,47 @@ ok('the choice filters')
 
 assert out('{{ v|date("Y-m-d") }}', { v: 0 }) == '1970-01-01',
   'date reads a Unix timestamp'
-assert out('{{ v|date("Y") }}', { v: '2026-03-04' }) == '2026', 'date parses a string'
+assert out('{{ v|date("Y") }}', { v: '2026-03-04' }) == '2026',
+  'date parses a string'
 ok('the date filter')
 
-assert raises(@() { out('{{ v|abs }}', { v: 'text' }) }),
+assert raises(@() {
+  out('{{ v|abs }}', { v: 'text' })
+}),
   'a filter given the wrong type raises'
-assert raises(@() { out('{{ v|truncate }}', { v: 'text' }) }),
+assert raises(@() {
+  out('{{ v|truncate }}', { v: 'text' })
+}),
   'a filter missing a required argument raises'
 ok('filters report what they cannot do')
 
 # ---------------------------------------------------------------------------
 # Syntax errors
 # ---------------------------------------------------------------------------
-assert raises(@() { out('{{ }}', nil) }), 'an empty interpolation is refused'
-assert raises(@() { out('{{ 1 + }}', nil) }), 'a dangling operator is refused'
-assert raises(@() { out('{{ (1 }}', nil) }), 'an unclosed parenthesis is refused'
-assert raises(@() { out("{{ 'a }}", nil) }), 'an unterminated string is refused'
-assert raises(@() { out('{{ a', nil) }), 'an unclosed interpolation is refused'
-assert raises(@() { out('{{ and }}', nil) }), 'a keyword used as a name is refused'
-assert raises(@() { out('{{ a. }}', nil) }), 'a dot with nothing after it is refused'
-assert raises(@() { out('{{ a | }}', nil) }), 'a pipe with no filter is refused'
+assert raises(@() {
+  out('{{ }}', nil)
+}), 'an empty interpolation is refused'
+assert raises(@() {
+  out('{{ 1 + }}', nil)
+}), 'a dangling operator is refused'
+assert raises(@() {
+  out('{{ (1 }}', nil)
+}), 'an unclosed parenthesis is refused'
+assert raises(@() {
+  out("{{ 'a }}", nil)
+}), 'an unterminated string is refused'
+assert raises(@() {
+  out('{{ a', nil)
+}), 'an unclosed interpolation is refused'
+assert raises(@() {
+  out('{{ and }}', nil)
+}), 'a keyword used as a name is refused'
+assert raises(@() {
+  out('{{ a. }}', nil)
+}), 'a dot with nothing after it is refused'
+assert raises(@() {
+  out('{{ a | }}', nil)
+}), 'a pipe with no filter is refused'
 ok('malformed expressions are refused at compile time')
 
 # ---------------------------------------------------------------------------
@@ -287,8 +345,10 @@ assert out("{{ 'a}}b' }}", nil) == 'a}}b',
   'a closing delimiter inside a string does not end the interpolation'
 assert out('{{ { a: { b: 2 } }|json }}', nil) == '{"a":{"b":2}}',
   'nested braces do not end the interpolation early'
-assert out("{{ '(' + ')' }}", nil) == '()', 'brackets inside strings are not counted'
-assert out('%{{ name }}', nil) == '{{ name }}', 'an interpolation can be escaped with %'
+assert out("{{ '(' + ')' }}", nil) == '()',
+  'brackets inside strings are not counted'
+assert out('%{{ name }}', nil) == '{{ name }}',
+  'an interpolation can be escaped with %'
 assert out('100% {{ v }}', { v: 'sure' }) == '100% sure',
   'a percent that is not escaping anything is just a percent'
 ok('the interpolation scanner handles quoting and nesting')

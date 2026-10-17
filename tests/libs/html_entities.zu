@@ -51,7 +51,8 @@ ok('the named reference table is complete, not a shortlist')
 # decode(): named references
 # ---------------------------------------------------------------------------
 assert html.decode('&amp;') == '&', 'a basic named reference must decode'
-assert html.decode('&lt;b&gt;') == '<b>', 'several references in one string must all decode'
+assert html.decode('&lt;b&gt;') == '<b>',
+  'several references in one string must all decode'
 assert html.decode('caf&eacute;') == 'café', 'a non-ASCII reference must decode'
 assert html.decode('&CounterClockwiseContourIntegral;') == '∳',
   'the longest reference name must decode'
@@ -62,9 +63,11 @@ ok('decode() resolves named references, including the extremes of the table')
 assert html.decode('a & b') == 'a & b', 'a bare ampersand must be left alone'
 assert html.decode('&nosuchthing;') == '&nosuchthing;',
   'an unknown reference must be returned exactly as written'
-assert html.decode('&&amp;&') == '&&&', 'ampersands around a real reference must survive'
+assert html.decode('&&amp;&') == '&&&',
+  'ampersands around a real reference must survive'
 assert html.decode('') == '', 'an empty string must decode to an empty string'
-assert html.decode('plain text') == 'plain text', 'text with no references must be untouched'
+assert html.decode('plain text') == 'plain text',
+  'text with no references must be untouched'
 ok('decode() leaves anything that is not a reference alone')
 
 # ---------------------------------------------------------------------------
@@ -88,14 +91,19 @@ ok('decode() implements longest match and the attribute-value legacy rule')
 assert html.decode('&#169;') == '©', 'a decimal reference must decode'
 assert html.decode('&#xA9;') == '©', 'a lowercase hex reference must decode'
 assert html.decode('&#XA9;') == '©', 'an uppercase hex marker must decode'
-assert html.decode('&#x1D546;') == '𝕆', 'a reference beyond the basic plane must decode'
-assert html.decode('&#65') == 'A', 'a numeric reference without its semicolon still decodes'
-assert html.decode('&#') == '&#', 'a numeric reference with no digits is not a reference'
-assert html.decode('&#x') == '&#x', 'a hex marker with no digits is not a reference'
+assert html.decode('&#x1D546;') == '𝕆',
+  'a reference beyond the basic plane must decode'
+assert html.decode('&#65') == 'A',
+  'a numeric reference without its semicolon still decodes'
+assert html.decode('&#') == '&#',
+  'a numeric reference with no digits is not a reference'
+assert html.decode('&#x') == '&#x',
+  'a hex marker with no digits is not a reference'
 ok('decode() resolves decimal and hexadecimal references')
 
 assert html.decode('&#0;') == '�', 'a null reference must become U+FFFD'
-assert html.decode('&#xD800;') == '�', 'a surrogate reference must become U+FFFD'
+assert html.decode('&#xD800;') == '�',
+  'a surrogate reference must become U+FFFD'
 assert html.decode('&#x110000;') == '�',
   'a reference past the Unicode range must become U+FFFD'
 assert html.decode('&#99999999999;') == '�',
@@ -105,7 +113,8 @@ ok('decode() replaces null, surrogate and out-of-range references')
 assert html.decode('&#150;') == '–',
   'a C1 reference must be remapped through Windows-1252, not taken literally'
 assert html.decode('&#128;') == '€', 'C1 0x80 must become a euro sign'
-assert html.decode('&#159;') == 'Ÿ', 'C1 0x9F must become a capital Y with diaeresis'
+assert html.decode('&#159;') == 'Ÿ',
+  'C1 0x9F must become a capital Y with diaeresis'
 assert html.decode('&#129;') == '',
   'a C1 code point with no Windows-1252 character must be left alone'
 ok('decode() applies the mandatory Windows-1252 remapping')
@@ -133,13 +142,16 @@ ok('consume_reference() reports position and parse errors')
 # ---------------------------------------------------------------------------
 # encode()
 # ---------------------------------------------------------------------------
-assert html.encode('<b>Tom & Jerry</b>') == '&lt;b&gt;Tom &amp; Jerry&lt;/b&gt;',
+assert html.encode('<b>Tom & Jerry</b>')
+  == '&lt;b&gt;Tom &amp; Jerry&lt;/b&gt;',
   'the syntax characters must all be escaped by default'
-assert html.encode('"quoted"') == '&quot;quoted&quot;', 'double quotes must be escaped'
+assert html.encode('"quoted"') == '&quot;quoted&quot;',
+  'double quotes must be escaped'
 assert html.encode("it's") == 'it&#x27;s',
   'a single quote must become &#x27;, which every parser understands'
 assert html.encode('') == '', 'an empty string must encode to an empty string'
-assert html.encode('plain') == 'plain', 'text with nothing to escape must be untouched'
+assert html.encode('plain') == 'plain',
+  'text with nothing to escape must be untouched'
 ok('encode() escapes the five syntax characters by default')
 
 assert html.encode("it's fine", { quotes: false }) == "it's fine",

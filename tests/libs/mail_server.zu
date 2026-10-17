@@ -106,7 +106,6 @@ def trusting_config() {
   return config
 }
 
-
 section('smtp')
 
 var smtp_channel = isolate.channel(1)
@@ -116,7 +115,10 @@ var smtp_address = smtp_channel.recv()
 var sender = SmtpClient.connect('smtp://${smtp_address}', { tls: 'disable' })
 
 check('greeting accepted', sender.greeting().code, 220)
-ok('the server named itself', sender.greeting().text.contains('test.example.com'))
+ok(
+  'the server named itself',
+  sender.greeting().text.contains('test.example.com'),
+)
 ok('size advertised', sender.supports('SIZE'))
 ok('pipelining advertised', sender.supports('PIPELINING'))
 ok('eight bit advertised', sender.supports('8BITMIME'))
@@ -181,7 +183,7 @@ chunked.mail_from('ann@example.com', nil)
 chunked.rcpt_to('bob@example.com', nil)
 
 check('sent in chunks', chunked.bdat(
-  'From: ann@example.com\r\nSubject: In chunks\r\n\r\nchunked body\r\n', true
+  'From: ann@example.com\r\nSubject: In chunks\r\n\r\nchunked body\r\n', true,
 ).code, 250)
 
 chunked.quit()
@@ -191,7 +193,7 @@ var bouncer = SmtpClient.connect('smtp://${smtp_address}', { tls: 'disable' })
 check('the null sender is accepted', bouncer.mail_from('', nil).code, 250)
 bouncer.rcpt_to('bob@example.com', nil)
 check('and can deliver', bouncer.data(
-  'From: postmaster@example.com\r\nSubject: Bounce\r\n\r\nundeliverable\r\n'
+  'From: postmaster@example.com\r\nSubject: Bounce\r\n\r\nundeliverable\r\n',
 ).code, 250)
 bouncer.quit()
 
@@ -201,17 +203,24 @@ smtp_task.join(10000)
 
 check('three messages arrived', seen.length(), 3)
 check('sender recorded', seen[0].sender, 'ann@example.com')
-check('both recipients recorded', seen[0].recipients, ['bob@example.com', 'carol@example.com'])
+check(
+  'both recipients recorded', seen[0].recipients,
+  ['bob@example.com', 'carol@example.com'],
+)
 check('subject decoded', seen[0].subject, 'Grüße from the suite')
-check('a dotted line survived', seen[0].body, 'A line.\r\n.A dotted line.\r\nAnd an end.\r\n')
+check(
+  'a dotted line survived', seen[0].body,
+  'A line.\r\n.A dotted line.\r\nAnd an end.\r\n',
+)
 check('the chunked message arrived', seen[1].subject, 'In chunks')
 check('the null sender came through empty', seen[2].sender, '')
-
 
 section('smtp over tls')
 
 var tls_channel = isolate.channel(1)
-var tls_task = isolate.spawn(mail_server_app.smtp_tls_server, tls_channel, server_cert, server_key)
+var tls_task = isolate.spawn(
+  mail_server_app.smtp_tls_server, tls_channel, server_cert, server_key,
+)
 var tls_address = tls_channel.recv()
 var tls_port = tls_address.split(':')[1]
 
@@ -255,7 +264,6 @@ check('both arrived', tls_seen.length(), 2)
 check('the server knew who sent it', tls_seen[0].user, 'ann')
 ok('and that it was encrypted', tls_seen[0].secure)
 
-
 section('imap')
 
 var imap_channel = isolate.channel(1)
@@ -263,7 +271,9 @@ var imap_task = isolate.spawn(mail_server_app.imap_server, imap_channel)
 var imap_address = imap_channel.recv()
 
 var inbox = ImapClient.connect('imap://${imap_address}', {
-  username: 'ann', password: 'secret', tls: 'disable',
+  username: 'ann',
+  password: 'secret',
+  tls: 'disable',
 })
 
 check('authenticated', inbox.state, 'authenticated')
@@ -275,7 +285,10 @@ check('mailboxes listed', inbox.list('', '*').map(@(m) => m.name).sort(),
   ['Archive', 'INBOX'])
 check('one level only', inbox.list('', '%').map(@(m) => m.name).sort(),
   ['Archive', 'INBOX'])
-check('a pattern narrows it', inbox.list('', 'Arch*').map(@(m) => m.name), ['Archive'])
+check(
+  'a pattern narrows it', inbox.list('', 'Arch*').map(@(m) => m.name),
+  ['Archive'],
+)
 
 var box = inbox.select('INBOX')
 
@@ -292,7 +305,9 @@ check('found by sender', inbox.search('FROM reports', false), [2])
 check('found by body', inbox.search('BODY first', false), [1])
 check('found by size', inbox.search('SMALLER 20', false), [])
 
-var infos = inbox.fetch('1:2', 'ENVELOPE FLAGS UID RFC822.SIZE INTERNALDATE', false)
+var infos = inbox.fetch(
+  '1:2', 'ENVELOPE FLAGS UID RFC822.SIZE INTERNALDATE', false,
+)
 
 check('two fetched', infos.length(), 2)
 check('first subject', infos[0].envelope.subject, 'Hello there')
@@ -303,38 +318,58 @@ ok('size reported', infos[0].size > 0)
 ok('internal date read', infos[0].internal_date != nil)
 ok('uid reported', infos[0].uid != nil)
 
-check('a set read whole', parser.tokenize('1:* (FLAGS)', nil), ['1:*', ['FLAGS']])
+check(
+  'a set read whole', parser.tokenize('1:* (FLAGS)', nil), ['1:*', ['FLAGS']],
+)
 check('a bare star read', parser.tokenize('*', nil), ['*'])
-check('a wildcard pattern read', parser.tokenize('"" Arch%', nil), ['', 'Arch%'])
-check('the keyword flag read', parser.tokenize('(\\Seen \\*)', nil), [['\\Seen', '\\*']])
+check(
+  'a wildcard pattern read', parser.tokenize('"" Arch%', nil), ['', 'Arch%'],
+)
+check(
+  'the keyword flag read', parser.tokenize('(\\Seen \\*)', nil),
+  [['\\Seen', '\\*']],
+)
 
 # RFC 3501's resp-text: a code in brackets, then free text. The last form
 # of a code is an atom and then any text but `]`, which need not read as
 # values.
 def status_of(line) {
-  var reader = parser.Reader(mail.stream.LineStream(io.BytesIO('${line}\r\n'.to_bytes()), false))
+  var reader = parser.Reader(mail.stream.LineStream(
+    io.BytesIO('${line}\r\n'.to_bytes()), false,
+  ))
   var response = reader.next()
 
   return [response.status, response.code, response.text]
 }
 
-check('a code read as values', status_of('* OK [PERMANENTFLAGS (\\Seen \\*)] Limited'),
+check('a code read as values',
+  status_of('* OK [PERMANENTFLAGS (\\Seen \\*)] Limited'),
   ['OK', ['PERMANENTFLAGS', ['\\Seen', '\\*']], 'Limited'])
 check('a code of free text read as its atom and its text',
-  status_of('a1 NO [XUNKNOWN it\'s "odd] the rest'), ['NO', ['XUNKNOWN', 'it\'s "odd'], 'the rest'])
-check('the text after a code kept whole', status_of('* BYE [ALERT] going away (now'),
+  status_of('a1 NO [XUNKNOWN it\'s "odd] the rest'),
+  ['NO', ['XUNKNOWN', 'it\'s "odd'], 'the rest'])
+check('the text after a code kept whole',
+  status_of('* BYE [ALERT] going away (now'),
   ['BYE', ['ALERT'], 'going away (now'])
 
 var braced = parser.Reader(mail.stream.LineStream(
   io.BytesIO('* OK [XFOO see {3}] hello\r\na1 OK done\r\n'.to_bytes()), false,
 ))
 
-check('a brace in free code text is only a character', braced.next().code, ['XFOO', 'see {3}'])
+check(
+  'a brace in free code text is only a character', braced.next().code,
+  ['XFOO', 'see {3}'],
+)
 check('and the next response is read whole', braced.next().text, 'done')
 
-check('a set running to the end', inbox.fetch('1:*', 'FLAGS', false).length(), 2)
+check(
+  'a set running to the end', inbox.fetch('1:*', 'FLAGS', false).length(), 2,
+)
 check('the last one alone', inbox.fetch('*', 'FLAGS', false)[0].sequence, 2)
-check('by uid to the end', inbox.fetch('${infos[1].uid}:*', 'FLAGS', true).length(), 1)
+check(
+  'by uid to the end', inbox.fetch('${infos[1].uid}:*', 'FLAGS', true).length(),
+  1,
+)
 
 var refusal = nil
 
@@ -344,15 +379,24 @@ catch {
   refusal = error
 }
 
-ok('free text with brackets and stars is a refusal', instance_of(refusal, mail.ImapError))
+ok(
+  'free text with brackets and stars is a refusal',
+  instance_of(refusal, mail.ImapError),
+)
 check('reported as BAD', refusal == nil ? nil : refusal.status, 'BAD')
 check('and the connection still answers', inbox.search('ALL', false), [1, 2])
 
 var structured = inbox.fetch(2, 'BODYSTRUCTURE', false)[0]
 
-check('structure is a multipart', structured.structure.mime_type(), 'multipart/mixed')
+check(
+  'structure is a multipart', structured.structure.mime_type(),
+  'multipart/mixed',
+)
 check('with two parts inside', structured.structure.parts.length(), 2)
-check('the first being text', structured.structure.parts[0].mime_type(), 'text/plain')
+check(
+  'the first being text', structured.structure.parts[0].mime_type(),
+  'text/plain',
+)
 
 var headers_only = inbox.fetch_headers(1, false)[0]
 
@@ -373,8 +417,11 @@ check('asking to mark it read did', inbox.search('SEEN', false), [1])
 var one_part = inbox.fetch(2, 'BODY.PEEK[2]', false)[0]
 
 ok('a numbered part came back', one_part.parts.get('2', nil) != nil)
-ok('and holds the attachment', one_part.parts['2'].to_string().contains('YXR0YWNoZWQ')
-  or one_part.parts['2'].to_string().contains('attached bytes'))
+ok(
+  'and holds the attachment',
+  one_part.parts['2'].to_string().contains('YXR0YWNoZWQ')
+    or one_part.parts['2'].to_string().contains('attached bytes'),
+)
 
 inbox.add_flags(2, ['\\Flagged'], false)
 check('flagged', inbox.search('FLAGGED', false), [2])
@@ -384,8 +431,13 @@ check('unflagged', inbox.search('FLAGGED', false), [])
 var uids = inbox.search('ALL', true)
 
 check('two uids', uids.length(), 2)
-check('a uid fetch reports the uid', inbox.fetch(uids[1], 'FLAGS', true)[0].uid, uids[1])
-check('a uid search finds by uid', inbox.search('UID ${uids[0]}', true), [uids[0]])
+check(
+  'a uid fetch reports the uid', inbox.fetch(uids[1], 'FLAGS', true)[0].uid,
+  uids[1],
+)
+check(
+  'a uid search finds by uid', inbox.search('UID ${uids[0]}', true), [uids[0]],
+)
 
 inbox.copy(1, 'Archive', false)
 check('copied', inbox.status('Archive', ['MESSAGES']).MESSAGES, 1)
@@ -404,7 +456,10 @@ var with_literal = mail.message()
   .set_text('a body with a line break\r\nin it')
 
 inbox.append('Archive', with_literal, nil, nil)
-check('a message with a literal appended', inbox.status('Archive', ['MESSAGES']).MESSAGES, 3)
+check(
+  'a message with a literal appended',
+  inbox.status('Archive', ['MESSAGES']).MESSAGES, 3,
+)
 
 inbox.move(2, 'Archive', false)
 check('moved out', inbox.select('INBOX').exists, 1)
@@ -422,14 +477,21 @@ inbox.rename('Later', 'Soon')
 check('renamed', inbox.list('', '*').map(@(m) => m.name).sort(),
   ['Archive', 'INBOX', 'Soon'])
 inbox.delete('Soon')
-check('deleted', inbox.list('', '*').map(@(m) => m.name).sort(), ['Archive', 'INBOX'])
+check(
+  'deleted', inbox.list('', '*').map(@(m) => m.name).sort(),
+  ['Archive', 'INBOX'],
+)
 
 inbox.create('Entwürfe & Co')
 check('a name outside ascii listed as written',
   inbox.list('', 'Entw*').map(@(m) => m.name), ['Entwürfe & Co'])
 check('and in modified utf-7 on the wire',
-  inbox.run('LIST', ['""', 'Entw*']).map(@(r) => '${r.arguments()[2]}'), ['Entw&APw-rfe &- Co'])
-check('and selectable by that name', inbox.select('Entwürfe & Co').name, 'Entwürfe & Co')
+  inbox.run('LIST', ['""', 'Entw*']).map(@(r) => '${r.arguments()[2]}'),
+  ['Entw&APw-rfe &- Co'])
+check(
+  'and selectable by that name', inbox.select('Entwürfe & Co').name,
+  'Entwürfe & Co',
+)
 inbox.unselect()
 inbox.delete('Entwürfe & Co')
 
@@ -456,12 +518,11 @@ check('logged out', inbox.state, 'logged-out')
 
 imap_task.join(10000)
 
-
 section('imap over tls')
 
 var imap_tls_channel = isolate.channel(1)
 var imap_tls_task = isolate.spawn(
-  mail_server_app.imap_tls_server, imap_tls_channel, server_cert, server_key
+  mail_server_app.imap_tls_server, imap_tls_channel, server_cert, server_key,
 )
 var imap_tls_address = imap_tls_channel.recv()
 var imap_tls_port = imap_tls_address.split(':')[1]
@@ -489,22 +550,25 @@ challenged_inbox.logout()
 
 imap_tls_task.join(10000)
 
-
 section('imap over a maildir')
 
 var maildir_root = os.create_temp_dir('zuri-mail-test')
 var maildir_channel = isolate.channel(1)
 var maildir_task = isolate.spawn(
-  mail_server_app.maildir_server, maildir_channel, maildir_root
+  mail_server_app.maildir_server, maildir_channel, maildir_root,
 )
 var maildir_address = maildir_channel.recv()
 
 var on_disk = ImapClient.connect('imap://${maildir_address}', {
-  username: 'ann', password: 'secret', tls: 'disable',
+  username: 'ann',
+  password: 'secret',
+  tls: 'disable',
 })
 
 check('the delivered message is there', on_disk.select('INBOX').exists, 1)
-check('and reads back', on_disk.fetch_message(1, false, false).subject(), 'On disk')
+check(
+  'and reads back', on_disk.fetch_message(1, false, false).subject(), 'On disk',
+)
 
 on_disk.append('INBOX', mail.message()
   .set_from('x@example.com')
@@ -526,10 +590,14 @@ var files = os.read_dir(current).filter(@(name) => name != '.' and name != '..')
 check('two files on disk', files.length(), 2)
 var info = os.platform == 'windows' ? ';2,' : ':2,'
 
-ok('one of them records the seen flag', files.some(@(name) => name.contains(info)
-  and name.ends_with('S')))
-ok('a delivery directory exists', os.dir_exists(os.join_paths(maildir_root, 'ann', 'new')))
-
+ok(
+  'one of them records the seen flag', files.some(@(name) => name.contains(info)
+    and name.ends_with('S')),
+)
+ok(
+  'a delivery directory exists',
+  os.dir_exists(os.join_paths(maildir_root, 'ann', 'new')),
+)
 
 section('pop3')
 
@@ -538,7 +606,9 @@ var pop_task = isolate.spawn(mail_server_app.pop3_server, pop_channel)
 var pop_address = pop_channel.recv()
 
 var mailbox = Pop3Client.connect('pop3://${pop_address}', {
-  username: 'ann', password: 'secret', tls: 'disable',
+  username: 'ann',
+  password: 'secret',
+  tls: 'disable',
 })
 
 ok('authenticated', mailbox.authenticated)
@@ -561,7 +631,10 @@ check('first body', mailbox.retrieve(1).text(), 'the first body\r\n')
 check('a dotted line survives', mailbox.retrieve(2).text(),
   '.a dotted line\r\nand more\r\n')
 ok('headers alone come back', mailbox.top(1, 0).subject() == 'First')
-ok('raw bytes come back', mailbox.retrieve_raw(1).to_string().contains('Subject: First'))
+ok(
+  'raw bytes come back',
+  mailbox.retrieve_raw(1).to_string().contains('Subject: First'),
+)
 
 mailbox.delete(1)
 check('one left', mailbox.stat().count, 1)
@@ -573,7 +646,6 @@ mailbox.quit()
 
 check('the server saw the removal', pop_channel.recv(), [2])
 pop_task.join(10000)
-
 
 section('the worker pool')
 
@@ -598,20 +670,30 @@ check('as does the other', second_saw.subject, 'Pooled')
 
 cluster.close(5000)
 
-
 section('a client that fails to start')
 
 # Whatever goes wrong while a client starts, the caller never holds the
 # client, so the connection has to be closed before the error leaves.
 var refusals = {
-  imap: ['* BYE not today', @(address) => ImapClient.connect('imap://${address}', { tls: 'disable' })],
-  pop3: ['-ERR not today', @(address) => Pop3Client.connect('pop3://${address}', { tls: 'disable' })],
-  smtp: ['554 not today', @(address) => SmtpClient.connect('smtp://${address}', { tls: 'disable' })],
+  imap: [
+    '* BYE not today',
+    @(address) => ImapClient.connect('imap://${address}', { tls: 'disable' }),
+  ],
+  pop3: [
+    '-ERR not today',
+    @(address) => Pop3Client.connect('pop3://${address}', { tls: 'disable' }),
+  ],
+  smtp: [
+    '554 not today',
+    @(address) => SmtpClient.connect('smtp://${address}', { tls: 'disable' }),
+  ],
 }
 
 for protocol, refusal in refusals {
   var refusing = isolate.channel(1)
-  var refusing_task = isolate.spawn(mail_server_app.refusing_server, refusing, refusal[0])
+  var refusing_task = isolate.spawn(
+    mail_server_app.refusing_server, refusing, refusal[0],
+  )
   var refusing_address = refusing.recv()
 
   ok('${protocol} raises', raises(@() {
@@ -627,7 +709,9 @@ section('names in utf-8')
 # directions, `&` included.
 var utf8 = isolate.channel(1)
 var utf8_task = isolate.spawn(mail_server_app.utf8_imap_server, utf8)
-var utf8_client = ImapClient.connect('imap://${utf8.recv()}', { tls: 'disable' })
+var utf8_client = ImapClient.connect(
+  'imap://${utf8.recv()}', { tls: 'disable' },
+)
 
 utf8_client.enable(['UTF8=ACCEPT'])
 check('the server said it turned it on', utf8_client.enabled, ['UTF8=ACCEPT'])
@@ -635,17 +719,24 @@ utf8_client.create('Entwürfe')
 
 var refused_listing = utf8_client.list('', '*')
 
-check('a listed name is not decoded', refused_listing.map(@(m) => m.name), ['Tom &- Jerry'])
+check(
+  'a listed name is not decoded', refused_listing.map(@(m) => m.name),
+  ['Tom &- Jerry'],
+)
 check('a refused special-use listing is asked again plainly',
   refused_listing[0].flags, ['\\Sent'])
-check('an answered one is used as it is', utf8_client.list('', '*')[0].flags, ['\\Sent'])
+check(
+  'an answered one is used as it is', utf8_client.list('', '*')[0].flags,
+  ['\\Sent'],
+)
 utf8_client.logout()
 
 var utf8_wire = utf8.recv()
 
 check('the name went as utf-8', utf8_wire.created, ['Entwürfe'])
 check('special-use attributes were asked for', utf8_wire.listings, [
-  'LIST "" "*" RETURN (SPECIAL-USE)', 'LIST "" "*"', 'LIST "" "*" RETURN (SPECIAL-USE)',
+  'LIST "" "*" RETURN (SPECIAL-USE)', 'LIST "" "*"',
+  'LIST "" "*" RETURN (SPECIAL-USE)',
 ])
 utf8_task.join(10000)
 

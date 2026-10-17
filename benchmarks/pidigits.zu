@@ -55,7 +55,9 @@ def calculatePi(arg: number) {
           ns = 0
         }
 
-        if last break
+        if last {
+          break
+        }
 
         a = (a - d * t) * 10n
         n = n * 10n

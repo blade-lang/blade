@@ -24,7 +24,9 @@ def test_insert() {
   assert returning.sql.ends_with('returning "id"')
 
   # A raw fragment is written out; everything else is bound.
-  var raw = crud.insert(sqlite, 'posts', { title: 'Hi', at: sql.raw('now()') }, nil)
+  var raw = crud.insert(
+    sqlite, 'posts', { title: 'Hi', at: sql.raw('now()') }, nil,
+  )
   assert raw.sql == 'insert into "posts" ("title", "at") values (?1, now())'
   assert raw.values == ['Hi']
 
@@ -100,8 +102,11 @@ def test_update() {
   assert built.values == ['New', 7]
 
   # A raw fragment on the left of an assignment reads the column.
-  var bumped = crud.update(sqlite, 'posts', { views: sql.raw('"views" + 1') }, { id: 7 })
-  assert bumped.sql == 'update "posts" set "views" = "views" + 1 where "id" = ?1'
+  var bumped = crud.update(
+    sqlite, 'posts', { views: sql.raw('"views" + 1') }, { id: 7 },
+  )
+  assert bumped.sql
+    == 'update "posts" set "views" = "views" + 1 where "id" = ?1'
   assert bumped.values == [7]
 
   var nothing = false
@@ -143,7 +148,7 @@ def test_select() {
   # already orders ascending by default.
   assert built.sql ==
     'select "id", "title" from "posts" where "ok" = ?1 ' +
-    'order by "title" desc, "id" limit 10 offset 5'
+      'order by "title" desc, "id" limit 10 offset 5'
   assert built.values == [true]
 
   # A limit goes into the statement text rather than being bound, since

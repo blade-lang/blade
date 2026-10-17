@@ -132,9 +132,9 @@ def api_server(port_channel, static_root) {
   })
 
   var account_schema = validate.schema({
-    name:  validate.required().string().max_length(20),
+    name: validate.required().string().max_length(20),
     email: validate.required().string().email(),
-    age:   validate.required().integer().gte(18).lte(120),
+    age: validate.required().integer().gte(18).lte(120),
   })
 
   server.post('/accounts', @(request, response) {
@@ -192,7 +192,9 @@ def api_server(port_channel, static_root) {
   # Redirects to the same server under a different name, which is a
   # different origin as far as credential scoping is concerned.
   server.get('/cross-origin', @(request, response) {
-    response.redirect('http://localhost:${server.address().port()}/saw-auth', 302)
+    response.redirect(
+      'http://localhost:${server.address().port()}/saw-auth', 302,
+    )
   })
 
   server.get('/saw-auth', @(request, response) {
@@ -301,12 +303,16 @@ def middleware_server(port_channel) {
   })
 
   var jwt_guard = middleware.jwt_auth(
-    jwt.Verifier('test-jwt-secret', { algorithms: ['HS256'], audience: 'zuri-test' })
+    jwt.Verifier(
+      'test-jwt-secret', { algorithms: ['HS256'], audience: 'zuri-test' },
+    ),
   )
 
   var scoped_guard = middleware.jwt_auth(
-    jwt.Verifier('test-jwt-secret', { algorithms: ['HS256'], audience: 'zuri-test' }),
-    { scopes: ['items:write'], realm: 'items' }
+    jwt.Verifier(
+      'test-jwt-secret', { algorithms: ['HS256'], audience: 'zuri-test' },
+    ),
+    { scopes: ['items:write'], realm: 'items' },
   )
 
   # No verifier at all: this must behave as though the middleware were
@@ -382,15 +388,15 @@ def middleware_server(port_channel) {
       good: jwt.sign({ sub: 'ada', aud: 'zuri-test' }, 'test-jwt-secret'),
       scoped: jwt.sign(
         { sub: 'ada', aud: 'zuri-test', scope: 'items:read items:write' },
-        'test-jwt-secret'
+        'test-jwt-secret',
       ),
       narrow: jwt.sign(
         { sub: 'ada', aud: 'zuri-test', scope: 'items:read' },
-        'test-jwt-secret'
+        'test-jwt-secret',
       ),
       expired: jwt.sign(
         { sub: 'ada', aud: 'zuri-test', exp: time() - 60 },
-        'test-jwt-secret'
+        'test-jwt-secret',
       ),
       forged: jwt.sign({ sub: 'root', aud: 'zuri-test' }, 'not-the-secret'),
     })
@@ -401,7 +407,9 @@ def middleware_server(port_channel) {
   })
 
   server.get('/token/data', @(request, response) {
-    response.json({ subject: request.context.get('user', {}).get('subject', nil) })
+    response.json({
+      subject: request.context.get('user', {}).get('subject', nil),
+    })
   })
 
   _run(server, port_channel)

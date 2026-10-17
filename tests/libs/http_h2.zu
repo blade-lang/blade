@@ -50,13 +50,15 @@ echo '════════════════════════�
 # Huffman (RFC 7541 Appendix B and C.4)
 # ---------------------------------------------------------------------------
 
-assert hex_of(huffman.encode('www.example.com'.to_bytes())) == 'f1e3c2e5f23a6ba0ab90f4ff',
+assert hex_of(huffman.encode('www.example.com'.to_bytes()))
+  == 'f1e3c2e5f23a6ba0ab90f4ff',
   'the RFC 7541 C.4.1 encoding of www.example.com'
 assert hex_of(huffman.encode('no-cache'.to_bytes())) == 'a8eb10649cbf',
   'the RFC 7541 C.4.2 encoding of no-cache'
 assert hex_of(huffman.encode('custom-key'.to_bytes())) == '25a849e95ba97d7f',
   'the RFC 7541 C.4.3 encoding of custom-key'
-assert hex_of(huffman.encode('custom-value'.to_bytes())) == '25a849e95bb8e8b4bf',
+assert hex_of(huffman.encode('custom-value'.to_bytes()))
+  == '25a849e95bb8e8b4bf',
   'the RFC 7541 C.4.3 encoding of custom-value'
 ok('Huffman encoding matches the RFC 7541 vectors')
 
@@ -69,13 +71,16 @@ for sample in [
   'the quick brown fox jumps over the lazy dog 0123456789',
 ] {
   var encoded = huffman.encode(sample.to_bytes())
-  assert huffman.decode(encoded).to_string() == sample, 'round-trip of ${sample}'
+  assert huffman.decode(encoded).to_string() == sample,
+    'round-trip of ${sample}'
 }
 ok('Huffman round-trips, padding and all')
 
 # Padding must be the leading bits of EOS. A byte of zero bits at the
 # end is not.
-assert raises(@() { huffman.decode(bytes([0xf1, 0x00])) }),
+assert raises(@() {
+  huffman.decode(bytes([0xf1, 0x00]))
+}),
   'invalid Huffman padding must be rejected'
 ok('invalid Huffman padding is refused')
 
@@ -99,7 +104,8 @@ ok('HPACK integers encode and decode, prefix and all')
 
 buffer = bytes(0)
 hpack.encode_string(buffer, 'custom-key')
-assert hpack.decode_string(buffer, 0, 4096)[0] == 'custom-key', 'a string literal round-trips'
+assert hpack.decode_string(buffer, 0, 4096)[0] == 'custom-key',
+  'a string literal round-trips'
 ok('HPACK string literals round-trip')
 
 # ---------------------------------------------------------------------------
@@ -115,7 +121,8 @@ var first = decoder.decode(bytes([
 
 assert first.length() == 4, 'four fields'
 assert first[0][0] == ':method' and first[0][1] == 'GET', 'an indexed field'
-assert first[3][0] == ':authority' and first[3][1] == 'www.example.com', 'a literal field'
+assert first[3][0] == ':authority' and first[3][1] == 'www.example.com',
+  'a literal field'
 assert decoder.table.length() == 1 and decoder.table.size() == 57,
   'the literal was added to the dynamic table, at the size the RFC states'
 
@@ -126,7 +133,8 @@ var second = decoder.decode(bytes([
 
 assert second.length() == 5, 'five fields'
 assert second[3][1] == 'www.example.com', 'index 62 read back the dynamic entry'
-assert second[4][0] == 'cache-control' and second[4][1] == 'no-cache', 'a new literal'
+assert second[4][0] == 'cache-control' and second[4][1] == 'no-cache',
+  'a new literal'
 assert decoder.table.length() == 2, 'which was itself indexed'
 ok('the RFC 7541 C.3 request sequence decodes, dynamic table and all')
 
@@ -135,7 +143,8 @@ var huffman_block = huffman_decoder.decode(bytes([
   0x82, 0x86, 0x84, 0x41, 0x8c, 0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a,
   0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff,
 ]))
-assert huffman_block[3][1] == 'www.example.com', 'a Huffman-coded literal decodes'
+assert huffman_block[3][1] == 'www.example.com',
+  'a Huffman-coded literal decodes'
 ok('the RFC 7541 C.4 Huffman-coded request decodes')
 
 # ---------------------------------------------------------------------------
@@ -181,12 +190,18 @@ uppercase.extend('Host'.to_bytes())
 uppercase.append(0x01)
 uppercase.extend('x'.to_bytes())
 
-assert raises(@() { hpack.Decoder().decode(uppercase) }),
+assert raises(@() {
+  hpack.Decoder().decode(uppercase)
+}),
   'an uppercase field name is a protocol error in HTTP/2'
 
-assert raises(@() { hpack.Decoder().decode(bytes([0xbe])) }),
+assert raises(@() {
+  hpack.Decoder().decode(bytes([0xbe]))
+}),
   'an index past the end of the table is an error'
-assert raises(@() { hpack.Decoder().decode(bytes([0x80])) }),
+assert raises(@() {
+  hpack.Decoder().decode(bytes([0x80]))
+}),
   'index 0 is not a valid index'
 ok('the decoder refuses invalid header blocks')
 
@@ -210,7 +225,8 @@ assert table.length() == 0, 'a capacity of zero empties the table'
 
 var tiny = hpack.DynamicTable(10)
 tiny.add('name', 'value')
-assert tiny.length() == 0, 'an entry larger than the table is dropped, not an error'
+assert tiny.length() == 0,
+  'an entry larger than the table is dropped, not an error'
 ok('the dynamic table evicts and re-indexes correctly')
 
 # ---------------------------------------------------------------------------
@@ -225,13 +241,16 @@ assert settings.length() == 12, 'two settings are twelve octets'
 
 var read_back = frames.decode_settings(settings)
 assert read_back[1] == 4096 and read_back[4] == 65535, 'and they read back'
-assert raises(@() { frames.decode_settings(bytes([0, 1, 2])) }),
+assert raises(@() {
+  frames.decode_settings(bytes([0, 1, 2]))
+}),
   'a SETTINGS payload that is not a multiple of six is an error'
 ok('SETTINGS frames encode and decode')
 
 var word = bytes(0)
 frames.write_u32(word, 2147483647)
-assert frames.read_u32(word, 0) == 2147483647, 'a 31-bit value survives a round trip'
+assert frames.read_u32(word, 0) == 2147483647,
+  'a 31-bit value survives a round trip'
 
 word = bytes(0)
 frames.write_u32(word, 0)

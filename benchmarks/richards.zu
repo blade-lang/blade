@@ -240,8 +240,12 @@ class Task < TaskState {
     if self.input == nil {
       self.input = p
       self.packet_pending = true
-      if self.priority > old.priority return self
-    } else p.append_to(self.input)
+      if self.priority > old.priority {
+        return self
+      }
+    } else {
+      p.append_to(self.input)
+    }
     return old
   }
 
@@ -250,11 +254,14 @@ class Task < TaskState {
     if self.isWaitingWithPacket() {
       msg = self.input
       self.input = msg.link
-      if self.input == nil
+      if self.input == nil {
         self.running()
-      else
+      } else {
         self.packetPending()
-    } else msg = nil
+      }
+    } else {
+      msg = nil
+    }
 
     return self.fn(msg, self.handle)
   }
@@ -290,8 +297,9 @@ class Task < TaskState {
 
   findtcb(id) {
     var t = taskWorkArea.taskTab[id]
-    if t == nil
+    if t == nil {
       raise Error("Bad task id ${id}")
+    }
     return t
   }
 }
@@ -308,14 +316,17 @@ class DeviceTask < Task {
     assert instance_of(d, DeviceTaskRec)
     if pkt == nil {
       pkt = d.pending
-      if pkt == nil return self.waitTask()
-      else {
+      if pkt == nil {
+        return self.waitTask()
+      } else {
         d.pending = nil
         return self.qpkt(pkt)
       }
     } else {
       d.pending = pkt
-      if tracing trace(pkt.datum)
+      if tracing {
+        trace(pkt.datum)
+      }
       return self.hold()
     }
   }
@@ -330,11 +341,16 @@ class HandlerTask < Task {
     var h = r
     assert instance_of(h, HandlerTaskRec)
     if pkt != nil {
-      if pkt.kind == K_WORK h.workInAdd(pkt)
-      else h.deviceInAdd(pkt)
+      if pkt.kind == K_WORK {
+        h.workInAdd(pkt)
+      } else {
+        h.deviceInAdd(pkt)
+      }
     }
     var work = h.work_in
-    if work == nil return self.waitTask()
+    if work == nil {
+      return self.waitTask()
+    }
     var count = work.datum
     if count >= BUFSIZE {
       h.work_in = work.link
@@ -342,7 +358,9 @@ class HandlerTask < Task {
     }
 
     var dev = h.device_in
-    if dev == nil return self.waitTask()
+    if dev == nil {
+      return self.waitTask()
+    }
 
     h.device_in = dev.link
     dev.datum = work.data[count]
@@ -362,8 +380,9 @@ class IdleTask < Task {
     var i = r
     assert instance_of(i, IdleTaskRec)
     i.count -= 1
-    if i.count == 0 return self.hold()
-    else if i.control & 1 == 0 {
+    if i.count == 0 {
+      return self.hold()
+    } else if i.control & 1 == 0 {
       i.control //= 2
       return self.release(I_DEVA)
     } else {
@@ -385,13 +404,16 @@ class WorkTask < Task {
   fn(pkt, r) {
     var w = r
     assert instance_of(w, WorkerTaskRec)
-    if pkt == nil return self.waitTask()
+    if pkt == nil {
+      return self.waitTask()
+    }
 
     var dest
-    if w.destination == I_HANDLERA
+    if w.destination == I_HANDLERA {
       dest = I_HANDLERB
-    else
+    } else {
       dest = I_HANDLERA
+    }
 
     w.destination = dest
     pkt.ident = dest
@@ -399,7 +421,9 @@ class WorkTask < Task {
 
     for i in 0..BUFSIZE {
       w.count += 1
-      if w.count > 26 w.count = 1
+      if w.count > 26 {
+        w.count = 1
+      }
       pkt.data[i] = A + w.count - 1
     }
 
@@ -419,7 +443,9 @@ def schedule() {
     if t.isTaskHoldingOrWaiting() {
       t = t.link
     } else {
-      if tracing trace((48 + t.ident).chr()) # 48 is '0' in ASCII
+      if tracing {
+        trace((48 + t.ident).chr()) # 48 is '0' in ASCII
+      }
       t = t.runTask()
     }
   }

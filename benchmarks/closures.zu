@@ -1,18 +1,22 @@
 def make_counter() {
   var count = 0
+
   def counter() {
     count = count + 1
     return count
   }
+
   return counter
 }
 
 def make_accumulator(start) {
   var total = start
+
   def add(n) {
     total = total + n
     return total
   }
+
   return add
 }
 

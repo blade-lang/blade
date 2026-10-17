@@ -4,6 +4,6 @@
 import args
 
 var p = args.Parser('bundle', false)
-p.add_option('verbose', 'Verbose', {short_name: 'v'})
-p.add_option('quiet', 'Quiet', {short_name: 'q'})
+p.add_option('verbose', 'Verbose', { short_name: 'v' })
+p.add_option('quiet', 'Quiet', { short_name: 'q' })
 p.parse(['-vZ'])

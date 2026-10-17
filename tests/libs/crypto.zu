@@ -29,14 +29,13 @@
 
 import crypto
 
-
 # ---------------------------------------------------------------------------
 # Tiny test runner: tracks pass/fail counts, prints per-group summaries.
 # ---------------------------------------------------------------------------
 
 var _passed = 0
 var _failed = 0
-var _group  = ''
+var _group = ''
 
 def begin(name) {
   _group = name
@@ -63,9 +62,13 @@ def raises(fn) {
 
 # Asserts that two byte strings have identical content.
 def bytes_equal(a, b) {
-  if a.length() != b.length() return false
+  if a.length() != b.length() {
+    return false
+  }
   iter var i = 0; i < a.length(); i++ {
-    if a[i] != b[i] return false
+    if a[i] != b[i] {
+      return false
+    }
   }
   return true
 }
@@ -73,7 +76,6 @@ def bytes_equal(a, b) {
 echo '═══════════════════════════════════════════════════════'
 echo '  crypto module: test suite'
 echo '═══════════════════════════════════════════════════════'
-
 
 # ===========================================================================
 # 1. random_bytes
@@ -109,18 +111,17 @@ assert !bytes_equal(rb_a, rb_b),
   'Two independent random_bytes(16) calls must differ'
 ok('successive calls are distinct')
 
-
 # ===========================================================================
 # 2. AES-GCM
 # ===========================================================================
 begin('AES-GCM')
 summary()
 
-var gcm_pt   = 'the quick brown fox jumps over the lazy dog'.to_bytes()
-var gcm_key  = crypto.random_bytes(32)   # AES-256
+var gcm_pt = 'the quick brown fox jumps over the lazy dog'.to_bytes()
+var gcm_key = crypto.random_bytes(32) # AES-256
 var gcm_key2 = crypto.random_bytes(32)
-var gcm_iv   = crypto.random_bytes(12)
-var gcm_iv2  = crypto.random_bytes(12)
+var gcm_iv = crypto.random_bytes(12)
+var gcm_iv2 = crypto.random_bytes(12)
 
 # Basic round-trip
 var gcm_ct = crypto.aes_gcm.encrypt(gcm_key, gcm_iv, gcm_pt)
@@ -142,16 +143,16 @@ ok('ciphertext != plaintext')
 
 # AES-128 key
 var gcm_key128 = crypto.random_bytes(16)
-var gcm_ct128  = crypto.aes_gcm.encrypt(gcm_key128, gcm_iv, gcm_pt)
-var gcm_rt128  = crypto.aes_gcm.decrypt(gcm_key128, gcm_iv, gcm_ct128)
+var gcm_ct128 = crypto.aes_gcm.encrypt(gcm_key128, gcm_iv, gcm_pt)
+var gcm_rt128 = crypto.aes_gcm.decrypt(gcm_key128, gcm_iv, gcm_ct128)
 assert bytes_equal(gcm_rt128, gcm_pt),
   'AES-128-GCM round-trip must recover plaintext'
 ok('round-trip (AES-128-GCM)')
 
 # AES-192 key
 var gcm_key192 = crypto.random_bytes(24)
-var gcm_ct192  = crypto.aes_gcm.encrypt(gcm_key192, gcm_iv, gcm_pt)
-var gcm_rt192  = crypto.aes_gcm.decrypt(gcm_key192, gcm_iv, gcm_ct192)
+var gcm_ct192 = crypto.aes_gcm.encrypt(gcm_key192, gcm_iv, gcm_pt)
+var gcm_rt192 = crypto.aes_gcm.decrypt(gcm_key192, gcm_iv, gcm_ct192)
 assert bytes_equal(gcm_rt192, gcm_pt),
   'AES-192-GCM round-trip must recover plaintext'
 ok('round-trip (AES-192-GCM)')
@@ -178,7 +179,7 @@ ok('AAD: wrong AAD raises error')
 
 # Tampered ciphertext must fail
 var gcm_tampered = gcm_ct.clone()
-gcm_tampered[0] = gcm_tampered[0] ^ 0xff    # flip all bits in first byte
+gcm_tampered[0] = gcm_tampered[0] ^ 0xff # flip all bits in first byte
 assert raises(@() {
   crypto.aes_gcm.decrypt(gcm_key, gcm_iv, gcm_tampered)
 }), 'AES-GCM must reject tampered ciphertext'
@@ -197,17 +198,16 @@ assert gcm_empty_rt.length() == 0,
   'AES-GCM must handle empty plaintext'
 ok('empty plaintext round-trip')
 
-
 # ===========================================================================
 # 3. AES-CBC
 # ===========================================================================
 begin('AES-CBC')
 summary()
 
-var cbc_pt   = 'interoperability payload: AES CBC mode test'.to_bytes()
-var cbc_key  = crypto.random_bytes(32)
+var cbc_pt = 'interoperability payload: AES CBC mode test'.to_bytes()
+var cbc_key = crypto.random_bytes(32)
 var cbc_key2 = crypto.random_bytes(32)
-var cbc_iv   = crypto.random_bytes(16)
+var cbc_iv = crypto.random_bytes(16)
 
 # Basic round-trip
 var cbc_ct = crypto.aes_cbc.encrypt(cbc_key, cbc_iv, cbc_pt)
@@ -223,8 +223,8 @@ ok('ciphertext length is a multiple of 16')
 
 # AES-128
 var cbc_key128 = crypto.random_bytes(16)
-var cbc_ct128  = crypto.aes_cbc.encrypt(cbc_key128, cbc_iv, cbc_pt)
-var cbc_rt128  = crypto.aes_cbc.decrypt(cbc_key128, cbc_iv, cbc_ct128)
+var cbc_ct128 = crypto.aes_cbc.encrypt(cbc_key128, cbc_iv, cbc_pt)
+var cbc_rt128 = crypto.aes_cbc.decrypt(cbc_key128, cbc_iv, cbc_ct128)
 assert bytes_equal(cbc_rt128, cbc_pt),
   'AES-128-CBC round-trip must recover plaintext'
 ok('round-trip (AES-128-CBC)')
@@ -236,13 +236,12 @@ assert raises(@() {
 ok('wrong key raises error')
 
 # Plaintext exactly one block: tests boundary padding
-var cbc_block_pt = '0123456789abcdef'.to_bytes()   # exactly 16 bytes
+var cbc_block_pt = '0123456789abcdef'.to_bytes() # exactly 16 bytes
 var cbc_block_ct = crypto.aes_cbc.encrypt(cbc_key, cbc_iv, cbc_block_pt)
 var cbc_block_rt = crypto.aes_cbc.decrypt(cbc_key, cbc_iv, cbc_block_ct)
 assert bytes_equal(cbc_block_rt, cbc_block_pt),
   'AES-CBC must handle plaintext exactly one block long'
 ok('plaintext == one block (PKCS#7 full-block padding)')
-
 
 # ===========================================================================
 # 4. ChaCha20-Poly1305
@@ -250,11 +249,11 @@ ok('plaintext == one block (PKCS#7 full-block padding)')
 begin('ChaCha20-Poly1305')
 summary()
 
-var cc_pt   = 'ChaCha20-Poly1305 test vector: software crypto path'.to_bytes()
-var cc_key  = crypto.random_bytes(32)
+var cc_pt = 'ChaCha20-Poly1305 test vector: software crypto path'.to_bytes()
+var cc_key = crypto.random_bytes(32)
 var cc_key2 = crypto.random_bytes(32)
-var cc_iv   = crypto.random_bytes(12)
-var cc_iv2  = crypto.random_bytes(12)
+var cc_iv = crypto.random_bytes(12)
+var cc_iv2 = crypto.random_bytes(12)
 
 # Basic round-trip
 var cc_ct = crypto.chacha20.encrypt(cc_key, cc_iv, cc_pt)
@@ -314,7 +313,6 @@ assert cc_empty_rt.length() == 0,
   'ChaCha20 must handle empty plaintext'
 ok('empty plaintext round-trip')
 
-
 # ===========================================================================
 # 5. RSA-2048
 # ===========================================================================
@@ -352,8 +350,8 @@ ok('private_pem != public_pem')
 
 # OAEP encrypt / decrypt
 var rsa_msg = 'RSA-OAEP test payload: 2048-bit'.to_bytes()
-var rsa_ct  = crypto.rsa.encrypt(rsa2k['public_pem'], rsa_msg)
-var rsa_rt  = crypto.rsa.decrypt(rsa2k['private_pem'], rsa_ct)
+var rsa_ct = crypto.rsa.encrypt(rsa2k['public_pem'], rsa_msg)
+var rsa_rt = crypto.rsa.decrypt(rsa2k['private_pem'], rsa_ct)
 
 assert bytes_equal(rsa_rt, rsa_msg),
   'RSA-OAEP round-trip must recover plaintext'
@@ -366,21 +364,23 @@ ok('ciphertext != plaintext')
 
 # PSS sign / verify
 var rsa_payload = 'document to authenticate with RSA-PSS'.to_bytes()
-var rsa_sig     = crypto.rsa.sign(rsa2k['private_pem'], rsa_payload)
-var rsa_valid   = crypto.rsa.verify(rsa2k['public_pem'], rsa_payload, rsa_sig)
+var rsa_sig = crypto.rsa.sign(rsa2k['private_pem'], rsa_payload)
+var rsa_valid = crypto.rsa.verify(rsa2k['public_pem'], rsa_payload, rsa_sig)
 
 assert rsa_valid,
   'RSA-PSS signature must verify against matching public key'
 ok('PSS sign/verify: correct signature accepted')
 
 # Wrong message must not verify
-var rsa_wrong = crypto.rsa.verify(rsa2k['public_pem'], 'different message'.to_bytes(), rsa_sig)
+var rsa_wrong = crypto.rsa.verify(
+  rsa2k['public_pem'], 'different message'.to_bytes(), rsa_sig,
+)
 assert !rsa_wrong,
   'RSA-PSS must reject signature for a different message'
 ok('PSS verify: wrong message rejected')
 
 # Cross-key pair: different key must not verify
-var rsa2k_b   = crypto.rsa.generate(2048)
+var rsa2k_b = crypto.rsa.generate(2048)
 var rsa_cross = crypto.rsa.verify(rsa2k_b['public_pem'], rsa_payload, rsa_sig)
 assert !rsa_cross,
   'RSA-PSS must reject signature verified against a different key pair'
@@ -391,7 +391,6 @@ assert raises(@() {
   crypto.rsa.decrypt(rsa2k_b['private_pem'], rsa_ct)
 }), 'RSA-OAEP must fail when decrypted with wrong private key'
 ok('OAEP decrypt with wrong key raises error')
-
 
 # ===========================================================================
 # 6. RSA-4096
@@ -407,18 +406,19 @@ assert rsa4k['private_pem'].starts_with('-----BEGIN'),
 ok('generate() produces valid PEM')
 
 var rsa4k_payload = 'RSA-4096 PSS signing test'.to_bytes()
-var rsa4k_sig     = crypto.rsa.sign(rsa4k['private_pem'], rsa4k_payload)
-var rsa4k_ok      = crypto.rsa.verify(rsa4k['public_pem'], rsa4k_payload, rsa4k_sig)
+var rsa4k_sig = crypto.rsa.sign(rsa4k['private_pem'], rsa4k_payload)
+var rsa4k_ok = crypto.rsa.verify(rsa4k['public_pem'], rsa4k_payload, rsa4k_sig)
 assert rsa4k_ok,
   'RSA-4096-PSS sign/verify round-trip must succeed'
 ok('PSS sign/verify round-trip (4096-bit)')
 
 # 4096-bit signature must not verify under 2048-bit key
-var rsa4k_cross = crypto.rsa.verify(rsa2k['public_pem'], rsa4k_payload, rsa4k_sig)
+var rsa4k_cross = crypto.rsa.verify(
+  rsa2k['public_pem'], rsa4k_payload, rsa4k_sig,
+)
 assert !rsa4k_cross,
   'RSA-4096 signature must not verify under a 2048-bit key'
 ok('4096-bit signature rejected by 2048-bit key')
-
 
 # ===========================================================================
 # 7. ECDSA P-256
@@ -449,14 +449,18 @@ assert ec256_ok,
 ok('verify() accepts valid signature')
 
 # Wrong message
-var ec256_wrong_msg = crypto.ecdsa.verify(ec256['public_pem'], 'wrong'.to_bytes(), ec256_sig)
+var ec256_wrong_msg = crypto.ecdsa.verify(
+  ec256['public_pem'], 'wrong'.to_bytes(), ec256_sig,
+)
 assert !ec256_wrong_msg,
   'ECDSA P-256 verify must reject signature for a different message'
 ok('verify() rejects wrong message')
 
 # Cross-key pair
-var ec256_b     = crypto.ecdsa.generate('P-256')
-var ec256_cross = crypto.ecdsa.verify(ec256_b['public_pem'], ec256_msg, ec256_sig)
+var ec256_b = crypto.ecdsa.generate('P-256')
+var ec256_cross = crypto.ecdsa.verify(
+  ec256_b['public_pem'], ec256_msg, ec256_sig,
+)
 assert !ec256_cross,
   'ECDSA P-256 verify must reject cross-keypair signature'
 ok('verify() rejects cross-keypair signature')
@@ -470,17 +474,16 @@ assert ec256_ok2,
   'Second independent ECDSA P-256 signature must also verify'
 ok('two independent signatures both verify')
 
-
 # ===========================================================================
 # 8. ECDSA P-384
 # ===========================================================================
 begin('ECDSA P-384')
 summary()
 
-var ec384     = crypto.ecdsa.generate('P-384')
+var ec384 = crypto.ecdsa.generate('P-384')
 var ec384_msg = 'ECDSA P-384 test payload'.to_bytes()
 var ec384_sig = crypto.ecdsa.sign(ec384['private_pem'], ec384_msg)
-var ec384_ok  = crypto.ecdsa.verify(ec384['public_pem'], ec384_msg, ec384_sig)
+var ec384_ok = crypto.ecdsa.verify(ec384['public_pem'], ec384_msg, ec384_sig)
 
 assert ec384_ok,
   'ECDSA P-384 signature must verify against matching public key'
@@ -497,14 +500,13 @@ assert !crypto.ecdsa.verify(ec384['public_pem'], 'nope'.to_bytes(), ec384_sig),
   'P-384 verify must reject wrong message'
 ok('verify() rejects wrong message (P-384)')
 
-
 # ===========================================================================
 # 9. Ed25519
 # ===========================================================================
 begin('Ed25519')
 summary()
 
-var ed_kp  = crypto.ed25519.generate()
+var ed_kp = crypto.ed25519.generate()
 var ed_kp2 = crypto.ed25519.generate()
 
 assert ed_kp.contains('private_pem') and ed_kp.contains('public_pem'),
@@ -516,8 +518,8 @@ assert ed_kp['public_pem'] != ed_kp2['public_pem'],
   'Two ed25519.generate() calls must produce distinct keys'
 ok('successive generate() calls produce distinct keys')
 
-var ed_msg  = 'Ed25519 EdDSA test message: deterministic signature'.to_bytes()
-var ed_sig  = crypto.ed25519.sign(ed_kp['private_pem'], ed_msg)
+var ed_msg = 'Ed25519 EdDSA test message: deterministic signature'.to_bytes()
+var ed_sig = crypto.ed25519.sign(ed_kp['private_pem'], ed_msg)
 var ed_sig2 = crypto.ed25519.sign(ed_kp['private_pem'], ed_msg)
 
 # Ed25519 is deterministic: identical inputs produce identical signatures
@@ -535,7 +537,9 @@ assert ed_ok,
 ok('verify() accepts valid signature')
 
 # Wrong message
-var ed_wrong_msg = crypto.ed25519.verify(ed_kp['public_pem'], 'tampered'.to_bytes(), ed_sig)
+var ed_wrong_msg = crypto.ed25519.verify(
+  ed_kp['public_pem'], 'tampered'.to_bytes(), ed_sig,
+)
 assert !ed_wrong_msg,
   'Ed25519 verify must reject wrong message'
 ok('verify() rejects wrong message')
@@ -549,11 +553,12 @@ ok('verify() rejects cross-keypair signature')
 # Tampered signature (flip one byte)
 var ed_tampered = ed_sig.clone()
 ed_tampered[0] = ed_tampered[0] ^ 0x01
-var ed_tampered_ok = crypto.ed25519.verify(ed_kp['public_pem'], ed_msg, ed_tampered)
+var ed_tampered_ok = crypto.ed25519.verify(
+  ed_kp['public_pem'], ed_msg, ed_tampered,
+)
 assert !ed_tampered_ok,
   'Ed25519 verify must reject a tampered signature'
 ok('verify() rejects tampered signature')
-
 
 # ===========================================================================
 # 10. X25519
@@ -562,7 +567,7 @@ begin('X25519')
 summary()
 
 var alice = crypto.x25519.generate()
-var bob   = crypto.x25519.generate()
+var bob = crypto.x25519.generate()
 var carol = crypto.x25519.generate()
 
 assert alice.contains('private_pem') and alice.contains('public_pem'),
@@ -570,8 +575,10 @@ assert alice.contains('private_pem') and alice.contains('public_pem'),
 ok('generate() returns valid key dict')
 
 # Core property: both parties must derive the same shared secret
-var alice_secret = crypto.x25519.exchange(alice['private_pem'], bob['public_pem'])
-var bob_secret   = crypto.x25519.exchange(bob['private_pem'],   alice['public_pem'])
+var alice_secret = crypto.x25519.exchange(
+  alice['private_pem'], bob['public_pem'],
+)
+var bob_secret = crypto.x25519.exchange(bob['private_pem'], alice['public_pem'])
 
 assert bytes_equal(alice_secret, bob_secret),
   'X25519 exchange must produce identical shared secrets for both parties'
@@ -582,7 +589,9 @@ assert alice_secret.length() == 32,
 ok('shared secret is exactly 32 bytes')
 
 # Different peer → different shared secret
-var alice_carol_secret = crypto.x25519.exchange(alice['private_pem'], carol['public_pem'])
+var alice_carol_secret = crypto.x25519.exchange(
+  alice['private_pem'], carol['public_pem'],
+)
 assert !bytes_equal(alice_secret, alice_carol_secret),
   'X25519 exchange with a different peer must produce a different secret'
 ok('different peer produces different shared secret')
@@ -593,17 +602,16 @@ assert !bytes_equal(alice_secret, alice_pub_bytes),
   'X25519 shared secret must not equal the local public key'
 ok('shared secret != local public key')
 
-
 # ===========================================================================
 # 11. Argon2id
 # ===========================================================================
 begin('Argon2id')
 summary()
 
-var a2_password  = 'correct horse battery staple'
-var a2_wrong_pw  = 'incorrect horse battery staple'
-var a2_salt      = crypto.random_bytes(16)
-var a2_salt2     = crypto.random_bytes(16)
+var a2_password = 'correct horse battery staple'
+var a2_wrong_pw = 'incorrect horse battery staple'
+var a2_salt = crypto.random_bytes(16)
+var a2_salt2 = crypto.random_bytes(16)
 
 var a2_hash = crypto.argon2.hash(a2_password, a2_salt)
 
@@ -664,14 +672,13 @@ assert !crypto.argon2.verify(a2_hash, a2_wrong_pw),
   'argon2.verify() must not accept wrong password against first hash'
 ok('cross-hash password rejection')
 
-
 # ===========================================================================
 # 12. HKDF
 # ===========================================================================
 begin('HKDF-SHA256')
 summary()
 
-var hkdf_ikm  = crypto.random_bytes(32)
+var hkdf_ikm = crypto.random_bytes(32)
 var hkdf_salt = crypto.random_bytes(32)
 var hkdf_info = 'zuri-crypto-test-context-v1'.to_bytes()
 
@@ -698,21 +705,23 @@ assert bytes_equal(hkdf_k32, hkdf_k32_b),
 ok('deterministic output for identical inputs')
 
 # Different info → different key
-var hkdf_k32_enc  = crypto.hkdf(hkdf_ikm, hkdf_salt, 'encryption'.to_bytes(), 32)
-var hkdf_k32_auth = crypto.hkdf(hkdf_ikm, hkdf_salt, 'authentication'.to_bytes(), 32)
+var hkdf_k32_enc = crypto.hkdf(hkdf_ikm, hkdf_salt, 'encryption'.to_bytes(), 32)
+var hkdf_k32_auth = crypto.hkdf(
+  hkdf_ikm, hkdf_salt, 'authentication'.to_bytes(), 32,
+)
 assert !bytes_equal(hkdf_k32_enc, hkdf_k32_auth),
   'hkdf() must produce distinct keys for distinct info values'
 ok('different info strings produce distinct keys')
 
 # Different salt → different key
-var hkdf_salt2   = crypto.random_bytes(32)
-var hkdf_k32_s2  = crypto.hkdf(hkdf_ikm, hkdf_salt2, hkdf_info, 32)
+var hkdf_salt2 = crypto.random_bytes(32)
+var hkdf_k32_s2 = crypto.hkdf(hkdf_ikm, hkdf_salt2, hkdf_info, 32)
 assert !bytes_equal(hkdf_k32, hkdf_k32_s2),
   'hkdf() must produce distinct keys for distinct salts'
 ok('different salts produce distinct keys')
 
 # Different IKM → different key
-var hkdf_ikm2   = crypto.random_bytes(32)
+var hkdf_ikm2 = crypto.random_bytes(32)
 var hkdf_k32_i2 = crypto.hkdf(hkdf_ikm2, hkdf_salt, hkdf_info, 32)
 assert !bytes_equal(hkdf_k32, hkdf_k32_i2),
   'hkdf() must produce distinct keys for distinct IKMs'
@@ -723,7 +732,6 @@ assert !bytes_equal(hkdf_k32, hkdf_ikm),
   'hkdf() output must not equal the raw IKM'
 ok('output != raw IKM')
 
-
 # ===========================================================================
 # 13. Cross-primitive integration
 #     X25519 → HKDF → AES-GCM (the canonical key-agreement + encryption flow)
@@ -732,21 +740,27 @@ begin('Integration: X25519 → HKDF → AES-GCM')
 summary()
 
 # Alice and Bob each generate an X25519 key pair (done above: reuse)
-var int_salt       = crypto.random_bytes(32)
-var int_info_enc   = 'zuri-session-encryption-key'.to_bytes()
-var int_info_auth  = 'zuri-session-auth-key'.to_bytes()
+var int_salt = crypto.random_bytes(32)
+var int_info_enc = 'zuri-session-encryption-key'.to_bytes()
+var int_info_auth = 'zuri-session-auth-key'.to_bytes()
 
 # Both parties derive the shared secret
-var int_alice_secret = crypto.x25519.exchange(alice['private_pem'], bob['public_pem'])
-var int_bob_secret   = crypto.x25519.exchange(bob['private_pem'],   alice['public_pem'])
+var int_alice_secret = crypto.x25519.exchange(
+  alice['private_pem'], bob['public_pem'],
+)
+var int_bob_secret = crypto.x25519.exchange(
+  bob['private_pem'], alice['public_pem'],
+)
 
 assert bytes_equal(int_alice_secret, int_bob_secret),
   'Integration: shared secrets must agree'
 ok('shared secret agreement')
 
 # Derive a 32-byte AES-256 encryption key from the shared secret
-var int_alice_enc_key = crypto.hkdf(int_alice_secret, int_salt, int_info_enc, 32)
-var int_bob_enc_key   = crypto.hkdf(int_bob_secret,   int_salt, int_info_enc, 32)
+var int_alice_enc_key = crypto.hkdf(
+  int_alice_secret, int_salt, int_info_enc, 32,
+)
+var int_bob_enc_key = crypto.hkdf(int_bob_secret, int_salt, int_info_enc, 32)
 
 assert bytes_equal(int_alice_enc_key, int_bob_enc_key),
   'Integration: derived encryption keys must be equal'
@@ -754,8 +768,8 @@ ok('derived encryption keys are equal')
 
 # Alice encrypts a message to Bob
 var int_plaintext = 'session message: authenticated key-agreement works end-to-end'.to_bytes()
-var int_iv        = crypto.random_bytes(12)
-var int_ct        = crypto.aes_gcm.encrypt(int_alice_enc_key, int_iv, int_plaintext)
+var int_iv = crypto.random_bytes(12)
+var int_ct = crypto.aes_gcm.encrypt(int_alice_enc_key, int_iv, int_plaintext)
 
 # Bob decrypts using his independently derived key
 var int_rt = crypto.aes_gcm.decrypt(int_bob_enc_key, int_iv, int_ct)
@@ -764,14 +778,17 @@ assert bytes_equal(int_rt, int_plaintext),
 ok('end-to-end: Bob decrypts Alice\'s message')
 
 # Carol (third party) cannot decrypt: her secret with Alice differs
-var int_carol_secret  = crypto.x25519.exchange(carol['private_pem'], alice['public_pem'])
-var int_carol_enc_key = crypto.hkdf(int_carol_secret, int_salt, int_info_enc, 32)
+var int_carol_secret = crypto.x25519.exchange(
+  carol['private_pem'], alice['public_pem'],
+)
+var int_carol_enc_key = crypto.hkdf(
+  int_carol_secret, int_salt, int_info_enc, 32,
+)
 
 assert raises(@() {
   crypto.aes_gcm.decrypt(int_carol_enc_key, int_iv, int_ct)
 }), 'Integration: third party must not be able to decrypt the session message'
 ok('third party (Carol) cannot decrypt: authentication fails')
-
 
 # ===========================================================================
 # 14. Invalid argument handling
@@ -780,18 +797,24 @@ begin('Invalid argument handling')
 summary()
 
 # random_bytes: zero length
-assert raises(@() { crypto.random_bytes(0) }),
+assert raises(@() {
+  crypto.random_bytes(0)
+}),
   'random_bytes(0) must raise'
 ok('random_bytes(0) raises')
 
 # random_bytes: over maximum
-assert raises(@() { crypto.random_bytes(65537) }),
+assert raises(@() {
+  crypto.random_bytes(65537)
+}),
   'random_bytes(65537) must raise'
 ok('random_bytes(65537) raises')
 
 # AES-GCM: bad key size
 assert raises(@() {
-  crypto.aes_gcm.encrypt(crypto.random_bytes(10), crypto.random_bytes(12), 'x'.to_bytes())
+  crypto.aes_gcm.encrypt(
+    crypto.random_bytes(10), crypto.random_bytes(12), 'x'.to_bytes(),
+  )
 }), 'aes_gcm.encrypt() must reject a key that is not 16/24/32 bytes'
 ok('aes_gcm.encrypt() rejects bad key size')
 
@@ -803,33 +826,45 @@ ok('aes_gcm.encrypt() rejects zero-length IV')
 
 # AES-CBC: IV must be exactly 16 bytes
 assert raises(@() {
-  crypto.aes_cbc.encrypt(crypto.random_bytes(32), crypto.random_bytes(8), 'x'.to_bytes())
+  crypto.aes_cbc.encrypt(
+    crypto.random_bytes(32), crypto.random_bytes(8), 'x'.to_bytes(),
+  )
 }), 'aes_cbc.encrypt() must reject IV != 16 bytes'
 ok('aes_cbc.encrypt() rejects IV of wrong length')
 
 # ChaCha20: key must be 32 bytes
 assert raises(@() {
-  crypto.chacha20.encrypt(crypto.random_bytes(16), crypto.random_bytes(12), 'x'.to_bytes())
+  crypto.chacha20.encrypt(
+    crypto.random_bytes(16), crypto.random_bytes(12), 'x'.to_bytes(),
+  )
 }), 'chacha20.encrypt() must reject key != 32 bytes'
 ok('chacha20.encrypt() rejects bad key size')
 
 # ChaCha20: IV must be 12 bytes
 assert raises(@() {
-  crypto.chacha20.encrypt(crypto.random_bytes(32), crypto.random_bytes(8), 'x'.to_bytes())
+  crypto.chacha20.encrypt(
+    crypto.random_bytes(32), crypto.random_bytes(8), 'x'.to_bytes(),
+  )
 }), 'chacha20.encrypt() must reject nonce != 12 bytes'
 ok('chacha20.encrypt() rejects bad nonce size')
 
 # RSA: invalid bit count
-assert raises(@() { crypto.rsa.generate(1024) }),
+assert raises(@() {
+  crypto.rsa.generate(1024)
+}),
   'rsa.generate() must reject bit counts other than 2048/4096'
 ok('rsa.generate(1024) raises')
 
-assert raises(@() { crypto.rsa.generate(3072) }),
+assert raises(@() {
+  crypto.rsa.generate(3072)
+}),
   'rsa.generate(3072) must raise'
 ok('rsa.generate(3072) raises')
 
 # ECDSA: unknown curve
-assert raises(@() { crypto.ecdsa.generate('P-521') }),
+assert raises(@() {
+  crypto.ecdsa.generate('P-521')
+}),
   'ecdsa.generate() must reject unknown curves'
 ok('ecdsa.generate("P-521") raises')
 
@@ -841,16 +876,19 @@ ok('argon2.hash() rejects salt < 8 bytes')
 
 # HKDF: zero output length
 assert raises(@() {
-  crypto.hkdf(crypto.random_bytes(32), crypto.random_bytes(32), 'x'.to_bytes(), 0)
+  crypto.hkdf(
+    crypto.random_bytes(32), crypto.random_bytes(32), 'x'.to_bytes(), 0,
+  )
 }), 'hkdf() must reject length == 0'
 ok('hkdf() rejects length == 0')
 
 # HKDF: output length over maximum
 assert raises(@() {
-  crypto.hkdf(crypto.random_bytes(32), crypto.random_bytes(32), 'x'.to_bytes(), 8161)
+  crypto.hkdf(
+    crypto.random_bytes(32), crypto.random_bytes(32), 'x'.to_bytes(), 8161,
+  )
 }), 'hkdf() must reject length > 8160'
 ok('hkdf() rejects length > 8160')
-
 
 # ===========================================================================
 # Final summary

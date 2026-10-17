@@ -34,8 +34,10 @@ echo '════════════════════════�
 # A flat list of instructions comes back
 # ---------------------------------------------------------------------------
 var instrs = zuri.compile('var x = 1')
-assert instrs.length() > 0, 'compiling a simple script must produce at least one instruction'
-assert instance_of(instrs[0], zuri.Instr), 'each entry must be an Instr instance'
+assert instrs.length() > 0,
+  'compiling a simple script must produce at least one instruction'
+assert instance_of(instrs[0], zuri.Instr),
+  'each entry must be an Instr instance'
 ok('compile() returns a non-empty flat instruction list')
 
 # ---------------------------------------------------------------------------
@@ -49,8 +51,10 @@ for instr in const_instrs {
   }
 }
 assert load_const != nil, 'a numeric literal must compile through a LoadConst'
-assert load_const.fields.const_idx != nil, 'LoadConst must carry the raw constant index'
-assert load_const.fields.value == 42, 'LoadConst must also carry the already-resolved value'
+assert load_const.fields.const_idx != nil,
+  'LoadConst must carry the raw constant index'
+assert load_const.fields.value == 42,
+  'LoadConst must also carry the already-resolved value'
 ok('LoadConst embeds its resolved constant value inline')
 
 # ---------------------------------------------------------------------------
@@ -63,7 +67,8 @@ for instr in global_instrs {
     set_global = instr
   }
 }
-assert set_global != nil, 'a top-level var declaration must compile through a SetGlobal'
+assert set_global != nil,
+  'a top-level var declaration must compile through a SetGlobal'
 assert set_global.fields.name == 'counter',
   'SetGlobal must resolve the global name from the constant pool'
 ok('SetGlobal resolves the global name inline')
@@ -79,9 +84,11 @@ for instr in closure_instrs {
     closure_instr = instr
   }
 }
-assert closure_instr != nil, 'a function declaration must compile through a Closure instruction'
+assert closure_instr != nil,
+  'a function declaration must compile through a Closure instruction'
 var prototype = closure_instr.fields.prototype
-assert prototype.name == 'add', 'the resolved prototype must carry the function name'
+assert prototype.name == 'add',
+  'the resolved prototype must carry the function name'
 assert prototype.arity == 2, 'the resolved prototype must carry its arity'
 assert prototype.instructions.length() > 0,
   'the resolved prototype must expose its own instructions'
@@ -93,20 +100,24 @@ for nested in prototype.instructions {
     found_return = true
   }
 }
-assert found_return, 'the nested function body must include its own Return instruction'
+assert found_return,
+  'the nested function body must include its own Return instruction'
 ok('a Closure instruction exposes its nested function body, recursively wrapped')
 
 # ---------------------------------------------------------------------------
 # Every instruction carries a line, but no column
 # ---------------------------------------------------------------------------
 var line_instrs = zuri.compile('var x = 1')
-assert line_instrs[0].line != nil, 'an instruction compiled from real source must carry a line'
+assert line_instrs[0].line != nil,
+  'an instruction compiled from real source must carry a line'
 ok('instructions carry their source line')
 
 # ---------------------------------------------------------------------------
 # A compile error raises rather than returning partial bytecode
 # ---------------------------------------------------------------------------
-assert raises(@() { zuri.compile('def (') }),
+assert raises(@() {
+  zuri.compile('def (')
+}),
   'malformed source must raise, not return partial bytecode'
 ok('a compile error raises instead of returning a partial result')
 
@@ -123,7 +134,8 @@ for instr in dump_instrs {
 assert load_const_dump != nil, 'must have found a LoadConst to dump'
 assert is_string(load_const_dump), 'dump() must return a string'
 assert load_const_dump.contains('LoadConst'), 'dump() must show the opcode'
-assert load_const_dump.contains('value: 42'), 'dump() must show the resolved constant value'
+assert load_const_dump.contains('value: 42'),
+  'dump() must show the resolved constant value'
 ok('Instr.dump() produces a readable dump with resolved fields')
 
 # ---------------------------------------------------------------------------
@@ -135,22 +147,30 @@ var walk_instrs_list = zuri.compile(walk_source)
 
 var returns_seen = []
 zuri.walk_instrs(walk_instrs_list, {
-  Return: @(instr) { returns_seen.append(instr) },
+  Return: @(instr) {
+    returns_seen.append(instr)
+  },
 })
 assert returns_seen.length() > 0,
   'walk_instrs() must reach Return instructions inside the nested Closure body'
 ok('walk_instrs() with a dict visitor reaches instructions inside a nested function body')
 
 var all_visited = []
-zuri.walk_instrs(walk_instrs_list, @(instr) { all_visited.append(instr.op) })
+zuri.walk_instrs(walk_instrs_list, @(instr) {
+  all_visited.append(instr.op)
+})
 assert all_visited.length() > returns_seen.length(),
   'a plain-function visitor must be called for every instruction'
 ok('walk_instrs() with a plain function visits every instruction')
 
 var closures = zuri.find_instrs(walk_instrs_list, 'Closure')
-assert closures.length() == 1, 'find_instrs() must find exactly one Closure instruction'
-var returns_inside = zuri.find_instrs(closures[0].fields.prototype.instructions, 'Return')
-assert returns_inside.length() > 0, 'find_instrs() must work on a nested instruction list too'
+assert closures.length() == 1,
+  'find_instrs() must find exactly one Closure instruction'
+var returns_inside = zuri.find_instrs(
+  closures[0].fields.prototype.instructions, 'Return',
+)
+assert returns_inside.length() > 0,
+  'find_instrs() must work on a nested instruction list too'
 ok('find_instrs() returns every instruction of the requested opcode, anywhere in the tree')
 
 # ---------------------------------------------------------------------------
@@ -168,33 +188,41 @@ for instr in file_instrs {
     file_load_const = instr
   }
 }
-assert file_load_const != nil, 'compile_file() must actually compile the file content'
+assert file_load_const != nil,
+  'compile_file() must actually compile the file content'
 assert file_load_const.fields.value == 42,
   'compile_file() must resolve constants the same way compile() does'
 
-assert raises(@() { zuri.compile_file('tmp/zuri_this_file_does_not_exist.zu') }),
+assert raises(@() {
+  zuri.compile_file('tmp/zuri_this_file_does_not_exist.zu')
+}),
   'compile_file() on a missing file must raise'
 ok('compile_file() reads and compiles a real file')
 
 # ---------------------------------------------------------------------------
 # check(): problems as diagnostics, never raised
 # ---------------------------------------------------------------------------
-assert zuri.check('var x = 1\necho x').is_empty(), 'source that compiles has no problems'
+assert zuri.check('var x = 1\necho x').is_empty(),
+  'source that compiles has no problems'
 
 var loop_problems = zuri.check('if true {\n  break\n}')
 assert loop_problems.length() == 1, 'one compile error is one diagnostic'
 var loop_problem = loop_problems[0]
 assert instance_of(loop_problem, zuri.Diagnostic), 'a problem is a Diagnostic'
-assert loop_problem.message == "'break' used outside of a loop", 'with the compiler message'
+assert loop_problem.message == "'break' used outside of a loop",
+  'with the compiler message'
 assert loop_problem.line == 2 and loop_problem.col == 3, 'placed at the keyword'
-assert loop_problem.end_line == 2 and loop_problem.end_col == 8, 'and covering it'
+assert loop_problem.end_line == 2 and loop_problem.end_col == 8,
+  'and covering it'
 assert loop_problem.to_string() == "2:3: 'break' used outside of a loop",
   'to_string() leads with the position'
 ok('check() reports a compile error at its token')
 
 var syntax_problems = zuri.check('var a = (1\nvar b = 2')
-assert syntax_problems.length() == 1, 'source that does not parse reports its syntax errors'
-assert syntax_problems[0].message.contains("Expected ')'"), 'with the parser message'
+assert syntax_problems.length() == 1,
+  'source that does not parse reports its syntax errors'
+assert syntax_problems[0].message.contains("Expected ')'"),
+  'with the parser message'
 
 var duplicate = 'def f() {\n}\ndef f() {\n}'
 var duplicate_problems = zuri.check(duplicate)
@@ -210,7 +238,8 @@ check_file.close()
 
 var file_problems = zuri.check_file(check_path)
 assert file_problems.length() == 1, 'check_file() checks the file content'
-assert file_problems[0].message == "'continue' used outside of a loop", 'and reports it'
+assert file_problems[0].message == "'continue' used outside of a loop",
+  'and reports it'
 ok('check_file() reads and checks a real file')
 
 # ---------------------------------------------------------------------------
@@ -219,11 +248,14 @@ ok('check_file() reads and checks a real file')
 var helper_path = os.join_paths(os.dir_name(__file__), 'zuri_compile_helper.zu')
 var imported = zuri.import_file(helper_path)
 
-assert imported == helper, 'import_file() returns the module an import statement gave'
-assert imported.greet('Ada') == 'hello Ada', 'its members are reached as on any module'
+assert imported == helper,
+  'import_file() returns the module an import statement gave'
+assert imported.greet('Ada') == 'hello Ada',
+  'its members are reached as on any module'
 
 helper.loads.append('first')
-assert zuri.import_file(helper_path).loads.length() == 1, 'and its top level does not run again'
+assert zuri.import_file(helper_path).loads.length() == 1,
+  'and its top level does not run again'
 ok('import_file() shares the import cache')
 
 var scratch = os.create_temp_dir('zuri-import-file-')
@@ -239,8 +271,10 @@ var package = file(os.join_paths(plugin_dir, 'index.zu'), 'w')
 package.write('var name = "package"\n')
 package.close()
 
-assert zuri.import_file(os.join_paths(scratch, 'plain')).name == 'plain', 'a path without an extension finds the .zu file'
-assert zuri.import_file(plugin_dir).name == 'package', 'a directory finds its index.zu'
+assert zuri.import_file(os.join_paths(scratch, 'plain')).name == 'plain',
+  'a path without an extension finds the .zu file'
+assert zuri.import_file(plugin_dir).name == 'package',
+  'a directory finds its index.zu'
 
 var started_in = os.cwd()
 os.change_dir(scratch)
@@ -248,7 +282,8 @@ os.change_dir(scratch)
 var relative = zuri.import_file('plain.zu')
 
 os.change_dir(started_in)
-assert relative.name == 'plain', 'a relative path is taken from the working directory'
+assert relative.name == 'plain',
+  'a relative path is taken from the working directory'
 ok('import_file() finds a file the way import does')
 
 var missing_kind = nil
@@ -259,7 +294,8 @@ catch {
   missing_kind = typeof(error)
 }
 
-assert missing_kind == 'ModuleNotFoundError', 'a missing file raises ModuleNotFoundError'
+assert missing_kind == 'ModuleNotFoundError',
+  'a missing file raises ModuleNotFoundError'
 
 var failing = file(os.join_paths(scratch, 'failing.zu'), 'w')
 failing.write('raise ValueError("raised while loading")\n')
@@ -273,14 +309,17 @@ catch {
   raised = error
 }
 
-assert instance_of(raised, ValueError), 'what the module raises is raised unchanged'
+assert instance_of(raised, ValueError),
+  'what the module raises is raised unchanged'
 assert raised.message == 'raised while loading', 'message and all'
 
 var broken = file(os.join_paths(scratch, 'broken.zu'), 'w')
 broken.write('def oops( {\n')
 broken.close()
 
-assert raises(@() { zuri.import_file(os.join_paths(scratch, 'broken.zu')) }), 'a file that does not parse raises'
+assert raises(@() {
+  zuri.import_file(os.join_paths(scratch, 'broken.zu'))
+}), 'a file that does not parse raises'
 ok('import_file() raises what the import raised')
 
 os.remove_dir(scratch, true)

@@ -89,13 +89,14 @@ def test_aggregates() {
   assert db.fetch_value('select longest(word) from t', nil, nil) == 'bbb'
 
   var grouped = db.fetch_all(
-    'select grp, longest(word) as w from t group by grp order by grp', nil
+    'select grp, longest(word) as w from t group by grp order by grp', nil,
   )
   assert grouped[0].w == 'bbb'
   assert grouped[1].w == 'cc'
 
   # A group with no rows never steps, so the accumulator is still nil.
-  assert db.fetch_value('select longest(word) from t where 0', nil, 'none') == nil
+  assert db.fetch_value('select longest(word) from t where 0', nil, 'none')
+    == nil
 
   db.close()
   echo 'test_aggregates passed'
@@ -109,7 +110,9 @@ def test_collations() {
 
   db.native().create_collation('bylen', @(a, b) => a.length() - b.length())
 
-  assert db.fetch_column('select word from t order by word collate bylen', nil, nil) ==
+  assert db.fetch_column(
+    'select word from t order by word collate bylen', nil, nil,
+  ) ==
     ['fig', 'pear', 'banana']
 
   db.close()

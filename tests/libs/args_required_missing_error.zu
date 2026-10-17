@@ -6,5 +6,7 @@
 import args
 
 var p = args.Parser('reqmissing', false)
-p.add_option('name', 'Name', {short_name: 'n', type: args.STRING, required: true})
+p.add_option(
+  'name', 'Name', { short_name: 'n', type: args.STRING, required: true },
+)
 p.parse([])

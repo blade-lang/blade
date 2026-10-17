@@ -18,22 +18,22 @@ def exercise(db) {
 
   db.exec_script(
     'create table portable_authors (' +
-    '  id ' + serial_type(db) + ' primary key,' +
-    '  name varchar(100) not null unique' +
-    ')'
+      '  id ' + serial_type(db) + ' primary key,' +
+      '  name varchar(100) not null unique' +
+      ')',
   )
 
   db.exec_script(
     'create table portable_posts (' +
-    '  id ' + serial_type(db) + ' primary key,' +
-    '  author_id integer not null,' +
-    '  title varchar(200) not null,' +
-    '  views integer not null default 0,' +
-    # Declared at table level rather than on the column: MySQL parses a
-    # column level REFERENCES and then ignores it, so the key would
-    # simply not exist there.
-    '  foreign key (author_id) references portable_authors (id)' +
-    ')'
+      '  id ' + serial_type(db) + ' primary key,' +
+      '  author_id integer not null,' +
+      '  title varchar(200) not null,' +
+      '  views integer not null default 0,' +
+      # Declared at table level rather than on the column: MySQL parses a
+      # column level REFERENCES and then ignores it, so the key would
+      # simply not exist there.
+      '  foreign key (author_id) references portable_authors (id)' +
+      ')',
   )
 
   # Inserting and getting an id back, which each engine does its own
@@ -60,13 +60,13 @@ def exercise(db) {
   # Positional and named parameters, in the one spelling both engines
   # are given.
   assert db.fetch_value(
-    'select title from portable_posts where views = ?', [42], nil
+    'select title from portable_posts where views = ?', [42], nil,
   ) == 'On Bugs'
 
   assert db.fetch_value(
     'select title from portable_posts where views = :views',
     { views: 3 },
-    nil
+    nil,
   ) == 'On Looms'
 
   # Selecting, ordering and limiting.
@@ -79,9 +79,11 @@ def exercise(db) {
 
   # Updating with a fragment that reads the column it writes.
   var quoted = db.driver().quote_identifier('views')
-  db.update('portable_posts', { views: sql.raw('${quoted} + 1') }, { views: 42 })
+  db.update(
+    'portable_posts', { views: sql.raw('${quoted} + 1') }, { views: 42 },
+  )
   assert db.fetch_value(
-    'select views from portable_posts where title = ?', ['On Bugs'], nil
+    'select views from portable_posts where title = ?', ['On Bugs'], nil,
   ) == 43
 
   assert db.delete('portable_posts', { title: 'On Looms' }) == 1
@@ -115,7 +117,7 @@ def exercise(db) {
   }, nil)
 
   var titles = db.fetch_column(
-    'select title from portable_posts order by title', nil, nil
+    'select title from portable_posts order by title', nil, nil,
   )
   assert titles.contains('Outer')
   assert !titles.contains('Inner')
@@ -123,7 +125,7 @@ def exercise(db) {
   # Streaming, which is a portal on one engine and the engine's own
   # row-at-a-time behaviour on the other.
   var cursor = db.stream(
-    'select title from portable_posts order by title', nil, { batch: 2 }
+    'select title from portable_posts order by title', nil, { batch: 2 },
   )
   var streamed = []
   for row in cursor {
@@ -133,7 +135,7 @@ def exercise(db) {
 
   # Prepared statements.
   var statement = db.prepare(
-    'select title from portable_posts where author_id = ? order by title'
+    'select title from portable_posts where author_id = ? order by title',
   )
   assert statement.fetch_all([ada]).length() >= 1
   assert statement.fetch_all([grace]).length() == 1

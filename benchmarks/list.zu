@@ -23,7 +23,7 @@ class IList {
     var result = self.tail(
       self.make_list(15),
       self.make_list(10),
-      self.make_list(6)
+      self.make_list(6),
     )
 
     return result.length()
@@ -60,7 +60,7 @@ class IList {
       return self.tail(
         self.tail(x.next, y, z),
         self.tail(y.next, z, x),
-        self.tail(z.next, x, y)
+        self.tail(z.next, x, y),
       )
     }
 

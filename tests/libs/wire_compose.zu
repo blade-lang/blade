@@ -66,20 +66,33 @@ ok('rendering from a file')
 
 var dotted = wire.wire({ root, extension: '.wire' })
 write('other.wire', '<p>wire</p>')
-assert dotted.render('other') == '<p>wire</p>', 'set_extension changes what is tried'
-assert raises(@() { dotted.render('hello') }),
+assert dotted.render('other') == '<p>wire</p>',
+  'set_extension changes what is tried'
+assert raises(@() {
+  dotted.render('hello')
+}),
   'and the old extension is no longer tried'
 ok('the template extension')
 
 # ---------------------------------------------------------------------------
 # The loader is a boundary
 # ---------------------------------------------------------------------------
-assert raises(@() { view.render('nope') }), 'a template that is not there raises'
-assert raises(@() { view.render('../escape') }), 'a path climbing out of the root raises'
-assert raises(@() { view.render('a/../../escape') }),
+assert raises(@() {
+  view.render('nope')
+}), 'a template that is not there raises'
+assert raises(@() {
+  view.render('../escape')
+}), 'a path climbing out of the root raises'
+assert raises(@() {
+  view.render('a/../../escape')
+}),
   'a path climbing out from further in raises too'
-assert raises(@() { view.render('/etc/passwd') }), 'an absolute path elsewhere raises'
-assert raises(@() { view.render('') }), 'an empty path raises'
+assert raises(@() {
+  view.render('/etc/passwd')
+}), 'an absolute path elsewhere raises'
+assert raises(@() {
+  view.render('')
+}), 'an empty path raises'
 assert raises(@() {
   view.render_string('<include path="../../escape" />', nil, nil)
 }), 'an include cannot climb out of the root either'
@@ -93,7 +106,8 @@ catch {
   not_found = e
 }
 
-assert instance_of(not_found, wire.TemplateNotFoundError), 'a missing template raises its own error'
+assert instance_of(not_found, wire.TemplateNotFoundError),
+  'a missing template raises its own error'
 assert instance_of(not_found, wire.WireError), 'which is a WireError'
 ok('the error a missing template raises')
 
@@ -108,8 +122,11 @@ assert view.render_string('<include path="partials/greeting.html" />',
 assert view.render_string('<template x-include="partials/greeting.html"></template>',
   { name: 'Ada' }, nil) == '<em>Hi Ada</em>',
   'the directive spelling means exactly the same thing'
-assert view.render_string('<include path="partials/greeting" />', { name: 'Ada' }, nil) ==
-  '<em>Hi Ada</em>', 'an include takes the extension too'
+assert view.render_string(
+  '<include path="partials/greeting" />', { name: 'Ada' }, nil,
+) ==
+  '<em>Hi Ada</em>',
+  'an include takes the extension too'
 assert view.render_string('<div><include path="partials/greeting" /><b>after</b></div>',
   { name: 'Ada' }, nil) == '<div><em>Hi Ada</em><b>after</b></div>',
   'a self-closing include does not swallow what follows it'
@@ -118,17 +135,17 @@ ok('including')
 write('partials/tone.html', '<i>{{ tone }}</i>')
 
 assert view.render_string(
-  '<include path="partials/tone" x-with="{ tone: \'loud\' }" />', nil, nil
+  '<include path="partials/tone" x-with="{ tone: \'loud\' }" />', nil, nil,
 ) == '<i>loud</i>', 'x-with hands variables to an include'
 assert view.render_string(
-  '<include path="partials/tone" />', { tone: 'inherited' }, nil
+  '<include path="partials/tone" />', { tone: 'inherited' }, nil,
 ) == '<i>inherited</i>', 'an include sees the variables around it'
 assert view.render_string(
-  '<include path="partials/tone" only />', { tone: 'inherited' }, nil
+  '<include path="partials/tone" only />', { tone: 'inherited' }, nil,
 ) == '<i></i>', 'x-only withholds them'
 assert view.render_string(
   '<include path="partials/tone" x-with="{ tone: \'given\' }" only />',
-  { tone: 'inherited' }, nil
+  { tone: 'inherited' }, nil,
 ) == '<i>given</i>', 'x-only leaves what x-with passed'
 ok('the variables an include can see')
 
@@ -149,11 +166,11 @@ write('components/card.html',
 
 assert view.render_string(
   '<include path="components/card" x-with="{ title: \'T\' }" only>' +
-  '<p>{{ body }}</p></include>',
-  { body: 'inner' }, nil
+    '<p>{{ body }}</p></include>',
+  { body: 'inner' }, nil,
 ) == '<section class="card"><h3>T</h3><p>inner</p></section>',
   'an include\'s children become the content region, and are rendered in the ' +
-  'scope they were written in rather than the partial\'s'
+    'scope they were written in rather than the partial\'s'
 assert view.render_string('<include path="components/card" x-with="{ title: \'T\' }" />',
   nil, nil) == '<section class="card"><h3>T</h3></section>',
   'a region nobody filled in renders its own default, which here is nothing'
@@ -165,14 +182,15 @@ ok('an include with children is a component')
 write('partials/rows.html', '<tr><td>a</td></tr><tr><td>b</td></tr>')
 
 assert view.render_string(
-  '<table><tbody><include path="partials/rows" /></tbody></table>', nil, nil
+  '<table><tbody><include path="partials/rows" /></tbody></table>', nil, nil,
 ) == '<table><tbody><tr><td>a</td></tr><tr><td>b</td></tr></tbody></table>',
   'a partial holding rows keeps them when it lands inside a table'
 
 write('partials/meta.html', '<meta charset="utf-8"><meta name="a" content="b">')
 
 assert view.render_string(
-  '<html><head><include path="partials/meta" /></head><body>x</body></html>', nil, nil
+  '<html><head><include path="partials/meta" /></head><body>x</body></html>',
+  nil, nil,
 ) == '<html><head><meta charset="utf-8"><meta name="a" content="b"></head>' +
   '<body>x</body></html>',
   'an include inside a head stays inside the head'
@@ -180,7 +198,7 @@ assert view.render_string(
 write('partials/options.html', '<option>a</option>')
 
 assert view.render_string(
-  '<select><include path="partials/options" /></select>', nil, nil
+  '<select><include path="partials/options" /></select>', nil, nil,
 ) == '<select><option>a</option></select>',
   'an include inside a select is not dropped'
 ok('an include is parsed in the context it lands in')
@@ -190,7 +208,7 @@ ok('an include is parsed in the context it lands in')
 # ---------------------------------------------------------------------------
 write('layouts/page.html',
   '<html><body><main><declare name="content"><p>default</p></declare></main>' +
-  '<footer><declare name="footer">base footer</declare></footer></body></html>')
+    '<footer><declare name="footer">base footer</declare></footer></body></html>')
 
 write('pages/plain.html',
   '<extend base="layouts/page.html"><define name="content"><h1>{{ t }}</h1></define></extend>')
@@ -208,7 +226,7 @@ ok('extending a base template')
 
 write('pages/directive.html',
   '<template x-extend="layouts/page.html">' +
-  '<template x-define="content"><h1>D</h1></template></template>')
+    '<template x-define="content"><h1>D</h1></template></template>')
 
 assert view.render('pages/directive').index_of('<h1>D</h1>') > 0,
   'the directive spelling of extend and define works the same way'
@@ -216,7 +234,7 @@ ok('extend and define in their directive spelling')
 
 write('pages/super.html',
   '<extend base="layouts/page.html">' +
-  '<define name="footer"><super /> and more</define></extend>')
+    '<define name="footer"><super /> and more</define></extend>')
 
 assert view.render('pages/super').index_of('base footer and more') > 0,
   'super renders the definition this one replaces'
@@ -224,8 +242,11 @@ ok('x-super')
 
 write('mid.html',
   '<extend base="layouts/page.html"><define name="content">' +
-  '<section><declare name="inner">middle default</declare></section></define></extend>')
-write('leaf.html', '<extend base="mid.html"><define name="inner"><b>leaf</b></define></extend>')
+    '<section><declare name="inner">middle default</declare></section></define></extend>')
+write(
+  'leaf.html',
+  '<extend base="mid.html"><define name="inner"><b>leaf</b></define></extend>',
+)
 
 assert view.render('leaf').index_of('<section><b>leaf</b></section>') > 0,
   'a middle template can declare regions of its own for a leaf to fill'
@@ -237,25 +258,31 @@ ok('inheritance more than one level deep')
 
 write('pages/twice.html',
   '<extend base="layouts/page.html"><define name="content">1</define>' +
-  '<define name="content">2</define></extend>')
-assert raises(@() { view.render('pages/twice') }),
+    '<define name="content">2</define></extend>')
+assert raises(@() {
+  view.render('pages/twice')
+}),
   'defining the same region twice is refused, since it is nearly always an accident'
 
 write('pages/override.html',
   '<extend base="layouts/page.html"><define name="content">1</define>' +
-  '<define name="content" override>2</define></extend>')
+    '<define name="content" override>2</define></extend>')
 assert view.render('pages/override').index_of('<main>2</main>') > 0,
   'saying override out loud makes the second one win'
 ok('a region defined twice')
 
 write('pages/stray.html',
   '<extend base="layouts/page.html"><p>nowhere to go</p></extend>')
-assert raises(@() { view.render('pages/stray') }),
+assert raises(@() {
+  view.render('pages/stray')
+}),
   'markup outside a define could never be rendered, so it is refused'
 
 write('pages/two.html',
   '<extend base="layouts/page.html"></extend><extend base="mid.html"></extend>')
-assert raises(@() { view.render('pages/two') }),
+assert raises(@() {
+  view.render('pages/two')
+}),
   'a template can extend only one base'
 ok('an extending template is checked')
 
@@ -263,15 +290,21 @@ ok('an extending template is checked')
 # Cycles
 # ---------------------------------------------------------------------------
 write('loop-a.html', '<include path="loop-a" />')
-assert raises(@() { view.render('loop-a') }), 'a template including itself is caught'
+assert raises(@() {
+  view.render('loop-a')
+}), 'a template including itself is caught'
 
 write('loop-b.html', '<include path="loop-c" />')
 write('loop-c.html', '<include path="loop-b" />')
-assert raises(@() { view.render('loop-b') }), 'a cycle through two files is caught'
+assert raises(@() {
+  view.render('loop-b')
+}), 'a cycle through two files is caught'
 
 write('cycle-x.html', '<extend base="cycle-y"></extend>')
 write('cycle-y.html', '<extend base="cycle-x"></extend>')
-assert raises(@() { view.render('cycle-x') }), 'a cycle of extends is caught'
+assert raises(@() {
+  view.render('cycle-x')
+}), 'a cycle of extends is caught'
 ok('cycles are caught rather than run until the process dies')
 
 # ---------------------------------------------------------------------------
@@ -297,7 +330,9 @@ view.set_auto_reload(true)
 ok('the compile cache and auto reload')
 
 write('checked.html', '<p x-if="a +">bad</p>')
-assert raises(@() { view.compile('checked') }),
+assert raises(@() {
+  view.compile('checked')
+}),
   'compile() reports a broken template without rendering it'
 assert view.compile('hello').path.ends_with('hello.html'),
   'compile() returns the template it compiled'
@@ -334,9 +369,11 @@ view.register_filter('excerpt', @(value, words) {
   return ' '.join(value.split(' ').take(count))
 })
 
-assert view.render_string('{{ v|excerpt }}', { v: 'one two three' }, nil) == 'one two',
+assert view.render_string('{{ v|excerpt }}', { v: 'one two three' }, nil)
+  == 'one two',
   'a registered filter, with its argument left out'
-assert view.render_string('{{ v|excerpt(1) }}', { v: 'one two three' }, nil) == 'one',
+assert view.render_string('{{ v|excerpt(1) }}', { v: 'one two three' }, nil)
+  == 'one',
   'and with it supplied'
 
 view.register_filter('upper', @(value) {
@@ -347,7 +384,8 @@ assert view.render_string('{{ v|upper }}', { v: 'x' }, nil) == 'replaced',
 ok('register_filter')
 
 view.register_global('site', 'Example')
-assert view.render_string('{{ site }}', nil, nil) == 'Example', 'a global is readable'
+assert view.render_string('{{ site }}', nil, nil) == 'Example',
+  'a global is readable'
 assert view.render_string('{{ site }}', { site: 'Passed' }, nil) == 'Passed',
   'a variable passed to render wins over a global of the same name'
 
@@ -375,7 +413,8 @@ assert view.render_string('<icon name="{{ v }}"></icon>', { v: '"x' }, nil) ==
 view.register_element('plain', @(environment, element) {
   return '<b>not markup</b>'
 })
-assert view.render_string('<plain></plain>', nil, nil) == '&lt;b&gt;not markup&lt;/b&gt;',
+assert view.render_string('<plain></plain>', nil, nil)
+  == '&lt;b&gt;not markup&lt;/b&gt;',
   'a handler returning something that is not marked safe has it escaped'
 
 view.register_element('gone', @(environment, element) {
@@ -385,11 +424,21 @@ assert view.render_string('<gone>x</gone>', nil, nil) == '',
   'a handler returning nil writes nothing at all'
 ok('register_element')
 
-assert raises(@() { view.register_filter('a b', @(v) { return v }) }),
+assert raises(@() {
+  view.register_filter('a b', @(v) {
+    return v
+  })
+}),
   'a name that could not be written in a template is refused'
-assert raises(@() { view.register_filter('_private', @(v) { return v }) }),
+assert raises(@() {
+  view.register_filter('_private', @(v) {
+    return v
+  })
+}),
   'a name a template could not read is refused'
-assert raises(@() { view.register_filter('ok', 'not callable') }),
+assert raises(@() {
+  view.register_filter('ok', 'not callable')
+}),
   'a filter has to be callable'
 ok('registration checks its arguments')
 
@@ -405,10 +454,14 @@ var built = wire.wire({
   url_schemes: ['https'],
 })
 
-assert built.render_string('<div>\n  <!-- c -->\n  <p>x</p>\n</div>', nil, nil) ==
+assert built.render_string(
+  '<div>\n  <!-- c -->\n  <p>x</p>\n</div>', nil, nil,
+) ==
   '<div><!-- c --><p>x</p></div>',
   'every option can be given to the constructor at once'
-assert raises(@() { wire.wire({ extension: 'html' }) }),
+assert raises(@() {
+  wire.wire({ extension: 'html' })
+}),
   'an extension without a leading dot is refused'
 ok('configuring a Wire in one place')
 

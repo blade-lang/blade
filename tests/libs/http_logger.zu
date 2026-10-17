@@ -39,10 +39,12 @@ for path in ['/fine', '/missing', '/broken'] {
   var sent = server.handle_request(HttpRequest('GET', path), nil)
   var logged = status_of(lines.last())
 
-  assert logged == sent.status.to_string(), '${path} was sent ${sent.status} and logged ${logged}'
+  assert logged == sent.status.to_string(),
+    '${path} was sent ${sent.status} and logged ${logged}'
 }
 
-assert status_of(lines.last()) == '500', 'a request that raised was not logged as a 500'
+assert status_of(lines.last()) == '500',
+  'a request that raised was not logged as a 500'
 
 # An error handler that answers with its own status is logged with it.
 server.error_handler(@(request, response, error) {
@@ -53,8 +55,10 @@ server.error_handler(@(request, response, error) {
 var later = server.handle_request(HttpRequest('GET', '/broken'), nil)
 
 assert later.status == 503, 'the error handler answered ${later.status}'
-assert status_of(lines.last()) == '503', 'the handler\'s status was not the one logged'
-assert lines.length() == 4, 'expected one line per request, got ${lines.length()}'
+assert status_of(lines.last()) == '503',
+  'the handler\'s status was not the one logged'
+assert lines.length() == 4,
+  'expected one line per request, got ${lines.length()}'
 
 # Callbacks run once each, in order, and one that raises does not stop
 # the rest.

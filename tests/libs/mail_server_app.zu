@@ -21,7 +21,11 @@ import os
  * see a rejection as well as an acceptance.
  */
 def smtp_server(channel, rounds) {
-  var server = SmtpServer({ port: 0, hostname: 'test.example.com', max_size: 4096 })
+  var server = SmtpServer({
+    port: 0,
+    hostname: 'test.example.com',
+    max_size: 4096,
+  })
   var seen = []
 
   server.on_rcpt(@(session, recipient) {
@@ -63,7 +67,11 @@ def smtp_server(channel, rounds) {
  * need it can be exercised.
  */
 def smtp_tls_server(channel, certificate, key) {
-  var server = SmtpServer({ port: 0, hostname: 'localhost', require_auth: true })
+  var server = SmtpServer({
+    port: 0,
+    hostname: 'localhost',
+    require_auth: true,
+  })
   var seen = []
 
   server.use_tls(certificate, key)
@@ -87,7 +95,11 @@ def smtp_tls_server(channel, certificate, key) {
   })
 
   server.on_data(@(session, raw) {
-    seen.append({ user: session.username, secure: session.secure, size: raw.length() })
+    seen.append({
+      user: session.username,
+      secure: session.secure,
+      size: raw.length(),
+    })
   })
 
   channel.send(server.address().to_string())
@@ -115,7 +127,8 @@ def imap_server(channel) {
     .add_to('ann@example.com')
     .set_subject('Quarterly report')
     .set_text('the second message')
-    .attach(mail.attachment('attached bytes').set_filename('figures.txt')).to_bytes(), nil, nil)
+    .attach(mail.attachment('attached bytes').set_filename('figures.txt'))
+    .to_bytes(), nil, nil)
 
   var server = ImapServer({ port: 0 }, store)
 
@@ -243,7 +256,9 @@ def pop3_server(channel) {
     if verb == 'RETR' or verb == 'TOP' {
       var number = (verb == 'TOP' ? rest.split(' ')[0] : rest).to_number()
 
-      if number < 1 or number > _POP3_MESSAGES.length() or deleted.contains(number) {
+      if number < 1
+        or number > _POP3_MESSAGES.length()
+        or deleted.contains(number) {
         _say(stream, '-ERR no such message')
         continue
       }
@@ -345,7 +360,10 @@ def utf8_imap_server(channel) {
   var created = []
   var listings = []
 
-  _say(stream, '* OK [CAPABILITY IMAP4rev1 ENABLE UTF8=ACCEPT LITERAL+ SPECIAL-USE] ready')
+  _say(
+    stream,
+    '* OK [CAPABILITY IMAP4rev1 ENABLE UTF8=ACCEPT LITERAL+ SPECIAL-USE] ready',
+  )
 
   while true {
     var line = stream.read_line(nil)
@@ -363,7 +381,9 @@ def utf8_imap_server(channel) {
       var name = words[2]
 
       if name.starts_with('{') {
-        name = stream.read_bytes(name[1, name.length() - 2].to_number()).to_string()
+        name = stream
+          .read_bytes(name[1, name.length() - 2].to_number())
+          .to_string()
         stream.read_line(nil)
       }
 
@@ -441,14 +461,15 @@ def build_pooled_imap() {
   return ImapServer({}, store)
 }
 
-
 /**
  * One client for the pool test, run in an isolate of its own so that
  * the main one is free to accept.
  */
 def pool_client(address) {
   var inbox = mail.imap('imap://${address}', {
-    username: 'ann', password: 'secret', tls: 'disable',
+    username: 'ann',
+    password: 'secret',
+    tls: 'disable',
   })
   var found = {
     messages: inbox.select('INBOX').exists,

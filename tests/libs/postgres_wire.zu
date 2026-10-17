@@ -25,7 +25,7 @@ def test_uri_strings() {
   assert simple.sslmode == 'prefer'
 
   var full = DRIVER.parse_dsn(
-    'postgres://alice:secret@db.example.com:6543/shop?sslmode=require'
+    'postgres://alice:secret@db.example.com:6543/shop?sslmode=require',
   )
   assert full.user == 'alice'
   assert full.password == 'secret'
@@ -53,7 +53,7 @@ def test_uri_strings() {
 
 def test_keyword_strings() {
   var parsed = DRIVER.parse_dsn(
-    'host=db.internal port=6000 dbname=app user=bob password=hunter2'
+    'host=db.internal port=6000 dbname=app user=bob password=hunter2',
   )
 
   assert parsed.host == 'db.internal'
@@ -155,7 +155,8 @@ def test_integers() {
 
   # A bigint int8 goes out byte for byte, sign-extended to eight.
   assert encode_int8(-1n) == bytes([255, 255, 255, 255, 255, 255, 255, 255])
-  assert encode_int8(9223372036854775807n) == bytes([127, 255, 255, 255, 255, 255, 255, 255])
+  assert encode_int8(9223372036854775807n)
+    == bytes([127, 255, 255, 255, 255, 255, 255, 255])
   assert encode_int8(-9223372036854775808n) == bytes([128, 0, 0, 0, 0, 0, 0, 0])
   assert encode_int8(4503599627370497) == bytes([0, 16, 0, 0, 0, 0, 0, 1])
 
@@ -259,7 +260,7 @@ def test_numeric() {
     '123456789.123456789', '0.10', '99999999999999999999.99'] {
     var original = Decimal(text)
     var back = registry.decode(
-      as_bytes(registry.encode(original, OIDS.Numeric)), OIDS.Numeric
+      as_bytes(registry.encode(original, OIDS.Numeric)), OIDS.Numeric,
     )
 
     assert instance_of(back, Decimal)
@@ -423,14 +424,15 @@ def test_scram() {
     's=W22ZaJ0SNY7soEsUEjb6gQ==,i=4096'
 
   var proof = auth.client_proof(
-    'pencil', client_nonce, 'n=user,r=' + client_nonce, server_first
+    'pencil', client_nonce, 'n=user,r=' + client_nonce, server_first,
   )
 
   assert proof.message ==
     'c=biws,r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0,' +
-    'p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ='
+      'p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ='
 
-  assert proof.server_signature == '6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4='
+  assert proof.server_signature
+    == '6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4='
 
   # The server proves itself too, and a wrong signature is rejected.
   auth.verify_server('v=${proof.server_signature}', proof.server_signature)
@@ -514,7 +516,7 @@ def test_unix_socket_paths() {
   # A path that already names the socket is taken as given rather than
   # having the port appended to it a second time.
   var direct = DRIVER.parse_dsn(
-    'host=/nonexistent/socket/dir/.s.PGSQL.5432 dbname=app'
+    'host=/nonexistent/socket/dir/.s.PGSQL.5432 dbname=app',
   )
 
   catch {
