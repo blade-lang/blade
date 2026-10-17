@@ -64,6 +64,7 @@
 - A PostgreSQL encoder registered on a `TypeRegistry` returns the value's binary form as `bytes` or as a list of byte values, and the built-in encoders return `bytes`.
 - A PostgreSQL integer parameter is checked against the type the server expects. A value an `int2`, `int4`, `int8` or `oid` cannot hold raises `QueryError`, where it was cut down to its low bytes and stored as a different number. A bigint bound to an `int8` is sent exactly, and an `int8` beyond 2 ** 53 either side of zero reads back as a bigint, as it does on SQLite and MySQL.
 - `bytes.append()` is compiled inline by both tiers, as `list.append()` is. A method called on a list, string, byte stream, dictionary or module goes straight to its built-in method, without first trying the path that finds a compiled method on an instance.
+- A loop's on-stack replacement threshold now comes from the loop's own length rather than the function's, so a short loop in a long function, such as setup code walking a small table, no longer compiles the function after a handful of turns. A field read or write the interpreter has seen reached with something other than an instance, such as a dictionary, is never compiled to a class check, so `column.name` on a dictionary stays on its inline cache instead of leaving compiled code because some class declares a `name` field.
 
 # CHANGELOGS
 

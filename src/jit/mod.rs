@@ -234,8 +234,8 @@ pub struct CompiledFunction {
   /// `osr_id` to jump directly into that loop's header block. Built by
   /// `codegen` while scanning the function for backward edges;
   /// consulted by `vm::vm::VM`'s own `Instr::Jmp` handler once a
-  /// specific loop's back-edge count crosses
-  /// `JitInfo::osr_threshold`.
+  /// specific loop's back-edge count crosses its threshold in
+  /// `JitInfo::osr_counts`.
   pub osr_ids: FxHashMap<usize, i32>,
 }
 

@@ -1085,14 +1085,6 @@ pub struct JitInfo {
   /// the fixed cost of compilation over fewer calls, so they warm up
   /// sooner than tiny ones.
   pub call_threshold: u32,
-  /// This function's threshold for a single loop's own back-edge count
-  /// to trigger on-stack replacement: see
-  /// `crate::jit::warmup::osr_threshold`. Deliberately smaller than
-  /// `call_threshold` scaled the same way, so a function that's called
-  /// exactly once (e.g. a `main`) but immediately enters a long loop
-  /// still gets compiled without waiting for a second call that may
-  /// never come.
-  pub osr_threshold: u32,
   /// Set once a compilation attempt has run and PRODUCED code; the
   /// single, allocation-free "is this compiled, and if so what do I
   /// call" check consulted on EVERY `Instr::Call`/`Invoke`/... site,
@@ -1170,11 +1162,14 @@ pub struct JitInfo {
   /// moment a function is compiled.
   pub elem_speculation_off: Cell<bool>,
   /// Per-loop-header back-edge hit counts, keyed by the bytecode `ip`
-  /// the loop's `Instr::Jmp` back-edge targets; consulted only by
-  /// that instruction's own handler in `vm.rs` to decide when a
-  /// specific loop is hot enough to trigger (or use, if compilation
-  /// already happened) on-stack replacement.
-  pub osr_counts: RefCell<FxHashMap<usize, u32>>,
+  /// the loop's `Instr::Jmp` back-edge targets, each beside the count
+  /// that loop triggers on-stack replacement at. The threshold comes
+  /// from the loop's own length (`crate::jit::warmup::osr_threshold`),
+  /// not the function's: a short loop in a long function does little
+  /// per turn, so it has to keep turning for longer before compiling
+  /// the whole function is worth it. Consulted only by the back-edge's
+  /// own handler in `vm.rs`.
+  pub osr_counts: RefCell<FxHashMap<usize, (u32, u32)>>,
   /// True from the moment a compile job for this function is handed
   /// to the background compiler thread (see `VM::enqueue_or_ready`)
   /// until its result is drained (`VM::drain_jit_results`); prevents
@@ -1282,7 +1277,6 @@ impl JitInfo {
     JitInfo {
       call_count: Cell::new(0),
       call_threshold: crate::jit::warmup::call_threshold(code_len),
-      osr_threshold: crate::jit::warmup::osr_threshold(code_len),
       tier: Cell::new(0),
       baseline: Cell::new(None),
       baseline_osr_ids: RefCell::new(None),

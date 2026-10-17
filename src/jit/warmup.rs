@@ -105,7 +105,9 @@ pub fn call_threshold(instruction_count: usize) -> u32 {
 
 /// How many times a single loop's own back-edge must run before it
 /// triggers on-stack replacement into (freshly compiled, or already
-/// compiled) machine code.
+/// compiled) machine code. `instruction_count` is the loop's own
+/// length, from its header to its back-edge, since that is the work
+/// each turn does in the interpreter.
 pub fn osr_threshold(instruction_count: usize) -> u32 {
   curve(osr_k(), instruction_count, OSR_WARMUP_MIN, OSR_WARMUP_MAX)
 }

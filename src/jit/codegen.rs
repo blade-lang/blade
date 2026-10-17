@@ -1291,6 +1291,9 @@ struct FuncCompiler<'a, 'b> {
   /// settles the whole group in one recompilation instead of one per
   /// field.
   deopt_receivers: FxHashSet<u8>,
+  /// Field sites whose receiver the interpreter has seen be something
+  /// other than an instance; see `non_instance_field_sites`.
+  non_instance_field_sites: FxHashSet<usize>,
   /// See `jit::CompileFacts::young_budget`.
   young_budget: i64,
   /// Compile this function with no field-class bets at all; see
@@ -1928,6 +1931,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
           _ => None,
         })
         .collect(),
+      non_instance_field_sites: Self::non_instance_field_sites(proto, &facts.site_kinds),
       deopt_sites: facts.deopt_sites,
       young_budget: facts.young_budget as i64,
       field_speculation_off: facts.field_speculation_off,
@@ -2008,6 +2012,27 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       }
     }
     spec
+  }
+
+  /// The `GetField`/`SetField` sites the interpreter has seen reached
+  /// with a receiver that is not an instance: a dictionary, a module, a
+  /// class's statics. A class guard at one of these leaves compiled code
+  /// each time such a receiver comes back, while the inline cache it
+  /// would replace serves both kinds, so they are never guarded.
+  fn non_instance_field_sites(proto: &ObjFunction, site_kinds: &[u8]) -> FxHashSet<usize> {
+    proto
+      .chunk
+      .code
+      .iter()
+      .enumerate()
+      .filter(|(ip, instr)| {
+        matches!(instr, Instr::GetField { .. } | Instr::SetField { .. })
+          && site_kinds
+            .get(*ip)
+            .is_some_and(|&seen| seen & !kind::INSTANCE != 0)
+      })
+      .map(|(ip, _)| ip)
+      .collect()
   }
 
   #[inline]
@@ -8102,7 +8127,10 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// built by a construct earlier in this function. Only past the
   /// construct: before it the register holds the class global itself.
   fn construct_field_slot(&self, ip: usize, obj: u8, name_const: u16) -> Option<(u64, u16)> {
-    if self.field_speculation_off || self.deopt_sites.contains(&ip) {
+    if self.field_speculation_off
+      || self.deopt_sites.contains(&ip)
+      || self.non_instance_field_sites.contains(&ip)
+    {
       return None;
     }
     let (construct_ip, bits, slots) = self.construct_field_slots.get(&obj)?;
@@ -8206,8 +8234,9 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// an instance: a dictionary reaches the same instruction. When that
   /// bet is wrong it is wrong on every call, and a missed guard here
   /// leaves compiled code entirely, so the site is worth far less than
-  /// nothing. `deopt_sites` is what a previous compilation learned
-  /// about exactly that.
+  /// nothing. The receivers the interpreter recorded at the site rule
+  /// that out before the first compilation, and `deopt_sites` is what a
+  /// previous compilation learned about it.
   ///
   /// A site that has seen instances of several classes guards the family
   /// they share the field in, or when there is none, is left alone.
@@ -8215,6 +8244,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     if self.field_speculation_off
       || self.deopt_sites.contains(&ip)
       || self.deopt_receivers.contains(&obj)
+      || self.non_instance_field_sites.contains(&ip)
     {
       return None;
     }

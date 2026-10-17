@@ -102,9 +102,8 @@ Kebbi's full speed.
 ## How Tiering Works
 
 Every function counts its own calls, and every loop counts its own
-back-edges. When a counter crosses that function's threshold, a compile job
-goes to a background thread; when the machine code comes back, later calls
-use it.
+back-edges. When a counter crosses its threshold, a compile job goes to a
+background thread. When the machine code comes back, later calls use it.
 
 The threshold is not a fixed number. It scales with the function's size:
 
@@ -121,7 +120,9 @@ Loops get their own, lower threshold through **on-stack replacement**. A
 loop inside a function that is only ever called once still compiles, and
 execution jumps from the interpreter into the middle of the compiled
 version without unwinding anything. That is what makes a one-shot batch
-script fast.
+script fast. A loop's threshold follows the same curve from the loop's own
+length, so a short loop in a long function, such as setup code walking a
+small table, turns many times before it compiles the function around it.
 
 You can watch it happen:
 

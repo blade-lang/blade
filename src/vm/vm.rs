@@ -4317,7 +4317,12 @@ impl VM {
   /// `Instr::Return`/an unhandled error firing, not resume interpreting.
   /// `Osr::Resumed` means compiled code handed the frames back, and the
   /// caller reloads its frame state from the top frame and carries on.
-  pub(crate) fn maybe_osr(&mut self, func: &ObjFunction, target_ip: usize) -> Option<Osr> {
+  pub(crate) fn maybe_osr(
+    &mut self,
+    func: &ObjFunction,
+    target_ip: usize,
+    loop_len: usize,
+  ) -> Option<Osr> {
     if !self.jit_enabled
       || func.jit.ineligible.get()
       || self.jit_call_depth.get() >= MAX_JIT_CALL_DEPTH
@@ -4354,9 +4359,11 @@ impl VM {
 
     let hot = {
       let mut counts = func.jit.osr_counts.borrow_mut();
-      let count = counts.entry(target_ip).or_insert(0);
-      *count += 1;
-      *count >= func.jit.osr_threshold
+      let (turns, threshold) = counts
+        .entry(target_ip)
+        .or_insert_with(|| (0, crate::jit::warmup::osr_threshold(loop_len)));
+      *turns += 1;
+      *turns >= *threshold
     };
     if !hot {
       return None;
@@ -5778,7 +5785,7 @@ impl VM {
               // closed this frame's upvalues and popped it, so
               // self.frames[frame_idx] is no longer valid to read after.
               let dst_in_caller = self.frames[frame_idx].dst_in_caller;
-              if let Some(outcome) = self.maybe_osr(func, target) {
+              if let Some(outcome) = self.maybe_osr(func, target, ip - target) {
                 match outcome {
                   // The deopt left the frames ready to interpret, possibly
                   // with a call compiled code had inlined pushed on top.
@@ -8134,20 +8141,21 @@ impl VM {
       let calls = proto.jit.call_count.get();
       let ops = proto.chunk.code.len();
 
-      let osr_hits = proto
-        .jit
-        .osr_counts
-        .borrow()
-        .values()
-        .copied()
-        .max()
-        .unwrap_or(0);
+      let (osr_hits, osr_hot) = {
+        let counts = proto.jit.osr_counts.borrow();
+        (
+          counts.values().map(|&(turns, _)| turns).max().unwrap_or(0),
+          counts
+            .values()
+            .any(|&(turns, threshold)| turns >= threshold),
+        )
+      };
 
       let status = if proto.jit.entry.get().is_some() {
         "compiled"
       } else if proto.jit.ineligible.get() {
         "ineligible"
-      } else if calls >= proto.jit.call_threshold || osr_hits >= proto.jit.osr_threshold {
+      } else if calls >= proto.jit.call_threshold || osr_hot {
         "warm"
       } else {
         "cold"
