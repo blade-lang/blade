@@ -3311,6 +3311,7 @@ fn ref_transfer(
     | Instr::SetUpval { .. }
     | Instr::CloseUpvalues { .. }
     | Instr::DeclareField { .. }
+    | Instr::SetFieldDefault { .. }
     | Instr::SetFieldInit { .. }
     | Instr::SetMethod { .. }
     | Instr::DeclareStatic { .. }
@@ -3585,6 +3586,7 @@ fn transfer(
     Instr::SetUpval { .. }
     | Instr::CloseUpvalues { .. }
     | Instr::DeclareField { .. }
+    | Instr::SetFieldDefault { .. }
     | Instr::SetFieldInit { .. }
     | Instr::SetMethod { .. }
     | Instr::DeclareStatic { .. }
@@ -4225,7 +4227,9 @@ fn mark_uses(instr: &Instr, proto: &ObjFunction, set: &mut RegSet) {
         set.set(s, true);
       }
     },
-    Instr::DeclareField { class, .. } | Instr::FinalizeClass { class } => set.set(class, true),
+    Instr::DeclareField { class, .. }
+    | Instr::SetFieldDefault { class, .. }
+    | Instr::FinalizeClass { class } => set.set(class, true),
     Instr::SetFieldInit { class, src }
     | Instr::SetMethod { class, src, .. }
     | Instr::DeclareStatic { class, src, .. } => {

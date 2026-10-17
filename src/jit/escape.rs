@@ -635,7 +635,9 @@ pub(crate) fn escaping_reads(instr: &Instr) -> Vec<u8> {
     },
 
     Instr::MakeClass { superclass, .. } => superclass.into_iter().collect(),
-    Instr::DeclareField { .. } | Instr::FinalizeClass { .. } => vec![],
+    Instr::DeclareField { .. } | Instr::SetFieldDefault { .. } | Instr::FinalizeClass { .. } => {
+      vec![]
+    },
     // The container (`class`) is safe; writing into your own
     // slot/method table doesn't hand your identity to anything new.
     // The stored value (`src`) escapes: see module docs on why this
@@ -683,6 +685,87 @@ pub(crate) fn escaping_reads(instr: &Instr) -> Vec<u8> {
 /// only a handful of sites checked don't pay for the rest.
 pub struct EscapeResult {
   pub escapes: bool,
+}
+
+/// Whether a `Move` may copy the value an allocation at `site` leaves in
+/// `dst` into another register, which would give it a second name that
+/// replacing `dst` alone does not cover. A copy of whatever `dst` held
+/// before the allocation, such as the receiver an `Invoke` passes on, is
+/// no such copy.
+pub fn moved_elsewhere(proto: &ObjFunction, preds: &[Vec<usize>], site: usize, dst: u8) -> bool {
+  let code = &proto.chunk.code;
+  // Whether the allocation may be in `dst` on the way into each position:
+  // some path from the site gets there with no other write to `dst`.
+  let mut out = vec![false; code.len()];
+  let mut entry = vec![false; code.len()];
+  let mut changed = true;
+  while changed {
+    changed = false;
+    for ip in 0..code.len() {
+      let new_entry = preds[ip].iter().any(|&p| out[p]);
+      let new_out = if ip == site {
+        true
+      } else if typeflow::any_dst(&code[ip]) == Some(dst) {
+        false
+      } else {
+        new_entry
+      };
+      if new_entry != entry[ip] || new_out != out[ip] {
+        entry[ip] = new_entry;
+        out[ip] = new_out;
+        changed = true;
+      }
+    }
+  }
+  code
+    .iter()
+    .enumerate()
+    .any(|(k, instr)| matches!(instr, Instr::Move { src, .. } if *src == dst) && entry[k])
+}
+
+/// What a function's allocation sites are checked against, worked out once
+/// for the function: see `in_place`.
+pub struct SiteFacts {
+  preds: Vec<Vec<usize>>,
+  self_ref: Vec<MustSet>,
+  param_escapes: Vec<bool>,
+}
+
+impl SiteFacts {
+  pub fn of(proto: &ObjFunction) -> SiteFacts {
+    let preds = typeflow::build_predecessors(proto);
+    let self_ref = self_reference_facts_with_preds(proto, &preds);
+    let summary = compute_param_summary_with_facts(proto, None, &preds, &self_ref);
+    SiteFacts {
+      preds,
+      self_ref,
+      param_escapes: summary.param_escapes,
+    }
+  }
+
+  /// Whether the instance an allocation at `site` puts in `dst`, of a
+  /// class whose fields `safety` describes, stays in `dst` and never
+  /// leaves the function, so it can live in the function's own frame
+  /// rather than on the heap.
+  pub fn in_place(
+    &self,
+    proto: &ObjFunction,
+    site: usize,
+    dst: u8,
+    safety: &ClassFieldSafety,
+  ) -> bool {
+    !moved_elsewhere(proto, &self.preds, site, dst)
+      && !analyze_one_with_facts(
+        proto,
+        site,
+        None,
+        Some(safety),
+        &self.preds,
+        &self.self_ref,
+        &self.param_escapes,
+      )
+      .escapes
+  }
 }
 
 /// Proves (or fails to prove) that the value defined at `alloc_ip`

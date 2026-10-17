@@ -239,6 +239,87 @@ pub struct CompiledFunction {
   pub osr_ids: FxHashMap<usize, i32>,
 }
 
+/// A builtin native (`vm::natives`) whose whole body is one test of its
+/// argument's kind, which both tiers compile inline instead of calling.
+///
+/// These are the cheapest functions in the language and, called, among
+/// the most expensive: resolution, dispatch and argument marshalling
+/// around what is one or two machine instructions of work. Each variant
+/// is exactly its native's predicate, so a compiled answer is always the
+/// interpreted one. Natives that do more than a tag test (`typeof`,
+/// `id`, `is_iterable`, `print`) are absent.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub enum NativeTest {
+  Number,
+  Bool,
+  Object,
+  /// A number with no fractional part: `is_number() && fract() == 0`,
+  /// which an infinity fails.
+  Int,
+  /// A heap object whose tag is one of these.
+  Tags(&'static [u8]),
+}
+
+impl NativeTest {
+  /// The test the builtin native called `name` makes.
+  pub fn of(name: &str) -> Option<NativeTest> {
+    use crate::vm::object;
+    Some(match name {
+      "is_number" => NativeTest::Number,
+      "is_bool" => NativeTest::Bool,
+      "is_object" => NativeTest::Object,
+      "is_int" => NativeTest::Int,
+      "is_string" => NativeTest::Tags(&[object::OBJ_TAG_STR]),
+      "is_list" => NativeTest::Tags(&[object::OBJ_TAG_LIST]),
+      "is_dict" => NativeTest::Tags(&[object::OBJ_TAG_DICT]),
+      "is_bytes" => NativeTest::Tags(&[object::OBJ_TAG_BYTES]),
+      "is_class" => NativeTest::Tags(&[object::OBJ_TAG_CLASS]),
+      "is_instance" => NativeTest::Tags(&[object::OBJ_TAG_INSTANCE]),
+      "is_file" => NativeTest::Tags(&[object::OBJ_TAG_FILE]),
+      // `natives::is_function` is closure, native or bound method but not
+      // class; `is_callable` is those three and class. Distinct tag sets
+      // keep that difference.
+      "is_function" => NativeTest::Tags(&[
+        object::OBJ_TAG_CLOSURE,
+        object::OBJ_TAG_NATIVE,
+        object::OBJ_TAG_BOUND_METHOD,
+      ]),
+      "is_callable" => NativeTest::Tags(&[
+        object::OBJ_TAG_CLOSURE,
+        object::OBJ_TAG_NATIVE,
+        object::OBJ_TAG_BOUND_METHOD,
+        object::OBJ_TAG_CLASS,
+      ]),
+      _ => return None,
+    })
+  }
+
+  /// One number per test, for keying a test among others.
+  pub fn key(self) -> u64 {
+    match self {
+      NativeTest::Number => 1,
+      NativeTest::Bool => 2,
+      NativeTest::Object => 3,
+      NativeTest::Int => 4,
+      NativeTest::Tags(tags) => tags
+        .iter()
+        .fold(0x100u64, |key, &tag| key | (1u64 << (16 + tag as u32))),
+    }
+  }
+}
+
+/// A class an `Invoke` on a module constructs, as `date.Date(...)` does.
+/// Compiled code relies on it only while the receiver leads to the module
+/// slot table `table` and slot `slot` there is public and holds the class.
+#[derive(Clone)]
+pub struct ModuleConstruct {
+  /// Always a `ResolvedGlobal::Class`.
+  pub class: ResolvedGlobal,
+  /// The module's `object::module_slots_table`.
+  pub table: usize,
+  pub slot: u32,
+}
+
 /// A `Call` site's statically-resolved callee, computed once by
 /// `vm::vm::VM::resolve_call_targets` (the only place with the live
 /// global-table access needed to resolve a name) and consumed by
@@ -398,6 +479,9 @@ pub enum ResolvedGlobal {
     safety: escape::ClassFieldSafety,
     field_slots: FxHashMap<String, u16>,
     simple_ctor_param_slots: Option<Vec<u16>>,
+    /// `ObjClass::defaults` as `(slot, value bits)`: literals, which are
+    /// immediates or interned strings that never move.
+    defaults: Vec<(u16, u64)>,
   },
   Native {
     guard_fn: u64,
@@ -421,6 +505,10 @@ pub struct CompileFacts {
   pub param_field_slots: FxHashMap<u8, (u64, FxHashMap<String, u16>)>,
   pub self_class_bits: Option<(u64, u64)>,
   pub globals_snapshot: FxHashMap<String, ResolvedGlobal>,
+  /// For an `Invoke` that constructs a class out of a module,
+  /// `date.Date(...)`, the class and where the module keeps it, by the
+  /// call's position.
+  pub module_constructs: FxHashMap<usize, ModuleConstruct>,
   /// The slot table of the module the function belongs to, for its
   /// compiled code to read that module's globals through (see
   /// `object::module_slots_table`); 0 for the root script's functions.
@@ -549,4 +637,7 @@ pub struct ConstructInfo {
   /// slots" is exactly that, with no call left to make. It's also by
   /// far the most common constructor ever written.
   pub simple_ctor_param_slots: Option<Vec<u16>>,
+  /// The literal default each field starts with, as `(slot, value bits)`;
+  /// a field not listed starts out nil.
+  pub defaults: Vec<(u16, u64)>,
 }

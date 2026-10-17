@@ -32,7 +32,7 @@ use super::{
   BitOp, BlockId, Cmp, FTest, FUnary, FrameClosure, FrameState, Func, GlobalRef, GuardKind,
   InlineFrame, IntOp, NO_VALUE, Op, ParamClass, Terminator, Ty, ValueId,
 };
-use crate::jit::typeflow;
+use crate::jit::{NativeTest, typeflow};
 use crate::vm::chunk::{Instr, ParamType, kind};
 use crate::vm::object::ObjFunction;
 use crate::vm::object::{OBJ_TAG_BYTES, OBJ_TAG_DICT, OBJ_TAG_RANGE, OBJ_TAG_STR};
@@ -82,6 +82,16 @@ pub struct Feedback {
   /// For a global slot holding a closure some call here reaches through,
   /// that closure's function, with what to build it from.
   pub global_callees: FxHashMap<GlobalRef, Box<Callee>>,
+  /// Global slots holding a closure of this very function, which a call
+  /// here reaches through: recursion. The function's `Value` bits.
+  pub self_calls: FxHashMap<GlobalRef, u64>,
+  /// For a global slot holding a builtin native some call here reaches
+  /// through, that native's `NativeFn` pointer and name.
+  pub global_natives: FxHashMap<GlobalRef, (u64, &'static str)>,
+  /// For a call site whose callee is a class read from a global or from
+  /// a module, the class it constructs, when that class can be built
+  /// straight into its constructor's compiled code.
+  pub constructs: FxHashMap<usize, KnownConstruct>,
   /// Global slots holding a class that a call here reaches through.
   pub global_classes: FxHashSet<GlobalRef>,
   /// Global slots holding a number this function reads and never writes,
@@ -99,6 +109,40 @@ pub struct Feedback {
   /// `None` gives every loop one. Each entry costs a copy of the loops
   /// around it, so the baseline tier asks only for the loop it is in.
   pub entries: Option<Vec<usize>>,
+}
+
+/// A class a call constructs, with what constructing it takes. Classes and
+/// their methods live in the old generation, so none of these moves.
+#[derive(Clone, Debug)]
+pub struct KnownConstruct {
+  /// The class, as `Value` bits.
+  pub class: u64,
+  /// `VM::method_table_generation` when the constructor was found. Any
+  /// later method installed anywhere moves it, and the constructor may
+  /// be one of them.
+  pub generation: u64,
+  /// The constructor's closure, as `Value` bits.
+  pub ctor: u64,
+  /// The constructor's `ObjFunction`.
+  pub ctor_proto: usize,
+  /// The constructor's arity, its receiver included.
+  pub arity: u8,
+  pub field_count: u16,
+  /// When the constructor does nothing but copy each parameter into a
+  /// field, the field each one goes to; see
+  /// `jit::ConstructInfo::simple_ctor_param_slots`.
+  pub simple: Option<Vec<u16>>,
+  /// For an `Invoke` on a module, the module's slot table and the slot
+  /// the class sits in: see `jit::ModuleConstruct`.
+  pub module: Option<(usize, u32)>,
+  /// The class's literal field defaults as `(slot, value bits)`; see
+  /// `jit::ConstructInfo::defaults`.
+  pub defaults: Vec<(u16, u64)>,
+  /// Whether Kebbi builds this instance in its own frame, with no
+  /// allocation: it stays in one register and never leaves the function.
+  /// Tier 2 allocates every instance it makes, so a function with such a
+  /// site stays in Kebbi.
+  pub in_place: bool,
 }
 
 /// A function a call can be built into its caller from.
@@ -924,13 +968,13 @@ impl<'a> Builder<'a> {
   /// Makes sure every register `reload_live` would read back already has
   /// its tagged form, so the reloads it emits follow the operation that
   /// needs them with nothing in between.
-  fn tag_live(&mut self, next_ip: usize, skip: u8) {
+  fn tag_live(&mut self, next_ip: usize, skip: Option<u8>) {
     let mut regs: Vec<u8> = if next_ip < self.cx.code.len() {
       self
         .cx
         .live
         .live_regs_at(next_ip)
-        .filter(|&r| r != skip)
+        .filter(|&r| Some(r) != skip)
         .map(|r| self.cx.offset + r)
         .collect()
     } else {
@@ -983,7 +1027,18 @@ impl<'a> Builder<'a> {
     if super::lower::generic_helper(&instr).is_none() {
       return Err(format!("no runtime helper for {instr:?} at ip {ip}"));
     }
-    if let Some(what) = self.baseline_faster(ip, &instr)
+    let known_construct = match instr {
+      Instr::Call { .. } | Instr::Invoke { .. } if self.cx.feedback.open(ip) => {
+        self.cx.feedback.constructs.get(&ip).cloned()
+      },
+      _ => None,
+    };
+    let baseline = match &known_construct {
+      Some(known) if known.in_place => Some("a construct"),
+      Some(_) => None,
+      None => self.baseline_faster(ip, &instr),
+    };
+    if let Some(what) = baseline
       && !self.constructs_once(ip, &instr)
     {
       let place = if self.cx.id == 0 {
@@ -996,6 +1051,22 @@ impl<'a> Builder<'a> {
     let state = self.state(ip);
     let args = state.regs.iter().map(|&(_, v)| v).collect();
     let frame = self.cx.id;
+    if let Some(known) = known_construct {
+      self.func.known_constructs.insert((frame, ip), known);
+    }
+    // A function calling itself through a global is a call to a callee
+    // known as well as any the feedback names.
+    if let Instr::Call { func, .. } = instr
+      && let Some(global) = self.callee_global(func)
+      && let Some(&bits) = self.cx.feedback.self_calls.get(&global)
+    {
+      let proto = self.cx.proto as *const ObjFunction as usize;
+      self
+        .func
+        .known_calls
+        .entry((frame, ip))
+        .or_insert((proto, bits));
+    }
     self.push(Op::Generic { instr, ip, frame }, args, None, Some(state));
     self.after_collect(ip + 1, typeflow::any_dst(&instr));
     self.in_memory = true;
@@ -1937,6 +2008,72 @@ impl<'a> Builder<'a> {
           },
         }
       },
+      Instr::Call {
+        dst,
+        func,
+        num_args,
+      } if self
+        .simple_construct(ip, num_args)
+        .is_some_and(|(known, _)| known.module.is_none() && !known.in_place) =>
+      {
+        // The constructor only copies its arguments into fields, so the
+        // instance is made here and they are stored straight into it.
+        let (known, slots) = self.simple_construct(ip, num_args).unwrap();
+        self.safepoint_before_alloc(ip);
+        let f = self.tagged(func);
+        let is_class = self.value(Op::IsBits(known.class), vec![f], Ty::Bool);
+        let state = self.state(ip);
+        self.push(
+          Op::Guard(GuardKind::True),
+          vec![is_class],
+          None,
+          Some(state),
+        );
+        self.build_simple_construct(ip, dst, func + 1, &known, &slots);
+      },
+      Instr::Invoke {
+        dst, obj, num_args, ..
+      } if self
+        .simple_construct(ip, num_args)
+        .is_some_and(|(known, _)| known.module.is_some() && !known.in_place) =>
+      {
+        // The same for a class out of a module, once the receiver still
+        // leads to the slot it was found in and the slot still holds it.
+        let (known, slots) = self.simple_construct(ip, num_args).unwrap();
+        self.safepoint_before_alloc(ip);
+        let (table, slot) = known.module.unwrap();
+        let receiver = self.tagged(obj);
+        let member = self.value(Op::ModuleMember { table, slot }, vec![receiver], Ty::Tagged);
+        let is_class = self.value(Op::IsBits(known.class), vec![member], Ty::Bool);
+        let state = self.state(ip);
+        self.push(
+          Op::Guard(GuardKind::True),
+          vec![is_class],
+          None,
+          Some(state),
+        );
+        self.build_simple_construct(ip, dst, obj + 2, &known, &slots);
+      },
+      Instr::Call {
+        dst,
+        func,
+        num_args: 1,
+      } if self.native_test(ip, func).is_some() => {
+        // A global can be reassigned, so the native is checked before its
+        // test stands in for the call.
+        let (guard_fn, test) = self.native_test(ip, func).unwrap();
+        let f = self.tagged(func);
+        let state = self.state(ip);
+        self.push(
+          Op::Guard(GuardKind::Native(guard_fn)),
+          vec![f],
+          None,
+          Some(state),
+        );
+        let arg = self.tagged(func + 1);
+        let c = self.value(Op::IsKind(test), vec![arg], Ty::Bool);
+        self.set_cond(dst, c);
+      },
       Instr::Invoke {
         dst, obj, num_args, ..
       } if self.invoke_callee(ip).is_some() => {
@@ -2423,7 +2560,7 @@ impl<'a> Builder<'a> {
   /// A list literal of up to two elements, allocated inline.
   fn new_list(&mut self, ip: usize, dst: u8, start: u8, count: u8) {
     let items: Vec<ValueId> = (0..count).map(|k| self.tagged(start + k)).collect();
-    self.tag_live(ip + 1, dst);
+    self.tag_live(ip + 1, Some(dst));
     let state = self.state(ip);
     let frame = self.cx.id;
     let list = self
@@ -2461,6 +2598,96 @@ impl<'a> Builder<'a> {
       return None;
     };
     feedback.global_callees.get(global).map(|c| &**c)
+  }
+
+  /// A safepoint ahead of an instance made inline outside any loop of this
+  /// function. A loop pays the collections its allocations owe on its back
+  /// edge, but code with no loop, a recursive function building a tree
+  /// say, would otherwise put them off until whatever runs next has a
+  /// safepoint of its own, holding on to every young object until then.
+  fn safepoint_before_alloc(&mut self, ip: usize) {
+    if self
+      .loops
+      .iter()
+      .any(|&(start, end)| start <= ip && ip <= end)
+    {
+      return;
+    }
+    self.tag_live(ip, None);
+    let state = self.state(ip);
+    let args = state.regs.iter().map(|&(_, v)| v).collect();
+    self.push(Op::Safepoint, args, None, Some(state));
+    self.reload_live(ip, None);
+  }
+
+  /// A new instance of `known` in `dst`, with the arguments from register
+  /// `first_arg` on stored into the fields `slots` names, for a call
+  /// already checked to reach the class.
+  fn build_simple_construct(
+    &mut self,
+    ip: usize,
+    dst: u8,
+    first_arg: u8,
+    known: &KnownConstruct,
+    slots: &[u16],
+  ) {
+    self.methods_unchanged(ip);
+    self
+      .func
+      .instance_defaults
+      .insert(known.class, known.defaults.clone());
+    let args: Vec<ValueId> = (0..slots.len() as u8)
+      .map(|k| self.tagged(first_arg + k))
+      .collect();
+    let instance = self.value(
+      Op::NewInstance {
+        class: known.class,
+        field_count: known.field_count,
+      },
+      vec![],
+      Ty::Tagged,
+    );
+    let ptr = self.value(Op::ObjPtr, vec![instance], Ty::Ptr);
+    for (&slot, &arg) in slots.iter().zip(&args) {
+      self.push(Op::StoreField(slot), vec![ptr, arg], None, None);
+    }
+    *self.view_mut(dst) = RegView {
+      tagged: Some(instance),
+      ptr: Some(ptr),
+      known: Known::Instance(known.class),
+      ..RegView::EMPTY
+    };
+  }
+
+  /// The class a call at `ip` constructs and the field each argument goes
+  /// to, when its constructor only copies its parameters into fields and
+  /// the call passes every one of them.
+  fn simple_construct(&self, ip: usize, num_args: u8) -> Option<(KnownConstruct, Vec<u16>)> {
+    let feedback: &'a Feedback = self.cx.feedback;
+    if !feedback.open(ip) {
+      return None;
+    }
+    let known = feedback.constructs.get(&ip)?;
+    let slots = known.simple.as_ref()?;
+    if num_args as usize + 1 != known.arity as usize || slots.len() != num_args as usize {
+      return None;
+    }
+    Some((known.clone(), slots.clone()))
+  }
+
+  /// The native a call at `ip` reaches through a global, as its `NativeFn`
+  /// pointer, when that native is a type predicate compiled inline.
+  fn native_test(&self, ip: usize, func: u8) -> Option<(u64, NativeTest)> {
+    let feedback: &'a Feedback = self.cx.feedback;
+    if !feedback.open(ip) {
+      return None;
+    }
+    let t = self.view(func).tagged?;
+    let Op::LoadGlobal(global) = &self.func.def_inst(t)?.op else {
+      return None;
+    };
+    let &(guard_fn, name) = feedback.global_natives.get(global)?;
+    Some((guard_fn, NativeTest::of(name)?))
   }
 
   /// The class a method call's receiver has had, and the method it
@@ -2828,8 +3055,8 @@ impl<'a> Builder<'a> {
   }
 
   /// Whether any block of the loop from `header` to `latch` holds an
-  /// operation that may collect. The loop is every block that reaches
-  /// the latch without passing back through the header.
+  /// operation that may collect, or allocate. The loop is every block
+  /// that reaches the latch without passing back through the header.
   fn loop_may_collect(&self, header: BlockId, latch: BlockId) -> bool {
     let preds = self.func.predecessors();
     let mut body: FxHashSet<BlockId> = FxHashSet::default();
@@ -2846,7 +3073,7 @@ impl<'a> Builder<'a> {
         .block(b)
         .insts
         .iter()
-        .any(|&i| self.func.inst(i).op.may_collect())
+        .any(|&i| self.func.inst(i).op.may_owe_collection())
     })
   }
 }

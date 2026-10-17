@@ -1,0 +1,199 @@
+# Field defaults: literal ones start every instance off, computed ones
+# run for each instance, and both land in declaration order down a line
+# of classes, however the instance is made.
+import isolate
+
+class Plain {
+  var name
+  var count = 3
+  var ratio = -0.5
+  var label = 'none'
+  var on = true
+  var off = (false)
+  var gone = nil
+}
+
+var plain = Plain()
+echo [plain.name, plain.count, plain.ratio, plain.label, plain.on, plain.off, plain.gone]
+echo 1 / Plain().ratio
+
+class Negative {
+  var zero = -0
+  var deep = -(-4)
+}
+
+echo 1 / Negative().zero
+echo Negative().deep
+
+# A list default is made afresh for each instance, and so is anything
+# declared after it.
+class Mixed {
+  var first = 1
+  var items = []
+  var last = 2
+}
+
+var a = Mixed()
+var b = Mixed()
+a.items.append('a')
+echo [a.items, b.items, a.first, a.last, b.last]
+
+# A subclass overrides an inherited default, and a bare redeclaration
+# resets it to nil, as running the declarations in order does.
+class Base {
+  var kind = 'base'
+  var size = 10
+  var keep = 'kept'
+}
+
+class Override < Base {
+  var kind = 'override'
+  var size
+}
+
+var o = Override()
+echo [o.kind, o.size, o.keep]
+echo [Base().kind, Base().size]
+
+# A bare redeclaration resets a computed default too.
+class Stocked {
+  var items = ['stock']
+}
+
+class Emptied < Stocked {
+  var items
+}
+
+echo [Stocked().items, Emptied().items]
+
+# An initializer that reads a field declared further down the line sees
+# it before its declaration has run.
+class Early {
+  var seen = self.peek()
+
+  peek() {
+    return self.later
+  }
+}
+
+class Late < Early {
+  var later = 'late'
+}
+
+var late = Late()
+echo [late.seen, late.later]
+
+# The constructor runs after every default and can replace any of them.
+class Point {
+  var x = 0
+  var y = 0
+  var tag = 'point'
+
+  @new(x) {
+    self.x = x
+  }
+}
+
+var p = Point(5)
+echo [p.x, p.y, p.tag]
+
+# Hot enough to be compiled and, where nothing escapes, built in place.
+def sum_points(count) {
+  var total = 0
+
+  iter var i = 0; i < count; i++ {
+    var q = Point(i)
+    total += q.x + q.y + q.tag.length()
+  }
+
+  return total
+}
+
+var total = 0
+
+iter var round = 0; round < 300; round++ {
+  total = sum_points(50)
+}
+
+echo total
+
+def tags(count) {
+  var out = []
+
+  iter var i = 0; i < count; i++ {
+    out.append(Point(i))
+  }
+
+  return out.map(@(q) => '${q.x}${q.tag}')
+}
+
+iter var round = 0; round < 300; round++ {
+  total = tags(3)
+}
+
+echo total
+
+# More fields than an instance holds inline.
+class Wide {
+  var a = 1
+  var b = 'b'
+  var c = true
+  var d = -2
+
+  @new(a) {
+    self.a = a
+  }
+}
+
+def widths(count) {
+  var total = 0
+
+  iter var i = 0; i < count; i++ {
+    var w = Wide(i)
+    total += w.a + w.b.length() + (w.c ? 1 : 0) + w.d
+  }
+
+  return total
+}
+
+iter var round = 0; round < 300; round++ {
+  total = widths(40)
+}
+
+echo total
+
+# An argument left out is nil, which the constructor stores over the
+# field's default.
+class Pair {
+  var left = 'l'
+  var right = 'r'
+
+  @new(left, right) {
+    self.left = left
+    self.right = right
+  }
+}
+
+def pairs(count) {
+  var out = ''
+
+  iter var i = 0; i < count; i++ {
+    out = '${Pair(i).right}'
+  }
+
+  return out
+}
+
+iter var round = 0; round < 300; round++ {
+  total = pairs(4)
+}
+
+echo total
+
+# A class declared here crosses to another isolate with its defaults.
+var made = isolate.spawn(@(cls) {
+  var made = cls(7)
+  return [made.x, made.y, made.tag]
+}, Point)
+
+echo made.join()

@@ -62,6 +62,14 @@ const TIER2_CALLEE_DEPTH: usize = crate::jit::ir::build::MAX_INLINE_DEPTH;
 /// offered.
 const TIER2_CALLEE_BUDGET: usize = 2 * crate::jit::ir::build::MAX_INLINED_TOTAL;
 
+/// A module member an `Invoke` site has been seen to call: its current
+/// value, the module's slot table and the member's slot there.
+struct ModuleMember {
+  class: Value,
+  table: usize,
+  slot: u32,
+}
+
 /// The walk `VM::tier2_feedback` makes through the functions a compile
 /// could build calls to.
 struct CalleeGathering<'v> {
@@ -2576,27 +2584,15 @@ impl VM {
   }
 
   fn snapshot_class_target(&self, class_val: Value) -> Option<crate::jit::ResolvedGlobal> {
-    let (field_count, ctor, superclass) = {
+    // A field initializer anywhere in the line, own or inherited, has to
+    // run through `instantiate`.
+    let (field_count, ctor) = {
       let class = class_val.as_class();
-      if class.own_field_initializer.is_some() {
+      if class.runs_initializers {
         return None;
       }
-      (class.field_count, class.constructor?, class.superclass)
+      (class.field_count, class.constructor?)
     };
-
-    // An inherited field initializer disqualifies just as much as an own
-    // one; `instantiate` runs every ancestor's, root to leaf.
-    let mut cur = superclass;
-    while let Some(c) = cur {
-      let next = {
-        let cobj = c.as_class();
-        if cobj.own_field_initializer.is_some() {
-          return None;
-        }
-        cobj.superclass
-      };
-      cur = next;
-    }
 
     if !ctor.is_closure() {
       return None;
@@ -2624,6 +2620,11 @@ impl VM {
       safety: escape::ClassFieldSafety::from_class(&class),
       field_slots: class.field_slots.clone(),
       simple_ctor_param_slots: Self::simple_ctor_param_slots(ctor_proto, &class),
+      defaults: class
+        .defaults
+        .iter()
+        .map(|&(slot, value)| (slot, value.to_bits()))
+        .collect(),
     })
   }
 
@@ -2746,6 +2747,7 @@ impl VM {
       field_speculation_off: proto.jit.field_speculation_off.get(),
       elem_speculation_off: proto.jit.elem_speculation_off.get(),
       globals_snapshot: self.snapshot_globals(proto),
+      module_constructs: self.snapshot_module_constructs(proto),
       module_table: proto
         .globals_module
         .map_or(0, crate::vm::object::module_slots_table),
@@ -2997,6 +2999,29 @@ impl VM {
         }
       }
     }
+    // Builtin natives a call here reaches through a global, and the
+    // classes it constructs. Nothing is built in from either, so the
+    // callee depth does not limit these.
+    let mut global_natives = FxHashMap::default();
+    let mut constructs = FxHashMap::default();
+    let mut self_calls = FxHashMap::default();
+    let sites = std::cell::OnceCell::new();
+    for (ip, instr) in chunk.code.iter().enumerate() {
+      if let Instr::Call { func, .. } = *instr
+        && let Some(global) = Self::global_feeding(proto, ip, func)
+      {
+        let value = self.global_value(proto, global);
+        if value.is_native() {
+          let native = value.as_native();
+          global_natives.insert(global, (native.func as usize as u64, native.name));
+        } else if value.is_closure() && std::ptr::eq(value.as_closure().function.as_func(), proto) {
+          self_calls.insert(global, value.as_closure().function.to_bits());
+        }
+      }
+      if let Some(known) = self.construct_feeding(proto, ip, &sites) {
+        constructs.insert(ip, known);
+      }
+    }
     let mut global_callees = FxHashMap::default();
     let mut invoke_callees = FxHashMap::default();
     if gather.path.len() <= TIER2_CALLEE_DEPTH {
@@ -3075,6 +3100,9 @@ impl VM {
       sites_off: proto.jit.site_speculation_off.get(),
       fields_off: proto.jit.field_speculation_off.get(),
       global_callees,
+      self_calls,
+      global_natives,
+      constructs,
       global_classes,
       global_numbers,
       invoke_callees,
@@ -3205,6 +3233,147 @@ impl VM {
   /// subclasses of its own.
   fn family_wider(class: Value, declaring: u64) -> bool {
     declaring != class.to_bits() || class.as_class().subclassed.get()
+  }
+
+  /// The class a call at `ip` constructs, when its callee register was
+  /// just read from a global holding a class, or the class an `Invoke`
+  /// there has been seen to construct out of a module, and the class can
+  /// be built straight into its compiled constructor (see
+  /// `snapshot_class_target`). Compiled code checks the callee is still
+  /// that class before relying on it.
+  ///
+  /// `sites` holds the escape facts for `proto`, worked out the first time
+  /// a site needs them.
+  fn construct_feeding(
+    &self,
+    proto: &ObjFunction,
+    ip: usize,
+    sites: &std::cell::OnceCell<escape::SiteFacts>,
+  ) -> Option<crate::jit::ir::build::KnownConstruct> {
+    let (class, module, dst) = match proto.chunk.code[ip] {
+      Instr::Call { func, dst, .. } => {
+        let global = Self::global_feeding(proto, ip, func)?;
+        (self.global_value(proto, global), None, dst)
+      },
+      Instr::Invoke { dst, .. } => {
+        let member = self.module_member_seen(proto, ip)?;
+        (member.class, Some((member.table, member.slot)), dst)
+      },
+      _ => return None,
+    };
+    if !class.is_class() {
+      return None;
+    }
+    let crate::jit::ResolvedGlobal::Class {
+      guard_bits,
+      generation,
+      field_count,
+      ctor_bits,
+      proto_ptr,
+      simple_ctor_param_slots,
+      defaults,
+      safety,
+      ..
+    } = self.snapshot_class_target(class)?
+    else {
+      return None;
+    };
+    // SAFETY: a class's methods live in the old generation, and this one
+    // is reachable through the class just found.
+    let arity = unsafe { &*(proto_ptr as *const ObjFunction) }.arity;
+    // The test Kebbi makes before building an instance in place, in its
+    // own frame, with no allocation at all.
+    let in_place = simple_ctor_param_slots.is_some()
+      && field_count > 0
+      && !proto.jit.deopt_sites.borrow().contains(&ip)
+      && !proto
+        .chunk
+        .code
+        .iter()
+        .any(|i| matches!(i, Instr::PushCatch { .. }))
+      && sites
+        .get_or_init(|| escape::SiteFacts::of(proto))
+        .in_place(proto, ip, dst, &safety);
+    Some(crate::jit::ir::build::KnownConstruct {
+      class: guard_bits,
+      generation,
+      ctor: ctor_bits,
+      ctor_proto: proto_ptr,
+      arity,
+      field_count,
+      simple: simple_ctor_param_slots,
+      module,
+      defaults,
+      in_place,
+    })
+  }
+
+  /// Records that the `Invoke` at `ip` in `proto` found a class as the
+  /// member of `module`, for compiled code to build it there directly.
+  /// Kept only when the member resolves through a public slot.
+  fn note_module_member(&self, proto: Value, ip: usize, module: Value, name: Value) {
+    let Some(slot) = module.as_module().namespace.public_slot(name.as_str()) else {
+      return;
+    };
+    let func = proto.as_func();
+    let mut members = func.jit.module_members.borrow_mut();
+    if members
+      .get(&ip)
+      .is_some_and(|&(m, s)| m.to_bits() == module.to_bits() && s == slot)
+    {
+      return;
+    }
+    members.insert(ip, (module, slot));
+    drop(members);
+    write_barrier(proto.as_obj());
+  }
+
+  /// What the `Invoke` at `ip` was last seen to construct out of a
+  /// module, as that member stands now.
+  fn module_member_seen(&self, proto: &ObjFunction, ip: usize) -> Option<ModuleMember> {
+    let (module, slot) = *proto.jit.module_members.borrow().get(&ip)?;
+    let class = {
+      let m = module.as_module();
+      if !m.namespace.public.get(slot as usize)?.get() {
+        return None;
+      }
+      m.namespace.slots.get(slot as usize)?.get()
+    };
+    Some(ModuleMember {
+      class,
+      table: crate::vm::object::module_slots_table(module),
+      slot,
+    })
+  }
+
+  /// For each `Invoke` in `proto` seen constructing a class out of a
+  /// module, that class and where it lives: see
+  /// `CompileFacts::module_constructs`.
+  fn snapshot_module_constructs(
+    &self,
+    proto: &ObjFunction,
+  ) -> FxHashMap<usize, crate::jit::ModuleConstruct> {
+    let mut out = FxHashMap::default();
+    let sites: Vec<usize> = proto.jit.module_members.borrow().keys().copied().collect();
+    for ip in sites {
+      if !matches!(proto.chunk.code.get(ip), Some(Instr::Invoke { .. })) {
+        continue;
+      }
+      if let Some(member) = self.module_member_seen(proto, ip)
+        && member.class.is_class()
+        && let Some(class) = self.snapshot_class_target(member.class)
+      {
+        out.insert(
+          ip,
+          crate::jit::ModuleConstruct {
+            class,
+            table: member.table,
+            slot: member.slot,
+          },
+        );
+      }
+    }
+    out
   }
 
   /// The global a call's function register was last read from, when the
@@ -4756,30 +4925,21 @@ impl VM {
     let constructor = class_val.as_class().constructor;
     let field_count = class_val.as_class().field_count;
 
-    // Fast path: does any ancestor declare a field initializer at all? A
-    // class whose fields are all assigned directly in its constructor body
-    // never needs the field_inits list, and building that list even when
-    // every entry is None is a real Vec allocation per instantiation.
-    let mut has_field_init = false;
-    let mut cur = Some(class_val);
-    while let Some(c) = cur {
-      let cobj = c.as_class();
-      if cobj.own_field_initializer.is_some() {
-        has_field_init = true;
-        break;
-      }
-      cur = cobj.superclass;
-    }
-
-    let mut field_inits = Vec::new();
-    if has_field_init {
+    // With no field initializer anywhere in the line, allocation has
+    // already given the instance every default. Otherwise each class's
+    // own defaults and then its initializer run in turn, root to leaf,
+    // in the order its declarations put them. A class is kept only when
+    // it has defaults of its own to apply.
+    let mut field_inits: Vec<(Option<Value>, Option<Value>)> = Vec::new();
+    if class_val.as_class().runs_initializers {
       let mut cur = Some(class_val);
       while let Some(c) = cur {
         let cobj = c.as_class();
-        field_inits.push(cobj.own_field_initializer);
+        let defaults = (!cobj.own_defaults.is_empty()).then_some(c);
+        field_inits.push((defaults, cobj.own_field_initializer));
         cur = cobj.superclass;
       }
-      field_inits.reverse(); // root to leaf
+      field_inits.reverse();
     }
 
     // Every one of these gets pinned, and every use from here on re-reads
@@ -4793,10 +4953,15 @@ impl VM {
     self.gc_pins.push(class_val);
     let class_idx = pin_mark;
 
-    let mut field_init_idxs = Vec::with_capacity(field_inits.len());
-    for f in field_inits.into_iter().flatten() {
-      self.gc_pins.push(f);
-      field_init_idxs.push(self.gc_pins.len() - 1);
+    let mut field_init_steps = Vec::with_capacity(field_inits.len());
+    for (defaults, init) in field_inits {
+      let mut pin = |value: Value| {
+        self.gc_pins.push(value);
+        self.gc_pins.len() - 1
+      };
+      let defaults_idx = defaults.map(&mut pin);
+      let init_idx = init.map(&mut pin);
+      field_init_steps.push((defaults_idx, init_idx));
     }
 
     let ctor_idx = constructor.map(|c| {
@@ -4817,10 +4982,19 @@ impl VM {
     let instance_idx = self.gc_pins.len() - 1;
 
     let result: RunResult<()> = (|| {
-      for &idx in &field_init_idxs {
-        let init = self.gc_pins[idx];
+      for &(defaults_idx, init_idx) in &field_init_steps {
         let instance_now = self.gc_pins[instance_idx];
-        self.call_value(init, &[instance_now])?;
+        if let Some(idx) = defaults_idx {
+          let class = self.gc_pins[idx];
+          let fields = &instance_now.as_instance().fields;
+          for &(slot, value) in &class.as_class().own_defaults {
+            fields[slot as usize].set(value);
+          }
+        }
+        if let Some(idx) = init_idx {
+          let init = self.gc_pins[idx];
+          self.call_value(init, &[instance_now])?;
+        }
       }
       if let Some(idx) = ctor_idx {
         let ctor = self.gc_pins[idx];
@@ -4882,32 +5056,17 @@ impl VM {
     // as_class is a real RefCell borrow/release pair, and on a
     // constructor-heavy workload taking it twice measured as a visible
     // cost.
-    let (field_count, ctor, superclass) = {
+    // A field initializer anywhere in the line, own or inherited, has to
+    // run through `instantiate`.
+    let (field_count, ctor) = {
       let class = class_val.as_class();
-      if class.own_field_initializer.is_some() {
+      if class.runs_initializers {
         return None;
       }
-      (
-        class.field_count as usize,
-        class.constructor?,
-        class.superclass,
-      )
+      (class.field_count as usize, class.constructor?)
     };
     if !ctor.is_closure() {
       return None;
-    }
-    // An inherited field initializer is just as disqualifying as an own
-    // one; `instantiate` runs every ancestor's, root to leaf.
-    let mut cur = superclass;
-    while let Some(c) = cur {
-      let next = {
-        let cobj = c.as_class();
-        if cobj.own_field_initializer.is_some() {
-          return None;
-        }
-        cobj.superclass
-      };
-      cur = next;
     }
 
     // Order below is load-bearing: this is the only collection point in
@@ -5354,7 +5513,7 @@ impl VM {
           let len = receiver.list_len();
           let bounds = self.resolve_slice_bounds(lo, hi, len)?;
           let items: Vec<Value> = match bounds {
-            Some((lo, hi)) => (lo..hi).map(|i| receiver.list_get(i).unwrap()).collect(),
+            Some((lo, hi)) => receiver.with_list(|items| items[lo..hi].to_vec()),
             None => Vec::new(),
           };
           return Ok(self.heap.alloc_list(items));
@@ -5363,7 +5522,7 @@ impl VM {
           let len = receiver.bytes_len();
           let bounds = self.resolve_slice_bounds(lo, hi, len)?;
           let items: Vec<u8> = match bounds {
-            Some((lo, hi)) => (lo..hi).map(|i| receiver.bytes_get(i).unwrap()).collect(),
+            Some((lo, hi)) => receiver.with_bytes(|bytes| bytes[lo..hi].to_vec()),
             None => Vec::new(),
           };
           return Ok(self.heap.alloc_bytes(items));
@@ -6083,18 +6242,28 @@ impl VM {
               None => None,
             };
 
-            let (methods, field_slots, field_count, constructor) = match superclass_val {
-              Some(sup) => {
-                let s = sup.as_class();
-                (
-                  s.methods.clone(),
-                  s.field_slots.clone(),
-                  s.field_count,
-                  s.constructor,
-                )
-              },
-              None => (FxHashMap::default(), FxHashMap::default(), 0, None),
-            };
+            let (methods, field_slots, field_count, constructor, defaults, runs_initializers) =
+              match superclass_val {
+                Some(sup) => {
+                  let s = sup.as_class();
+                  (
+                    s.methods.clone(),
+                    s.field_slots.clone(),
+                    s.field_count,
+                    s.constructor,
+                    s.defaults.clone(),
+                    s.runs_initializers,
+                  )
+                },
+                None => (
+                  FxHashMap::default(),
+                  FxHashMap::default(),
+                  0,
+                  None,
+                  Vec::new(),
+                  false,
+                ),
+              };
 
             let class_val = self.heap.alloc_class(ObjClass {
               name,
@@ -6103,6 +6272,9 @@ impl VM {
               field_slots,
               field_count,
               own_field_initializer: None,
+              own_defaults: Vec::new(),
+              defaults,
+              runs_initializers,
               constructor,
               static_slots: FxHashMap::default(),
               statics: Vec::new(),
@@ -6127,10 +6299,29 @@ impl VM {
             }
           },
 
+          Instr::SetFieldDefault {
+            class,
+            name_const,
+            value_const,
+          } => {
+            let class_val = self.get_reg(base, class);
+            let name = tri!(self.const_as_str(func, name_const), 'step);
+            let value = func.chunk.constants[value_const as usize];
+            let mut c = class_val.as_class_mut();
+            if let Some(&slot) = c.field_slots.get(&name) {
+              c.set_field_default(slot, value);
+            }
+            drop(c);
+            write_barrier(class_val.as_obj());
+          },
+
           Instr::SetFieldInit { class, src } => {
             let class_val = self.get_reg(base, class);
             let init = self.get_reg(base, src);
-            class_val.as_class_mut().own_field_initializer = Some(init);
+            let mut c = class_val.as_class_mut();
+            c.own_field_initializer = Some(init);
+            c.runs_initializers = true;
+            drop(c);
             write_barrier(class_val.as_obj());
           },
 
@@ -6449,6 +6640,11 @@ impl VM {
               };
               match member {
                 Some(v) => {
+                  if v.is_class() && self.jit_enabled {
+                    // SAFETY: a frame's closure lives as long as the frame.
+                    let proto = unsafe { (*closure_ptr).function };
+                    self.note_module_member(proto, ip - 1, module_val, method_name_val);
+                  }
                   self.set_reg(base, obj + 1, v);
                   tri!(self.dispatch_call(base, obj + 1, num_args, dst), 'step);
                 },
@@ -7575,6 +7771,9 @@ impl VM {
         if let Some(m) = f.globals_module {
           mark(m);
         }
+        for &(module, _) in f.jit.module_members.borrow().values() {
+          mark(module);
+        }
       },
       Obj::Closure(c) => {
         mark(c.function);
@@ -7597,6 +7796,9 @@ impl VM {
         }
         if let Some(init) = class.own_field_initializer {
           mark(init);
+        }
+        for &(_, value) in class.own_defaults.iter().chain(&class.defaults) {
+          mark(value);
         }
         if let Some(ctor) = class.constructor {
           mark(ctor);
@@ -7688,6 +7890,9 @@ impl VM {
         if let Some(m) = f.globals_module.as_mut() {
           relocate(m as *mut Value);
         }
+        for (module, _) in f.jit.module_members.get_mut().values_mut() {
+          relocate(module as *mut Value);
+        }
       },
       Obj::Closure(c) => {
         relocate(&mut c.function as *mut Value);
@@ -7710,6 +7915,13 @@ impl VM {
         }
         if let Some(init) = class.own_field_initializer.as_mut() {
           relocate(init as *mut Value);
+        }
+        for (_, value) in class
+          .own_defaults
+          .iter_mut()
+          .chain(class.defaults.iter_mut())
+        {
+          relocate(value as *mut Value);
         }
         if let Some(ctor) = class.constructor.as_mut() {
           relocate(ctor as *mut Value);

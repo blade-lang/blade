@@ -534,6 +534,22 @@ fn instr_to_value(
       ];
       instr_node(ctx, shape, "DeclareField", line, f)
     },
+    Instr::SetFieldDefault {
+      class,
+      name_const,
+      value_const,
+    } => {
+      let name = resolve_const(ctx, shape, chunk, name_const);
+      let value = resolve_const(ctx, shape, chunk, value_const);
+      let f = vec![
+        kv(ctx, "class_reg", Value::number(class as f64)),
+        kv(ctx, "name_const", Value::number(name_const as f64)),
+        kv(ctx, "name", name),
+        kv(ctx, "value_const", Value::number(value_const as f64)),
+        kv(ctx, "value", value),
+      ];
+      instr_node(ctx, shape, "SetFieldDefault", line, f)
+    },
     Instr::SetFieldInit { class, src } => {
       let f = vec![
         kv(ctx, "class_reg", Value::number(class as f64)),

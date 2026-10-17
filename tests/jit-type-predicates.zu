@@ -1,0 +1,78 @@
+# The builtin type predicates in compiled code: every one against every
+# kind of value, through a call site that also sees a global holding a
+# native change to another native, and to a function, partway through.
+
+class Shape {
+  var sides = 3
+
+  area() {
+    return 0
+  }
+}
+
+var values = [
+  0, -0, 1, -7, 2.5, 1e300, 1 / 0, -(1 / 0), 0 / 0, 2 ** 53,
+  12n, true, false, nil, 'text', '', [1], [], { a: 1 }, {},
+  bytes([1, 2]), 0..3, Shape, Shape(), Shape().area, print, @(x) => x,
+]
+
+def describe(value) {
+  var flags = ''
+
+  flags += is_number(value) ? 'N' : '-'
+  flags += is_int(value) ? 'I' : '-'
+  flags += is_bool(value) ? 'B' : '-'
+  flags += is_object(value) ? 'O' : '-'
+  flags += is_string(value) ? 'S' : '-'
+  flags += is_list(value) ? 'L' : '-'
+  flags += is_dict(value) ? 'D' : '-'
+  flags += is_bytes(value) ? 'Y' : '-'
+  flags += is_class(value) ? 'C' : '-'
+  flags += is_instance(value) ? 'T' : '-'
+  flags += is_function(value) ? 'F' : '-'
+  flags += is_callable(value) ? 'K' : '-'
+
+  return flags
+}
+
+var seen = []
+
+iter var round = 0; round < 300; round++ {
+  seen = values.map(@(value) => describe(value))
+}
+
+iter var i = 0; i < values.length(); i++ {
+  echo '${i}: ${seen[i]}'
+}
+
+var check = is_int
+
+def count(items) {
+  var hits = 0
+
+  for item in items {
+    if check(item) {
+      hits++
+    }
+  }
+
+  return hits
+}
+
+var numbers = [1, 2.5, 3, 'four', 5]
+var total = 0
+
+iter var round = 0; round < 400; round++ {
+  if round == 200 {
+    check = is_string
+  }
+
+  if round == 300 {
+    check = @(item) => item == 5
+  }
+
+  total += count(numbers)
+}
+
+echo total
+echo is_int(check)

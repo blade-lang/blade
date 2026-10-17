@@ -885,9 +885,33 @@ impl<'a> Compiler<'a> {
     }
   }
 
+  /// The value a field default stands for when it is a literal: a
+  /// number, a string, a boolean or nil, possibly negated or in
+  /// parentheses. Anything else is computed for each instance.
+  fn literal_default(&mut self, expr: &Expr) -> Option<Value> {
+    Some(match &expr.kind {
+      ExprKind::Nil => Value::nil(),
+      ExprKind::Bool(value) => Value::bool(*value),
+      ExprKind::Integer(value) => Value::number(*value as f64),
+      ExprKind::Float(value) => Value::number(*value),
+      ExprKind::Literal(text) => self.heap.alloc_string_old(text.clone()),
+      ExprKind::Grouping(inner) => return self.literal_default(inner),
+      ExprKind::Unary(TokenKind::Minus, inner, _) => {
+        let number = self.literal_default(inner)?;
+        if !number.is_number() {
+          return None;
+        }
+        Value::number(-number.as_number())
+      },
+      _ => return None,
+    })
+  }
+
   /// Compile a class's own (non-static) field initializers into a
   /// single arity-1 (self) function, run once per instance at
-  /// construction time: see `VM::instantiate`. Own field names were
+  /// construction time: see `VM::instantiate`. It is handed the
+  /// declarations from the first computed default on; the literal ones
+  /// before it are the class's defaults instead. Own field names were
   /// already registered into the class's field_slots table via
   /// Instr::DeclareField before this runs, but that happens at CLASS
   /// declaration time, well before any instance (and thus any call to
@@ -1056,8 +1080,32 @@ impl<'a> Compiler<'a> {
       });
     }
 
-    if !own_fields.is_empty() {
-      let init_fn = self.compile_field_initializer(name, &own_fields);
+    // The literal defaults the declarations open with are given to the
+    // class to start every instance with. From the first default that has
+    // to be computed on, every declaration stays in the initializer, so
+    // the code there runs on exactly the fields it always ran on.
+    let mut tabled = 0;
+    for prop in &own_fields {
+      let DeclKind::Property(fname, value, ..) = &prop.kind else {
+        break;
+      };
+      let Some(literal) = self.literal_default(value) else {
+        break;
+      };
+      let fname_val = self.heap.alloc_string_old(Self::identifier_name(fname));
+      let name_const = self.add_constant(fname_val);
+      let value_const = self.add_constant(literal);
+      self.emit(Instr::SetFieldDefault {
+        class: dst,
+        name_const,
+        value_const,
+      });
+      tabled += 1;
+    }
+    let computed = &own_fields[tabled..];
+
+    if !computed.is_empty() {
+      let init_fn = self.compile_field_initializer(name, computed);
       let proto_val = self.heap.alloc_function(init_fn);
       let const_idx = self.add_constant(proto_val);
       let freg = self.alloc_reg();

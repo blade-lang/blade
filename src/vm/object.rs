@@ -699,6 +699,9 @@ pub fn obj_class_display_offsets() -> (usize, usize) {
       field_slots: FxHashMap::default(),
       field_count: 0,
       own_field_initializer: None,
+      own_defaults: Vec::new(),
+      defaults: Vec::new(),
+      runs_initializers: false,
       constructor: None,
       static_slots: FxHashMap::default(),
       statics: Vec::new(),
@@ -1170,6 +1173,14 @@ pub struct JitInfo {
   /// the whole function is worth it. Consulted only by the back-edge's
   /// own handler in `vm.rs`.
   pub osr_counts: RefCell<FxHashMap<usize, (u32, u32)>>,
+  /// For an `Instr::Invoke` the interpreter has run on a module, or on a
+  /// binding to one, whose member there is a class: the module, and the
+  /// slot of that member in its namespace. Compiled code builds the class
+  /// straight from the call when the receiver still leads to that slot
+  /// and the slot still holds it. The modules are traced by the
+  /// collector through the function, so a slot table compiled code
+  /// checks against belongs to a module that is still alive.
+  pub module_members: RefCell<FxHashMap<usize, (Value, u32)>>,
   /// True from the moment a compile job for this function is handed
   /// to the background compiler thread (see `VM::enqueue_or_ready`)
   /// until its result is drained (`VM::drain_jit_results`); prevents
@@ -1295,6 +1306,7 @@ impl JitInfo {
       overridden: Cell::new(false),
       elem_speculation_off: Cell::new(false),
       osr_counts: RefCell::new(FxHashMap::default()),
+      module_members: RefCell::new(FxHashMap::default()),
       compiling: Cell::new(false),
       numeric_feedback: Cell::new(!0u64),
       list_feedback: Cell::new(!0u64),
@@ -1405,6 +1417,12 @@ impl ModuleNamespace {
     Some(self.slots[s as usize].get())
   }
 
+  /// The slot `name` lives in, when it is part of the public surface.
+  pub fn public_slot(&self, name: &str) -> Option<u32> {
+    let &s = self.names.get(name)?;
+    self.public[s as usize].get().then_some(s)
+  }
+
   /// Marks an existing slot as not part of this module's public
   /// surface. Called only when a plain (non-`@`) wildcard import
   /// writes an entry; see `public`'s own docs.
@@ -1511,6 +1529,22 @@ pub struct ObjClass {
   /// construction time: see `VM::instantiate`; so this is
   /// deliberately NOT chained to call the superclass's initializer.
   pub own_field_initializer: Option<Value>,
+  /// The literal defaults this class's own field declarations open with
+  /// (`var x = 0`), as `(slot, value)` in declaration order. They are
+  /// what the field initializer would have written first, so they are
+  /// applied where it would have run.
+  pub own_defaults: Vec<(u16, Value)>,
+  /// Every literal default down this class's line of descent, root
+  /// first, at most one per slot. When `runs_initializers` is false an
+  /// instance starts out with these and nothing else runs before the
+  /// constructor.
+  pub defaults: Vec<(u16, Value)>,
+  /// Whether this class or an ancestor has a field initializer, code
+  /// that computes a default and has to run for every instance. Its
+  /// defaults are then applied class by class around those initializers
+  /// rather than at allocation, so none of them runs on a field set
+  /// earlier than it was declared.
+  pub runs_initializers: bool,
   /// Resolved once, when the class is declared (see
   /// `Instr::FinalizeClass`): this class's own same-named method if it
   /// declares one, else inherited from the nearest ancestor that does,
@@ -1553,6 +1587,22 @@ pub struct ObjClass {
 pub const CLASS_DISPLAY_DEPTH: usize = 8;
 
 impl ObjClass {
+  /// Gives field `slot`, one of this class's own declarations, the
+  /// literal default `value`. A nil is left out when nothing before it
+  /// can have set the field, since every field starts out nil; an
+  /// ancestor's initializer may have, and the nil then has to reset it.
+  pub fn set_field_default(&mut self, slot: u16, value: Value) {
+    let earlier = self.defaults.iter().position(|&(s, _)| s == slot);
+    if value.is_nil() && earlier.is_none() && !self.runs_initializers {
+      return;
+    }
+    self.own_defaults.push((slot, value));
+    match earlier {
+      Some(i) => self.defaults[i].1 = value,
+      None => self.defaults.push((slot, value)),
+    }
+  }
+
   /// Fills `display` from the superclass's, with `own`, this class's
   /// bits, at the first depth the superclass leaves free.
   pub fn fill_display(&self, own: u64) {
@@ -5055,6 +5105,14 @@ impl Heap {
 
   pub fn alloc_instance(&mut self, class: Value, field_count: usize) -> Value {
     let fields = self.young_field_storage(field_count);
+    {
+      let class = class.as_class();
+      if !class.runs_initializers {
+        for &(slot, value) in &class.defaults {
+          fields[slot as usize].set(value);
+        }
+      }
+    }
     let size = SLOT_BYTES + fields_outside_slot(field_count);
     self.alloc_sized(Obj::Instance(ObjInstance { class, fields }), size)
   }

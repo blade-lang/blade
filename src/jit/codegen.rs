@@ -31,7 +31,7 @@ use std::collections::BTreeSet;
 
 use smallvec::SmallVec;
 
-use crate::jit::{CallTarget, CompileFacts, escape, typeflow};
+use crate::jit::{CallTarget, CompileFacts, NativeTest, escape, typeflow};
 use crate::vm::chunk::{Instr, ParamType, kind};
 use crate::vm::object::{self, ObjFunction};
 use crate::vm::value::{self};
@@ -362,7 +362,7 @@ fn helper_cannot_collect(name: &str) -> bool {
 /// The widest class whose instances compiled code allocates inline.
 /// Every field is written `nil` with its own store, so past this the
 /// code grows faster than the call it replaces costs.
-const MAX_INLINE_INSTANCE_FIELDS: usize = 16;
+pub(crate) const MAX_INLINE_INSTANCE_FIELDS: usize = 16;
 
 /// Compiles `proto`'s bytecode into `fb`'s function body. Returns the
 /// bytecode-ip -> osr-id map (`CompiledFunction::osr_ids`) on success,
@@ -480,18 +480,6 @@ impl FieldTarget {
       FieldTarget::Class { slot, .. } | FieldTarget::Family { slot, .. } => slot,
     }
   }
-}
-
-/// A builtin native emitted inline: see
-/// `FuncCompiler::native_intrinsic`.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum NativeIntrinsic {
-  IsNumber,
-  IsBool,
-  IsObject,
-  IsInt,
-  /// `is_obj()` AND the object's tag is one of these.
-  Tag(&'static [u8]),
 }
 
 /// A register's shape, proven for the WHOLE function body by a
@@ -1166,6 +1154,10 @@ struct FuncCompiler<'a, 'b> {
   /// checked once at the access, which is what makes it sound on a
   /// path that somehow skipped the construct.
   construct_field_slots: FxHashMap<u8, (usize, u64, FxHashMap<String, u16>)>,
+  /// For an `Invoke` that constructs a class out of a module, the
+  /// module's slot table and the slot the class sits in: see
+  /// `jit::ModuleConstruct`.
+  module_guards: FxHashMap<usize, (usize, u32)>,
   /// This compiled function's OWN `FuncId` in `module`; known before
   /// codegen starts (the caller, `JitEngine::build_ir`, always declares
   /// it first). Lets `emit_call_instr`'s self-recursive case emit a
@@ -1583,6 +1575,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     proto: &ObjFunction,
     preds: &[Vec<usize>],
     globals: &FxHashMap<String, crate::jit::ResolvedGlobal>,
+    module_constructs: &FxHashMap<usize, crate::jit::ModuleConstruct>,
   ) -> (
     FxHashMap<usize, CallTarget>,
     FxHashMap<usize, crate::jit::ConstructInfo>,
@@ -1594,6 +1587,25 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       FxHashMap::default();
 
     let self_facts = escape::self_reference_facts_with_preds(proto, preds);
+
+    // Classes an `Invoke` builds out of a module, `date.Date(...)`.
+    let record_module_constructs =
+      |targets: &mut FxHashMap<usize, CallTarget>,
+       construct_info: &mut FxHashMap<usize, crate::jit::ConstructInfo>,
+       construct_slots: &mut FxHashMap<u8, (usize, u64, FxHashMap<String, u16>)>| {
+        for (&ip, construct) in module_constructs {
+          Self::record_construct(
+            proto,
+            ip,
+            &proto.chunk.code[ip],
+            &construct.class,
+            targets,
+            construct_info,
+            construct_slots,
+          );
+        }
+      };
+
     if globals.is_empty() {
       for (ip, instr) in proto.chunk.code.iter().enumerate() {
         if let Instr::Call { func, .. } = instr
@@ -1602,6 +1614,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
           targets.insert(ip, CallTarget::SelfRecursive);
         }
       }
+      record_module_constructs(&mut targets, &mut construct_info, &mut construct_slots);
       return (targets, construct_info, construct_slots);
     }
 
@@ -1635,53 +1648,15 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
           continue;
         };
         match resolved {
-          crate::jit::ResolvedGlobal::Class {
-            guard_bits,
-            generation,
-            field_count,
-            ctor_bits,
-            proto_ptr: ctor_proto_ptr,
-            safety,
-            field_slots,
-            simple_ctor_param_slots,
-          } => {
-            construct_info.insert(
+          crate::jit::ResolvedGlobal::Class { .. } => {
+            Self::record_construct(
+              proto,
               ip,
-              crate::jit::ConstructInfo {
-                safety: safety.clone(),
-                field_slots: field_slots.clone(),
-                field_count: *field_count,
-                simple_ctor_param_slots: simple_ctor_param_slots.clone(),
-              },
-            );
-            // `var p = Point(1, 2)` fixes p's class for good: an
-            // instance never changes class, so every later read of
-            // this register is a read of a Point. Recorded when the
-            // construct is the LAST thing to write the register; the
-            // idiom writes it twice (the class global, then the
-            // result), so "written once" would never hold.
-            if let Instr::Call { dst, .. } = instr {
-              let written_later = proto
-                .chunk
-                .code
-                .iter()
-                .enumerate()
-                .any(|(k, i)| k > ip && crate::jit::typeflow::any_dst(i) == Some(*dst));
-              if !written_later {
-                construct_slots
-                  .entry(*dst)
-                  .or_insert_with(|| (ip, *guard_bits, field_slots.clone()));
-              }
-            }
-            targets.insert(
-              ip,
-              CallTarget::ConstructKnown {
-                guard_bits: *guard_bits,
-                generation: *generation,
-                field_count: *field_count,
-                ctor_bits: *ctor_bits,
-                proto_ptr: *ctor_proto_ptr,
-              },
+              instr,
+              resolved,
+              &mut targets,
+              &mut construct_info,
+              &mut construct_slots,
             );
             break;
           },
@@ -1720,7 +1695,73 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
         }
       }
     }
+    record_module_constructs(&mut targets, &mut construct_info, &mut construct_slots);
     (targets, construct_info, construct_slots)
+  }
+
+  /// Records that the call at `ip` constructs the class `resolved`
+  /// describes, which must be a `ResolvedGlobal::Class`.
+  fn record_construct(
+    proto: &ObjFunction,
+    ip: usize,
+    instr: &Instr,
+    resolved: &crate::jit::ResolvedGlobal,
+    targets: &mut FxHashMap<usize, CallTarget>,
+    construct_info: &mut FxHashMap<usize, crate::jit::ConstructInfo>,
+    construct_slots: &mut FxHashMap<u8, (usize, u64, FxHashMap<String, u16>)>,
+  ) {
+    let crate::jit::ResolvedGlobal::Class {
+      guard_bits,
+      generation,
+      field_count,
+      ctor_bits,
+      proto_ptr: ctor_proto_ptr,
+      safety,
+      field_slots,
+      simple_ctor_param_slots,
+      defaults,
+    } = resolved
+    else {
+      return;
+    };
+    construct_info.insert(
+      ip,
+      crate::jit::ConstructInfo {
+        safety: safety.clone(),
+        field_slots: field_slots.clone(),
+        field_count: *field_count,
+        simple_ctor_param_slots: simple_ctor_param_slots.clone(),
+        defaults: defaults.clone(),
+      },
+    );
+    // `var p = Point(1, 2)` fixes p's class for good: an instance never
+    // changes class, so every later read of this register is a read of a
+    // Point. Recorded when the construct is the LAST thing to write the
+    // register; the idiom writes it twice (the class global, then the
+    // result), so "written once" would never hold.
+    if let Instr::Call { dst, .. } | Instr::Invoke { dst, .. } = instr {
+      let written_later = proto
+        .chunk
+        .code
+        .iter()
+        .enumerate()
+        .any(|(k, i)| k > ip && crate::jit::typeflow::any_dst(i) == Some(*dst));
+      if !written_later {
+        construct_slots
+          .entry(*dst)
+          .or_insert_with(|| (ip, *guard_bits, field_slots.clone()));
+      }
+    }
+    targets.insert(
+      ip,
+      CallTarget::ConstructKnown {
+        guard_bits: *guard_bits,
+        generation: *generation,
+        field_count: *field_count,
+        ctor_bits: *ctor_bits,
+        proto_ptr: *ctor_proto_ptr,
+      },
+    );
   }
 
   fn new(
@@ -1836,8 +1877,12 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     let bool_facts = typeflow::analyze_bool(proto, &preds);
     let const_facts = typeflow::analyze_const(proto, &preds);
     let liveness = typeflow::liveness(proto, &preds);
-    let (call_targets, construct_info, construct_slots) =
-      Self::resolve_call_targets_from_snapshot(proto, &preds, &facts.globals_snapshot);
+    let (call_targets, construct_info, construct_slots) = Self::resolve_call_targets_from_snapshot(
+      proto,
+      &preds,
+      &facts.globals_snapshot,
+      &facts.module_constructs,
+    );
     FuncCompiler {
       fb,
       module,
@@ -1899,6 +1944,11 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       module_table: facts.module_table,
       param_field_slots: facts.param_field_slots,
       construct_field_slots: construct_slots,
+      module_guards: facts
+        .module_constructs
+        .iter()
+        .map(|(&ip, construct)| (ip, (construct.table, construct.slot)))
+        .collect(),
       own_func_id,
       self_class_bits: facts.self_class_bits,
       call_targets,
@@ -3007,8 +3057,12 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     // them, and entering past the construct would then read an
     // unwritten slot.
     for (ip, instr) in self.proto.chunk.code.iter().enumerate() {
-      if let Instr::Call { dst, .. } = *instr
-        && self.scalar_construct_eligible(ip, dst)
+      let dst = match *instr {
+        Instr::Call { dst, .. } => dst,
+        Instr::Invoke { dst, .. } if self.module_guards.contains_key(&ip) => dst,
+        _ => continue,
+      };
+      if self.scalar_construct_eligible(ip, dst)
         && !self.planned_scalar_instances.contains_key(&dst)
         && let Some(info) = self.construct_info.get(&ip)
       {
@@ -5461,8 +5515,10 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
 
   fn scalar_construct_eligible(&self, ip: usize, dst: u8) -> bool {
     // A handler resumes in the interpreter without the stack slots such
-    // an instance lives in, so none is made where one can.
-    if self.has_catch {
+    // an instance lives in, so none is made where one can. A construct
+    // that left compiled code before is built on the heap instead, where
+    // a changed class falls back to the general call.
+    if self.has_catch || self.deopt_sites.contains(&ip) {
       return false;
     }
     let Some(info) = self.construct_info.get(&ip) else {
@@ -5471,12 +5527,8 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     if info.simple_ctor_param_slots.is_none() || info.field_count == 0 {
       return false;
     }
-    for instr in &self.proto.chunk.code {
-      if let Instr::Move { src, .. } = instr
-        && *src == dst
-      {
-        return false;
-      }
+    if escape::moved_elsewhere(self.proto, &self.preds, ip, dst) {
+      return false;
     }
     !self
       .escape_analyze_one(ip, None, Some(&info.safety))
@@ -5499,7 +5551,40 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// the refill happens here. Anywhere else the registration follows
   /// the stores, as it always did.
   fn emit_scalar_construct(&mut self, ip: usize, dst: u8, func: u8, num_args: u8) {
-    let (field_count, param_slots) = {
+    // The constructor replayed here is the one the class had when this
+    // compiled. The callee has to be that class still, with no method
+    // installed anywhere since, or the interpreter makes the call.
+    let Some(CallTarget::ConstructKnown {
+      guard_bits,
+      generation,
+      ..
+    }) = self.call_targets.get(&ip).copied()
+    else {
+      unreachable!("a scalar construct site has a known class");
+    };
+    let callee = self.load_reg(func);
+    let class = self.u64c(guard_bits);
+    let same_class = self.fb.ins().icmp(IntCC::Equal, callee, class);
+    let current = self.fb.ins().load(
+      types::I64,
+      cranelift_codegen::ir::MemFlagsData::trusted(),
+      self.vm_param,
+      METHOD_TABLE_GENERATION_OFFSET,
+    );
+    let found = self.u64c(generation);
+    let same_methods = self.fb.ins().icmp(IntCC::Equal, current, found);
+    let unchanged = self.fb.ins().band(same_class, same_methods);
+    let build_block = self.fb.create_block();
+    let deopt_block = self.fb.create_block();
+    self
+      .fb
+      .ins()
+      .brif(unchanged, build_block, &[], deopt_block, &[]);
+    self.fb.switch_to_block(deopt_block);
+    self.emit_deopt(ip);
+    self.fb.switch_to_block(build_block);
+
+    let (field_count, param_slots, defaults) = {
       let info = &self.construct_info[&ip];
       (
         info.field_count,
@@ -5507,6 +5592,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
           .simple_ctor_param_slots
           .clone()
           .expect("eligibility checked simple_ctor_param_slots"),
+        info.defaults.clone(),
       )
     };
 
@@ -5521,31 +5607,46 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       .expect("scalar construct slot registered in the pre-pass");
     debug_assert_eq!(site, ip, "one scalar construct site per register");
 
-    // Only the fields the constructor leaves alone need the nil. The
-    // ones it writes are stored below, in this same straight-line run
-    // with no call and so no safepoint in between, which makes a nil
-    // for them a store nothing can ever observe. For a class whose
-    // constructor fills every field (`Vec3` and friends) that is the
-    // whole pre-fill gone.
+    // Only the fields the constructor leaves alone need their starting
+    // value, the class's literal default or nil. The ones it writes are
+    // stored below, in this same straight-line run with no call and so
+    // no safepoint in between, which makes a store for them one nothing
+    // can ever observe. For a class whose constructor fills every field
+    // (`Vec3` and friends) that is the whole pre-fill gone.
+    // A parameter the call leaves out is nil, and the constructor stores
+    // that nil over the field's default like any other argument.
     let mut written = vec![false; field_count as usize];
+    let mut from_params = vec![false; field_count as usize];
     for (param, &field_slot) in param_slots.iter().enumerate() {
+      if let Some(p) = from_params.get_mut(field_slot as usize) {
+        *p = true;
+      }
       if param >= num_args as usize {
-        break;
+        continue;
       }
       if let Some(w) = written.get_mut(field_slot as usize) {
         *w = true;
       }
     }
 
-    let nil = self.u64c(crate::vm::value::Value::nil().to_bits());
+    let nil = crate::vm::value::Value::nil().to_bits();
     for i in 0..field_count {
       if written[i as usize] {
         continue;
       }
+      let bits = if from_params[i as usize] {
+        nil
+      } else {
+        defaults
+          .iter()
+          .find(|&&(s, _)| s == i)
+          .map_or(nil, |&(_, bits)| bits)
+      };
+      let start = self.u64c(bits);
       self
         .fb
         .ins()
-        .stack_store(types::I64, nil, slot, (i as i32) * 8);
+        .stack_store(types::I64, start, slot, (i as i32) * 8);
     }
 
     // Arguments sit at `func + 1 ..= func + num_args`, exactly as the
@@ -5621,6 +5722,36 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// class, or a class monkey-patched after this function compiled)
   /// control falls into the ordinary dynamic construction path, which
   /// re-resolves everything itself and is still correct.
+  /// Leaves for the interpreter unless the receiver in `obj` is, or
+  /// binds, the module whose slot table is `table` and its public slot
+  /// `slot` still holds the class `class_bits`. Past it, the class is in
+  /// `obj + 1`, where the member's call starts.
+  fn emit_module_member_guard(
+    &mut self,
+    ip: usize,
+    obj: u8,
+    table: usize,
+    slot: u32,
+    class_bits: u64,
+  ) {
+    let vm = self.vm_param;
+    let receiver = self.load_reg(obj);
+    let table_c = self.u64c(table as u64);
+    let slot_c = self.u64c(slot as u64);
+    let member = self.call_helper_raw("zuri_jit_module_member", &[vm, receiver, table_c, slot_c]);
+    let class = self.u64c(class_bits);
+    let same = self.fb.ins().icmp(IntCC::Equal, member, class);
+    let found_block = self.fb.create_block();
+    let deopt_block = self.fb.create_block();
+    self.fb.ins().brif(same, found_block, &[], deopt_block, &[]);
+
+    self.fb.switch_to_block(deopt_block);
+    self.emit_deopt(ip);
+
+    self.fb.switch_to_block(found_block);
+    self.store_reg(obj + 1, class);
+  }
+
   fn emit_construct_known(
     &mut self,
     ip: usize,
@@ -5703,6 +5834,11 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       .construct_info
       .get(&ip)
       .and_then(|info| info.simple_ctor_param_slots.clone());
+    let defaults = self
+      .construct_info
+      .get(&ip)
+      .map(|info| info.defaults.clone())
+      .unwrap_or_default();
     if ctor_proto.variadic || (num_args as u16 + 1) != ctor_proto.arity as u16 {
       let prepare = self.call_helper(
         "zuri_jit_construct_prepare",
@@ -5750,7 +5886,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       self.resync_dst_from_memory(dst);
       self.fb.ins().jump(done_block, &[]);
     } else if let Some(param_slots) = simple_ctor_param_slots {
-      let instance_val = self.emit_inline_instance_alloc(target_class, field_count);
+      let instance_val = self.emit_inline_instance_alloc(target_class, field_count, &defaults);
       let instance_ptr = self.obj_ptr(instance_val);
       let fields_ptr = if field_count <= object::INLINE_FIELDS as u16 {
         self.fb.ins().iadd_imm_s(
@@ -6796,52 +6932,6 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     self.fb.switch_to_block(hit_block);
   }
 
-  /// A builtin native (`vm::natives`) whose whole body is a `Value` tag
-  /// test, emitted inline instead of called.
-  ///
-  /// These are the cheapest functions in the language and, until now,
-  /// among the most expensive to call: a measured ~44ns of resolution,
-  /// dispatch and argument marshalling around what is one or two
-  /// machine instructions of actual work.
-  ///
-  /// Every variant reproduces its `vm::natives` counterpart exactly --
-  /// the same `Value` predicate, not an equivalent-looking one; so a
-  /// compiled answer is always the interpreted answer. Natives whose
-  /// body is more than a tag test (`typeof`, `id`, `is_iterable`,
-  /// `print`, ...) are deliberately absent; they still get
-  /// `KnownNative`'s resolution-free call, just not an inline body.
-  fn native_intrinsic(name: &str) -> Option<NativeIntrinsic> {
-    use NativeIntrinsic::*;
-    Some(match name {
-      "is_number" => IsNumber,
-      "is_bool" => IsBool,
-      "is_object" => IsObject,
-      "is_int" => IsInt,
-      "is_string" => Tag(&[object::OBJ_TAG_STR]),
-      "is_list" => Tag(&[object::OBJ_TAG_LIST]),
-      "is_dict" => Tag(&[object::OBJ_TAG_DICT]),
-      "is_bytes" => Tag(&[object::OBJ_TAG_BYTES]),
-      "is_class" => Tag(&[object::OBJ_TAG_CLASS]),
-      "is_instance" => Tag(&[object::OBJ_TAG_INSTANCE]),
-      "is_file" => Tag(&[object::OBJ_TAG_FILE]),
-      // `natives::is_function` is closure/native/bound-method but NOT
-      // class; `is_callable` is those three PLUS class. Keeping them
-      // as distinct tag sets is what preserves that difference.
-      "is_function" => Tag(&[
-        object::OBJ_TAG_CLOSURE,
-        object::OBJ_TAG_NATIVE,
-        object::OBJ_TAG_BOUND_METHOD,
-      ]),
-      "is_callable" => Tag(&[
-        object::OBJ_TAG_CLOSURE,
-        object::OBJ_TAG_NATIVE,
-        object::OBJ_TAG_BOUND_METHOD,
-        object::OBJ_TAG_CLASS,
-      ]),
-      _ => return None,
-    })
-  }
-
   /// `Instr::Call` on a call site proven to target a specific builtin
   /// native: see `CallTarget::KnownNative`.
   ///
@@ -6868,7 +6958,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
     // minor collection on that thread from relocating the object out
     // from under this compilation.
     let intrinsic = (num_args == 1)
-      .then(|| Self::native_intrinsic(native_name))
+      .then(|| NativeTest::of(native_name))
       .flatten();
 
     let callee_val = self.load_reg(func);
@@ -6909,25 +6999,25 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   }
 
   /// The intrinsic body itself, as a `Value`-bits result.
-  fn emit_native_intrinsic(&mut self, op: NativeIntrinsic, v: IrValue) -> IrValue {
+  fn emit_native_intrinsic(&mut self, op: NativeTest, v: IrValue) -> IrValue {
     match op {
-      NativeIntrinsic::IsNumber => {
+      NativeTest::Number => {
         let c = self.is_number(v);
         self.bool_value(c)
       },
-      NativeIntrinsic::IsObject => {
+      NativeTest::Object => {
         let c = self.is_obj(v);
         self.bool_value(c)
       },
-      NativeIntrinsic::IsBool => {
+      NativeTest::Bool => {
         let c = self.emit_is_bool_test(v);
         self.bool_value(c)
       },
-      NativeIntrinsic::IsInt => {
+      NativeTest::Int => {
         let c = self.emit_is_int_test(v);
         self.bool_value(c)
       },
-      NativeIntrinsic::Tag(tags) => {
+      NativeTest::Tags(tags) => {
         let c = self.emit_obj_tag_test(v, tags);
         self.bool_value(c)
       },
@@ -6936,7 +7026,7 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
 
   /// `Value::is_bool`'s exact match against the two singleton bit
   /// patterns, not a masked test; raw `i8` `0`/`1`, not a boxed
-  /// `Value`. Shared by `emit_native_intrinsic`'s `IsBool` and
+  /// `Value`. Shared by `emit_native_intrinsic`'s `Bool` and
   /// `emit_check_param_type`'s inline `ParamType::Bool` case, so the
   /// two can't silently disagree on what "a bool" means.
   fn emit_is_bool_test(&mut self, v: IrValue) -> IrValue {
@@ -13286,7 +13376,14 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
   /// a class too wide for the inline cells; only a full chunk, or a
   /// class with more fields than is worth initializing inline, goes
   /// through `zuri_jit_alloc_instance_fast`.
-  fn emit_inline_instance_alloc(&mut self, class_bits: IrValue, field_count: u16) -> IrValue {
+  /// `defaults` are the class's literal field defaults as `(slot, value
+  /// bits)`, which an instance starts out with in place of nil.
+  fn emit_inline_instance_alloc(
+    &mut self,
+    class_bits: IrValue,
+    field_count: u16,
+    defaults: &[(u16, u64)],
+  ) -> IrValue {
     let flags = cranelift_codegen::ir::MemFlagsData::trusted();
     let vm = self.vm_param;
     let count = field_count as usize;
@@ -13322,12 +13419,26 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
       self.fb.ins().store(flags, cells_ptr, obj, fields_ptr_off);
       let len_word = self.i64c(len_word);
       self.fb.ins().store(flags, len_word, obj, len_off);
-      self.fb.ins().store(flags, nil, obj, inline_off);
-      self.fb.ins().store(flags, nil, obj, inline_off + 8);
-      if let Some(cells) = arena {
-        for i in 0..count {
-          self.fb.ins().store(flags, nil, cells, (i * 8) as i32);
-        }
+      let start = |this: &mut Self, i: usize| match defaults.iter().find(|&&(s, _)| s as usize == i)
+      {
+        Some(&(_, bits)) => this.u64c(bits),
+        None => nil,
+      };
+      match arena {
+        Some(cells) => {
+          self.fb.ins().store(flags, nil, obj, inline_off);
+          self.fb.ins().store(flags, nil, obj, inline_off + 8);
+          for i in 0..count {
+            let v = start(self, i);
+            self.fb.ins().store(flags, v, cells, (i * 8) as i32);
+          }
+        },
+        None => {
+          let first = start(self, 0);
+          let second = start(self, 1);
+          self.fb.ins().store(flags, first, obj, inline_off);
+          self.fb.ins().store(flags, second, obj, inline_off + 8);
+        },
       }
 
       let tag_mask = self.u64c(value::QNAN | value::SIGN_BIT);
@@ -15023,6 +15134,21 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
         );
         false
       },
+      Instr::SetFieldDefault {
+        class,
+        name_const,
+        value_const,
+      } => {
+        let base = self.base_param;
+        let class_i = self.idx(class);
+        let name = self.bake_const(name_const);
+        let value = self.bake_const(value_const);
+        self.call_checked(
+          "zuri_jit_set_field_default",
+          &[self.vm_param, base, class_i, name, value],
+        );
+        false
+      },
       Instr::SetFieldInit { class, src } => {
         let base = self.base_param;
         let class_i = self.idx(class);
@@ -15171,6 +15297,38 @@ impl<'a, 'b> FuncCompiler<'a, 'b> {
         method_const,
         num_args,
       } => {
+        if let Some(&(table, slot)) = self.module_guards.get(&ip)
+          && let Some(CallTarget::ConstructKnown {
+            guard_bits,
+            generation,
+            field_count,
+            ctor_bits,
+            proto_ptr,
+          }) = self.call_targets.get(&ip).copied()
+        {
+          // A class out of a module: once the module still holds it, the
+          // member is called exactly as a `Call` on the class would be,
+          // from the register after the receiver.
+          self.emit_safepoint();
+          self.emit_module_member_guard(ip, obj, table, slot, guard_bits);
+          let func = obj + 1;
+          if self.scalar_construct_eligible(ip, dst) {
+            self.emit_scalar_construct(ip, dst, func, num_args);
+          } else {
+            self.emit_construct_known(
+              ip,
+              dst,
+              func,
+              num_args,
+              guard_bits,
+              generation,
+              field_count,
+              ctor_bits,
+              proto_ptr,
+            );
+          }
+          return false;
+        }
         if num_args == 1 {
           if let Some(op) = IterableIntrinsic::of(self.method_name(method_const)) {
             self.emit_iterable_intrinsic(ip, dst, obj, method_const, op);

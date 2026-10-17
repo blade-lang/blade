@@ -268,6 +268,7 @@ fn key_of(op: &Op, v: &Versions) -> Option<Key> {
     Op::WrapIndex => Key::Pure("wrap_index", 0),
     Op::GetIndex => Key::Pure("get_index", 0),
     Op::IsBits(bits) => Key::Pure("is_bits", *bits),
+    Op::IsKind(test) => Key::Pure("is_kind", test.key()),
     Op::NextKey => Key::Pure("next_key", 0),
     Op::RangeCount => Key::Pure("range_count", 0),
     Op::RangeAt => Key::Pure("range_at", 0),

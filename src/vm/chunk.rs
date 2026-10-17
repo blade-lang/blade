@@ -249,6 +249,17 @@ pub enum Instr {
     class: u8,
     name_const: u16,
   },
+  /// Gives one of the class's own fields, already declared, the literal
+  /// default its declaration writes: `var x = 0` puts constant
+  /// `value_const` in field `name_const` of every instance. Only emitted
+  /// for the literal defaults a class's declarations open with, before
+  /// any default that has to be computed, which stay in the class's
+  /// field initializer.
+  SetFieldDefault {
+    class: u8,
+    name_const: u16,
+    value_const: u16,
+  },
   SetFieldInit {
     class: u8,
     src: u8,
@@ -1267,6 +1278,7 @@ pub fn instr_name(instr: &Instr) -> &'static str {
     Instr::MakeDict { .. } => "MakeDict",
     Instr::MakeClass { .. } => "MakeClass",
     Instr::DeclareField { .. } => "DeclareField",
+    Instr::SetFieldDefault { .. } => "SetFieldDefault",
     Instr::SetFieldInit { .. } => "SetFieldInit",
     Instr::SetMethod { .. } => "SetMethod",
     Instr::DeclareStatic { .. } => "DeclareStatic",

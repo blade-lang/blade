@@ -28,10 +28,12 @@ use cranelift_jit::JITModule;
 use cranelift_module::{FuncId, Module};
 use rustc_hash::FxHashMap;
 
+use super::build::KnownConstruct;
 use super::{
   BitOp, BlockId, Cmp, FTest, FUnary, FrameState, Func, GlobalRef, GuardKind, InstId, IntOp, Op,
   Terminator, Ty, ValueId,
 };
+use crate::jit::NativeTest;
 use crate::vm::chunk::Instr;
 use crate::vm::object::{self, ObjFunction};
 use crate::vm::value;
@@ -53,6 +55,10 @@ const HEAP_BYTES_ALLOCATED_OFFSET: i32 =
   (vm::VM_HEAP_OFFSET + object::HEAP_BYTES_ALLOCATED_OFFSET) as i32;
 const HEAP_YOUNG_HEADER_OFFSET: i32 =
   (vm::VM_HEAP_OFFSET + object::HEAP_YOUNG_HEADER_OFFSET) as i32;
+const HEAP_FIELD_ARENA_CUR_OFFSET: i32 =
+  (vm::VM_HEAP_OFFSET + object::HEAP_FIELD_ARENA_CUR_OFFSET) as i32;
+const HEAP_FIELD_ARENA_END_OFFSET: i32 =
+  (vm::VM_HEAP_OFFSET + object::HEAP_FIELD_ARENA_END_OFFSET) as i32;
 const JIT_IP_OFFSET: i32 = vm::VM_JIT_IP_OFFSET as i32;
 const GLOBAL_SLOTS_PTR_CACHE_OFFSET: i32 = vm::VM_GLOBAL_SLOTS_PTR_CACHE_OFFSET as i32;
 const METHOD_TABLE_GENERATION_OFFSET: i32 = vm::VM_METHOD_TABLE_GENERATION_OFFSET as i32;
@@ -133,6 +139,7 @@ pub fn generic_helper(instr: &Instr) -> Option<&'static str> {
     Instr::CloseUpvalues { .. } => "zuri_jit_close_upvalues",
     Instr::MakeClass { .. } => "zuri_jit_make_class",
     Instr::DeclareField { .. } => "zuri_jit_declare_field",
+    Instr::SetFieldDefault { .. } => "zuri_jit_set_field_default",
     Instr::SetFieldInit { .. } => "zuri_jit_set_field_init",
     Instr::SetMethod { .. } => "zuri_jit_set_method",
     Instr::DeclareStatic { .. } => "zuri_jit_declare_static",
@@ -500,10 +507,25 @@ impl<'a, 'b> Lowering<'a, 'b> {
       },
       Op::StoreField(slot) => {
         let obj = av[0];
-        let fields = self.fields_ptr(obj);
         let val = self.tagged_of(inst.args[1]);
-        self.fb.ins().store(flags, val, fields, (*slot as i32) * 8);
-        self.barrier_for_store(inst.args[1], val, obj);
+        match self.fresh_instance(inst.args[0]) {
+          // Its layout is known, and it is young.
+          Some(field_count) => {
+            let fields = if field_count as usize <= object::INLINE_FIELDS {
+              let inline = object::obj_instance_fields_inline_offset() as i64;
+              self.fb.ins().iadd_imm_s(obj, inline)
+            } else {
+              let at = object::obj_instance_fields_offset() as i32;
+              self.fb.ins().load(types::I64, flags, obj, at)
+            };
+            self.fb.ins().store(flags, val, fields, (*slot as i32) * 8);
+          },
+          None => {
+            let fields = self.fields_ptr(obj);
+            self.fb.ins().store(flags, val, fields, (*slot as i32) * 8);
+            self.barrier_for_store(inst.args[1], val, obj);
+          },
+        }
         None
       },
       Op::StoreReg(r) => {
@@ -644,6 +666,13 @@ impl<'a, 'b> Lowering<'a, 'b> {
         let want = self.u64c(*bits);
         Some(self.fb.ins().icmp(IntCC::Equal, av[0], want))
       },
+      Op::IsKind(test) => Some(self.kind_test(av[0], *test)),
+      Op::ModuleMember { table, slot } => {
+        let table = self.u64c(*table as u64);
+        let slot = self.u64c(*slot as u64);
+        Some(self.call_pure("zuri_jit_module_member", &[self.vm, av[0], table, slot]))
+      },
+      Op::NewInstance { class, field_count } => Some(self.new_instance(*class, *field_count)),
       Op::NextKey => Some(self.next_key(av[0], av[1])),
       Op::RangeCount => {
         let (_, _, _, count) = self.range_shape(av[0]);
@@ -771,6 +800,7 @@ impl<'a, 'b> Lowering<'a, 'b> {
         (self.param_check(x, proto, frame, check, state), None)
       },
       GuardKind::Proto(bits) => (self.closure_of(x, bits), None),
+      GuardKind::Native(guard_fn) => (self.native_is(x, guard_fn), None),
       GuardKind::Elems { whole } => {
         let w = self.u64c(whole as u64);
         let r = self.call_pure("zuri_jit_list_elems_are", &[self.vm, x, w]);
@@ -825,7 +855,17 @@ impl<'a, 'b> Lowering<'a, 'b> {
           num_args,
           dst,
         };
-        if num_args > 4 {
+        let constructed = self
+          .ir
+          .known_constructs
+          .get(&(frame, ip))
+          .cloned()
+          .filter(|known| known.module.is_none())
+          .map(|known| self.construct_known(known, call));
+        if let Some((miss, _)) = constructed {
+          self.fb.switch_to_block(miss);
+        }
+        let status = if num_args > 4 {
           self.fast_call("zuri_jit_call_prepare", prepare, call, name, &args)
         } else {
           // A callee named by the feedback whose shape takes this call
@@ -849,6 +889,14 @@ impl<'a, 'b> Lowering<'a, 'b> {
           self.fb.ins().jump(done, &[status.into()]);
           self.fb.switch_to_block(done);
           self.fb.block_params(done)[0]
+        };
+        match constructed {
+          Some((_, done)) => {
+            self.fb.ins().jump(done, &[status.into()]);
+            self.fb.switch_to_block(done);
+            self.fb.block_params(done)[0]
+          },
+          None => status,
         }
       },
       Instr::Invoke {
@@ -869,6 +917,37 @@ impl<'a, 'b> Lowering<'a, 'b> {
           self.u64c(func_ptr),
           self.u64c(ip as u64),
         ];
+        // A class out of a module is called from the register after the
+        // receiver, as the interpreter calls it, once the receiver still
+        // leads to the slot it was found in and the slot still holds it.
+        let constructed = match self.ir.known_constructs.get(&(frame, ip)).cloned() {
+          Some(known) if known.module.is_some() => {
+            let (table, slot) = known.module.unwrap();
+            let receiver = self.load_reg(offset + obj);
+            let table = self.u64c(table as u64);
+            let slot = self.u64c(slot as u64);
+            let member =
+              self.call_pure("zuri_jit_module_member", &[self.vm, receiver, table, slot]);
+            let class = self.u64c(known.class);
+            let same = self.fb.ins().icmp(IntCC::Equal, member, class);
+            let elsewhere = self.fb.create_block();
+            self.continue_if(same, elsewhere);
+            self.store_reg(offset + obj + 1, class);
+            let call = FastCall {
+              base,
+              offset,
+              first_arg: obj + 2,
+              num_args,
+              dst,
+            };
+            let (miss, done) = self.construct_known(known, call);
+            self.fb.switch_to_block(elsewhere);
+            self.fb.ins().jump(miss, &[]);
+            self.fb.switch_to_block(miss);
+            Some(done)
+          },
+          _ => None,
+        };
         // The receiver is the callee's first argument.
         let call = FastCall {
           base,
@@ -877,7 +956,7 @@ impl<'a, 'b> Lowering<'a, 'b> {
           num_args: num_args + 1,
           dst,
         };
-        match proto.chunk.invoke_cache_cell(ip) {
+        let status = match proto.chunk.invoke_cache_cell(ip) {
           Some(cell) if num_args < 4 => {
             let cell = cell as *const _ as u64;
             let (miss, done) = self.direct_call(DirectCallee::Cached(cell), call, ip, frame);
@@ -888,6 +967,14 @@ impl<'a, 'b> Lowering<'a, 'b> {
             self.fb.block_params(done)[0]
           },
           _ => self.invoke_resolved(offset + obj, prepare, call, name, &args),
+        };
+        match constructed {
+          Some(done) => {
+            self.fb.ins().jump(done, &[status.into()]);
+            self.fb.switch_to_block(done);
+            self.fb.block_params(done)[0]
+          },
+          None => status,
         }
       },
       _ => self.call(name, &args),
@@ -1004,6 +1091,80 @@ impl<'a, 'b> Lowering<'a, 'b> {
 
     self.fb.switch_to_block(done);
     self.fb.block_params(done)[0]
+  }
+
+  /// A call to the class this site was found to construct, run straight
+  /// in the constructor's compiled code: the class and the method table
+  /// are checked, the constructor's frame is pushed with the new instance
+  /// in its first register, its code runs, and the call evaluates to the
+  /// instance. Branches to the returned miss block when the class or the
+  /// table has changed, or the constructor has no compiled code yet; the
+  /// returned done block takes the call's status.
+  fn construct_known(&mut self, known: KnownConstruct, call: FastCall) -> (Block, Block) {
+    let FastCall {
+      base,
+      offset,
+      first_arg,
+      num_args,
+      dst,
+    } = call;
+    let func = first_arg - 1;
+    let flags = MemFlagsData::trusted();
+    let miss = self.fb.create_block();
+    let done = self.fb.create_block();
+    self.fb.append_block_param(done, types::I64);
+
+    let callee = self.load_reg(offset + func);
+    let class = self.u64c(known.class);
+    let same = self.fb.ins().icmp(IntCC::Equal, callee, class);
+    self.continue_if(same, miss);
+    let generation = self
+      .fb
+      .ins()
+      .load(types::I64, flags, self.vm, METHOD_TABLE_GENERATION_OFFSET);
+    let found = self.u64c(known.generation);
+    let unchanged = self.fb.ins().icmp(IntCC::Equal, generation, found);
+    self.continue_if(unchanged, miss);
+
+    let slot = self.closure_slot();
+    let out = self.fb.ins().stack_addr(types::I64, slot, 0);
+    let prepare = [
+      self.vm,
+      base,
+      self.u64c(func as u64),
+      self.u64c(num_args as u64),
+      self.u64c(dst as u64),
+      self.u64c(known.ctor),
+      self.u64c(known.ctor_proto as u64),
+      self.u64c(known.field_count as u64),
+      out,
+    ];
+    let entry = self.call("zuri_jit_construct_prepare", &prepare);
+    self.refresh_regs();
+    self.continue_if(entry, miss);
+
+    // The constructor's window starts at the callee register, which now
+    // holds the instance, with the arguments where the call left them.
+    let closure = self.fb.ins().stack_load(types::I64, types::I64, slot, 0);
+    let new_base = self.fb.ins().iadd_imm_s(base, func as i64);
+    let nil = self.u64c(value::NIL_VAL);
+    let mut call_args = vec![self.vm, new_base, closure];
+    call_args.push(self.fb.ins().iconst(types::I32, -1));
+    for k in 0..4u8 {
+      let a = if k <= num_args {
+        self.load_reg(offset + func + k)
+      } else {
+        nil
+      };
+      call_args.push(a);
+    }
+    let sig = self.entry_sig();
+    self.fb.ins().call_indirect(sig, entry, &call_args);
+    self.refresh_regs();
+    let dst_c = self.u64c(dst as u64);
+    let status = self.call("zuri_jit_new_finish", &[self.vm, base, dst_c, new_base]);
+    self.fb.ins().jump(done, &[status.into()]);
+    (miss, done)
   }
 
   /// An `Invoke` no compiled callee answered: the prepare-and-call path
@@ -1640,6 +1801,21 @@ impl<'a, 'b> Lowering<'a, 'b> {
       Instr::DeclareField { class, name_const } => {
         let name = name_bits(self, name_const);
         vec![vm, base, r(self, class as u64), r(self, name)]
+      },
+      Instr::SetFieldDefault {
+        class,
+        name_const,
+        value_const,
+      } => {
+        let name = name_bits(self, name_const);
+        let value = name_bits(self, value_const);
+        vec![
+          vm,
+          base,
+          r(self, class as u64),
+          r(self, name),
+          r(self, value),
+        ]
       },
       Instr::SetFieldInit { class, src } => {
         vec![vm, base, r(self, class as u64), r(self, src as u64)]
@@ -2755,6 +2931,281 @@ impl<'a, 'b> Lowering<'a, 'b> {
     self.fb.ins().jump(done, &[same.into()]);
     self.fb.switch_to_block(done);
     self.fb.block_params(done)[0]
+  }
+
+  /// The field count of the instance `ptr` points into, when `NewInstance`
+  /// made it. Such an instance is young, and a pointer derived from it is
+  /// never used past anything able to collect, which would read the
+  /// instance back afresh, so a store through it needs no write barrier.
+  fn fresh_instance(&self, ptr: ValueId) -> Option<u16> {
+    let def = self.ir.def_inst(ptr)?;
+    if !matches!(def.op, Op::ObjPtr) {
+      return None;
+    }
+    match self.ir.def_inst(def.args[0])?.op {
+      Op::NewInstance { field_count, .. } => Some(field_count),
+      _ => None,
+    }
+  }
+
+  /// A young instance of `class` with `field_count` fields, each holding
+  /// the class's literal default or nil, exactly as `Heap::alloc_instance`
+  /// makes one: bumped out of the nursery inline, with its fields inline
+  /// or in cells bumped out of the young field arena. A full nursery or
+  /// arena chunk, or a class wider than is worth filling inline, takes the
+  /// runtime's allocation, which never collects either.
+  fn new_instance(&mut self, class: u64, field_count: u16) -> IrValue {
+    let flags = MemFlagsData::trusted();
+    let vm = self.vm;
+    let count = field_count as usize;
+    let class_bits = self.u64c(class);
+    let slow = self.fb.create_block();
+    let done = self.fb.create_block();
+    self.fb.append_block_param(done, types::I64);
+
+    if count <= crate::jit::codegen::MAX_INLINE_INSTANCE_FIELDS {
+      let arena_cells = if count > object::INLINE_FIELDS {
+        count
+      } else {
+        0
+      };
+      let cur = self
+        .fb
+        .ins()
+        .load(types::I64, flags, vm, HEAP_NURSERY_CUR_OFFSET);
+      let end = self
+        .fb
+        .ins()
+        .load(types::I64, flags, vm, HEAP_NURSERY_END_OFFSET);
+      let mut no_room = self.fb.ins().icmp(IntCC::Equal, cur, end);
+      let arena = if arena_cells > 0 {
+        let acur = self
+          .fb
+          .ins()
+          .load(types::I64, flags, vm, HEAP_FIELD_ARENA_CUR_OFFSET);
+        let aend = self
+          .fb
+          .ins()
+          .load(types::I64, flags, vm, HEAP_FIELD_ARENA_END_OFFSET);
+        let room = self.fb.ins().isub(aend, acur);
+        let wanted = self.u64c((arena_cells * 8) as u64);
+        let short = self.fb.ins().icmp(IntCC::UnsignedLessThan, room, wanted);
+        no_room = self.fb.ins().bor(no_room, short);
+        Some(acur)
+      } else {
+        None
+      };
+      let fast = self.fb.create_block();
+      self.fb.ins().brif(no_room, slow, &[], fast, &[]);
+
+      self.fb.switch_to_block(fast);
+      let size = (object::SLOT_BYTES + object::fields_outside_slot(count)) as i64;
+      let next = self.fb.ins().iadd_imm_s(cur, 64);
+      self
+        .fb
+        .ins()
+        .store(flags, next, vm, HEAP_NURSERY_CUR_OFFSET);
+      if let Some(acur) = arena {
+        let anext = self.fb.ins().iadd_imm_s(acur, (arena_cells * 8) as i64);
+        self
+          .fb
+          .ins()
+          .store(flags, anext, vm, HEAP_FIELD_ARENA_CUR_OFFSET);
+      }
+      for (offset, delta) in [
+        (HEAP_LIVE_COUNT_OFFSET, 1),
+        (HEAP_BYTES_ALLOCATED_OFFSET, size),
+      ] {
+        let old = self.fb.ins().load(types::I64, flags, vm, offset);
+        let new = self.fb.ins().iadd_imm_s(old, delta);
+        self.fb.ins().store(flags, new, vm, offset);
+      }
+      let young = self
+        .fb
+        .ins()
+        .load(types::I64, flags, vm, HEAP_YOUNG_BYTES_ALLOCATED_OFFSET);
+      let young = self.fb.ins().iadd_imm_s(young, size);
+      self
+        .fb
+        .ins()
+        .store(flags, young, vm, HEAP_YOUNG_BYTES_ALLOCATED_OFFSET);
+      // Owe a collection once the young budget is spent; the next
+      // safepoint pays it.
+      let budget = self.u64c(self.ir.young_budget);
+      let owed = self
+        .fb
+        .ins()
+        .icmp(IntCC::UnsignedGreaterThan, young, budget);
+      let flag = self
+        .fb
+        .ins()
+        .load(types::I8, flags, vm, HEAP_JIT_GC_NEEDED_OFFSET);
+      let flag = self.fb.ins().bor(flag, owed);
+      self
+        .fb
+        .ins()
+        .store(flags, flag, vm, HEAP_JIT_GC_NEEDED_OFFSET);
+      let header = self
+        .fb
+        .ins()
+        .load(types::I64, flags, vm, HEAP_YOUNG_HEADER_OFFSET);
+      self.fb.ins().store(flags, header, cur, 0);
+      let zero = self.u64c(0);
+      self.fb.ins().store(flags, zero, cur, 8);
+
+      // The `Obj::Instance` payload: tag, class, the field cells' pointer
+      // (null for inline fields), the length word (with the arena bit
+      // when the cells are the arena's), then the two inline cells.
+      let obj = self.fb.ins().iadd_imm_s(cur, 16);
+      let tag = self.u64c(object::OBJ_TAG_INSTANCE as u64);
+      self.fb.ins().store(flags, tag, obj, 0);
+      self.fb.ins().store(
+        flags,
+        class_bits,
+        obj,
+        object::obj_instance_class_offset() as i32,
+      );
+      let (cells_ptr, len_word) = match arena {
+        Some(cells) => (cells, count as u64 | (1u64 << 32)),
+        None => (zero, count as u64),
+      };
+      self.fb.ins().store(
+        flags,
+        cells_ptr,
+        obj,
+        object::obj_instance_fields_offset() as i32,
+      );
+      let len_word = self.u64c(len_word);
+      self.fb.ins().store(
+        flags,
+        len_word,
+        obj,
+        object::obj_instance_fields_len_offset() as i32,
+      );
+      let defaults = self
+        .ir
+        .instance_defaults
+        .get(&class)
+        .cloned()
+        .unwrap_or_default();
+      let nil = self.u64c(value::NIL_VAL);
+      let start = |this: &mut Self, i: usize| match defaults.iter().find(|&&(s, _)| s as usize == i)
+      {
+        Some(&(_, bits)) => this.u64c(bits),
+        None => nil,
+      };
+      let inline = object::obj_instance_fields_inline_offset() as i32;
+      match arena {
+        Some(cells) => {
+          self.fb.ins().store(flags, nil, obj, inline);
+          self.fb.ins().store(flags, nil, obj, inline + 8);
+          for i in 0..count {
+            let v = start(self, i);
+            self.fb.ins().store(flags, v, cells, (i * 8) as i32);
+          }
+        },
+        None => {
+          for i in 0..2 {
+            let v = start(self, i);
+            self.fb.ins().store(flags, v, obj, inline + (i * 8) as i32);
+          }
+        },
+      }
+      let mask = self.u64c(value::QNAN | value::SIGN_BIT);
+      let instance = self.fb.ins().bor(obj, mask);
+      self.fb.ins().jump(done, &[instance.into()]);
+    } else {
+      self.fb.ins().jump(slow, &[]);
+    }
+
+    self.fb.switch_to_block(slow);
+    self.fb.set_cold_block(slow);
+    let count = self.u64c(count as u64);
+    let instance = self.call("zuri_jit_alloc_instance_fast", &[vm, class_bits, count]);
+    self.fb.ins().jump(done, &[instance.into()]);
+    self.fb.switch_to_block(done);
+    self.fb.block_params(done)[0]
+  }
+
+  /// Whether `v` is the builtin native whose `NativeFn` pointer is
+  /// `guard_fn`.
+  fn native_is(&mut self, v: IrValue, guard_fn: u64) -> IrValue {
+    let is_native = self.obj_tag_is(v, object::OBJ_TAG_NATIVE);
+    let check = self.fb.create_block();
+    let done = self.fb.create_block();
+    self.fb.append_block_param(done, types::I8);
+    let no = self.fb.ins().iconst(types::I8, 0);
+    self
+      .fb
+      .ins()
+      .brif(is_native, check, &[], done, &[no.into()]);
+    self.fb.switch_to_block(check);
+    let p = self.obj_ptr(v);
+    let func = self.fb.ins().load(
+      types::I64,
+      MemFlagsData::trusted(),
+      p,
+      object::obj_native_func_offset() as i32,
+    );
+    let want = self.u64c(guard_fn);
+    let same = self.fb.ins().icmp(IntCC::Equal, func, want);
+    self.fb.ins().jump(done, &[same.into()]);
+    self.fb.switch_to_block(done);
+    self.fb.block_params(done)[0]
+  }
+
+  /// A builtin type predicate on a `Tagged`, exactly as its native
+  /// computes it.
+  fn kind_test(&mut self, v: IrValue, test: NativeTest) -> IrValue {
+    match test {
+      NativeTest::Number => self.is_number(v),
+      NativeTest::Object => self.is_obj(v),
+      NativeTest::Bool => {
+        let t = self.u64c(value::TRUE_VAL);
+        let f = self.u64c(value::FALSE_VAL);
+        let is_t = self.fb.ins().icmp(IntCC::Equal, v, t);
+        let is_f = self.fb.ins().icmp(IntCC::Equal, v, f);
+        self.fb.ins().bor(is_t, is_f)
+      },
+      NativeTest::Int => {
+        // `fract()` is `x - x.trunc()`, which is NaN for an infinity, so
+        // an infinity is not an integer here either.
+        let is_num = self.is_number(v);
+        let check = self.fb.create_block();
+        let done = self.fb.create_block();
+        self.fb.append_block_param(done, types::I8);
+        let no = self.fb.ins().iconst(types::I8, 0);
+        self.fb.ins().brif(is_num, check, &[], done, &[no.into()]);
+        self.fb.switch_to_block(check);
+        let x = self.to_f64(v);
+        let whole = self.fb.ins().trunc(x);
+        let fraction = self.fb.ins().fsub(x, whole);
+        let zero = self.fb.ins().f64const(0.0);
+        let yes = self.fb.ins().fcmp(FloatCC::Equal, fraction, zero);
+        self.fb.ins().jump(done, &[yes.into()]);
+        self.fb.switch_to_block(done);
+        self.fb.block_params(done)[0]
+      },
+      NativeTest::Tags(tags) => {
+        let is_obj = self.is_obj(v);
+        let check = self.fb.create_block();
+        let done = self.fb.create_block();
+        self.fb.append_block_param(done, types::I8);
+        let no = self.fb.ins().iconst(types::I8, 0);
+        self.fb.ins().brif(is_obj, check, &[], done, &[no.into()]);
+        self.fb.switch_to_block(check);
+        let p = self.obj_ptr(v);
+        let t = self.fb.ins().load(types::I8, MemFlagsData::trusted(), p, 0);
+        let mut yes = self.fb.ins().icmp_imm_s(IntCC::Equal, t, tags[0] as i64);
+        for &tag in &tags[1..] {
+          let this = self.fb.ins().icmp_imm_s(IntCC::Equal, t, tag as i64);
+          yes = self.fb.ins().bor(yes, this);
+        }
+        self.fb.ins().jump(done, &[yes.into()]);
+        self.fb.switch_to_block(done);
+        self.fb.block_params(done)[0]
+      },
+    }
   }
 
   /// Zuri truthiness: nil, false, zero and NaN are falsey; so are empty

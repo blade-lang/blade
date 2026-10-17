@@ -64,6 +64,7 @@ use std::fmt;
 
 use rustc_hash::FxHashMap;
 
+use crate::jit::NativeTest;
 use crate::vm::chunk::Instr;
 
 /// How a value is represented in a machine register.
@@ -301,6 +302,10 @@ pub enum GuardKind {
   /// The value is a closure whose prototype is the function whose `Value`
   /// bits are given. Produces nothing.
   Proto(u64),
+  /// The value is the builtin native whose `NativeFn` pointer is given.
+  /// The pointer, unlike the native's object, never moves. Produces
+  /// nothing.
+  Native(u64),
   /// Every element of the list whose pointer is the operand is a number,
   /// or with `whole` set a whole number an `i64` holds. Produces nothing.
   Elems { whole: bool },
@@ -319,6 +324,7 @@ impl GuardKind {
       | GuardKind::True
       | GuardKind::Param { .. }
       | GuardKind::Proto(_)
+      | GuardKind::Native(_)
       | GuardKind::Elems { .. } => None,
     }
   }
@@ -514,6 +520,9 @@ pub enum Op {
   ObjLength,
   /// Whether a `Tagged` is exactly the given bits.
   IsBits(u64),
+  /// One of the builtin type predicates, `is_int()` and the rest, on a
+  /// `Tagged`, as a `Bool`.
+  IsKind(NativeTest),
   /// The iteration protocol's next key for a sequence of the given
   /// length: 0 after nil (nil for an empty one), `k + 1` after `k` while
   /// that is in range, nil at the end. `NO_VALUE` for a key that is
@@ -524,6 +533,22 @@ pub enum Op {
   /// The range's value at a position, or nil past the end. Operands:
   /// range pointer, position as an `F64`.
   RangeAt,
+  /// The member at public slot `slot` of the module a `Tagged` is or
+  /// binds, when that module's slot table is `table`, and 0 for anything
+  /// else: see `runtime::zuri_jit_module_member`. A `Tagged`.
+  ModuleMember {
+    table: usize,
+    slot: u32,
+  },
+  /// A new instance of the class whose `Value` bits are given, with
+  /// `field_count` fields holding the class's literal defaults, or nil,
+  /// bumped out of the nursery inline. Allocating never collects. Its constructor is not run: this is for
+  /// one that only copies its arguments into fields, which the stores
+  /// that follow do instead.
+  NewInstance {
+    class: u64,
+    field_count: u16,
+  },
   /// A list of up to two elements, allocated inline in the nursery. The
   /// runtime makes it instead when the nursery is full, which may
   /// collect, so the reloads after it read memory only then. `dst`,
@@ -593,6 +618,13 @@ impl Op {
     )
   }
 
+  /// Whether this operation may leave a collection owed, which a later
+  /// safepoint has to pay: anything that may collect, and an allocation
+  /// that never collects itself but counts against the young budget.
+  pub fn may_owe_collection(&self) -> bool {
+    self.may_collect() || matches!(self, Op::NewInstance { .. })
+  }
+
   /// Whether this operation reads or writes memory another operation
   /// could change, so it cannot be merged with or moved past such an
   /// operation freely.
@@ -625,6 +657,7 @@ impl Op {
         | Op::OsrParam(_)
         | Op::LoadGlobal(_)
         | Op::MethodGeneration
+        | Op::ModuleMember { .. }
         | Op::StoreGlobal(_)
         | Op::StoreReg(_)
         | Op::TaggedEq
@@ -647,6 +680,7 @@ impl Op {
         | Op::BytesAppend
         | Op::DictSet
         | Op::NewList { .. }
+        | Op::NewInstance { .. }
         | Op::StoreElem
         | Op::StoreField(_)
         | Op::StoreGlobal(_)
@@ -791,6 +825,12 @@ pub struct Func {
   /// bits. A closure holding that function is called without looking
   /// into it for its shape.
   pub known_calls: FxHashMap<(u16, usize), (usize, u64)>,
+  /// For a call by frame and position, the class it was found to
+  /// construct; see `build::Feedback::constructs`.
+  pub known_constructs: FxHashMap<(u16, usize), build::KnownConstruct>,
+  /// For each class a `NewInstance` makes, its literal field defaults as
+  /// `(slot, value bits)`.
+  pub instance_defaults: FxHashMap<u64, Vec<(u16, u64)>>,
   /// For a parameter check tested inline, by frame and check, the classes
   /// it names, in the order its types name them.
   pub param_classes: FxHashMap<(u16, u16), Vec<ParamClass>>,
@@ -817,6 +857,8 @@ impl Func {
         closure: FrameClosure::Reg(0),
       }],
       known_calls: FxHashMap::default(),
+      known_constructs: FxHashMap::default(),
+      instance_defaults: FxHashMap::default(),
       param_classes: FxHashMap::default(),
     }
   }

@@ -267,6 +267,7 @@ pub(super) fn is_pure(op: &Op) -> bool {
       | Op::WrapIndex
       | Op::GetIndex
       | Op::IsBits(_)
+      | Op::IsKind(_)
       | Op::NextKey
       | Op::RangeCount
       | Op::RangeAt

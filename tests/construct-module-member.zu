@@ -1,0 +1,47 @@
+# Constructing a class read out of a module, `shapes.Point(...)`, in
+# compiled code, including after the module swaps the class it exports.
+import .construct_members.shapes
+
+def points(count) {
+  var total = 0
+
+  iter var i = 0; i < count; i++ {
+    var p = shapes.Point(i, 2)
+    total += p.x + p.y + p.tag.length()
+  }
+
+  return total
+}
+
+def checked(count) {
+  var total = 0
+
+  iter var i = 0; i < count; i++ {
+    total += shapes.Checked(i - 3).x
+  }
+
+  return total
+}
+
+var total = 0
+
+iter var round = 0; round < 300; round++ {
+  total = points(20)
+}
+
+echo total
+
+iter var round = 0; round < 300; round++ {
+  total = checked(10)
+}
+
+echo total
+
+shapes.swap()
+
+iter var round = 0; round < 300; round++ {
+  total = points(20)
+}
+
+echo total
+echo shapes.Point(1, 2).tag

@@ -162,6 +162,9 @@ pub struct CapturedClass {
   field_slots: Vec<(String, u16)>,
   field_count: u16,
   own_field_initializer: Option<TransferValue>,
+  own_defaults: Vec<(u16, TransferValue)>,
+  defaults: Vec<(u16, TransferValue)>,
+  runs_initializers: bool,
   static_slots: Vec<(String, u16)>,
   statics: Vec<TransferValue>,
 }
@@ -912,6 +915,9 @@ fn capture_class_structural(
     field_slots: Vec::new(),
     field_count: 0,
     own_field_initializer: None,
+    own_defaults: Vec::new(),
+    defaults: Vec::new(),
+    runs_initializers: false,
     static_slots: Vec::new(),
     statics: Vec::new(),
   }));
@@ -923,6 +929,9 @@ fn capture_class_structural(
     field_slots,
     field_count,
     own_init_src,
+    own_defaults_src,
+    defaults_src,
+    runs_initializers,
     static_slots,
     statics_src,
   ) = {
@@ -933,6 +942,9 @@ fn capture_class_structural(
       c.field_slots.clone(),
       c.field_count,
       c.own_field_initializer,
+      c.own_defaults.clone(),
+      c.defaults.clone(),
+      c.runs_initializers,
       c.static_slots.clone(),
       c.statics.iter().map(|cell| cell.get()).collect::<Vec<_>>(),
     )
@@ -954,6 +966,14 @@ fn capture_class_structural(
   for s in statics_src {
     statics.push(capture_value(vm, s, arena, memo)?);
   }
+  let mut own_defaults = Vec::with_capacity(own_defaults_src.len());
+  for (slot, value) in own_defaults_src {
+    own_defaults.push((slot, capture_value(vm, value, arena, memo)?));
+  }
+  let mut defaults = Vec::with_capacity(defaults_src.len());
+  for (slot, value) in defaults_src {
+    defaults.push((slot, capture_value(vm, value, arena, memo)?));
+  }
 
   if let TransferNode::Class(cc) = &mut arena[idx as usize] {
     cc.superclass = superclass;
@@ -961,6 +981,9 @@ fn capture_class_structural(
     cc.field_slots = field_slots.into_iter().collect();
     cc.field_count = field_count;
     cc.own_field_initializer = own_field_initializer;
+    cc.own_defaults = own_defaults;
+    cc.defaults = defaults;
+    cc.runs_initializers = runs_initializers;
     cc.static_slots = static_slots.into_iter().collect();
     cc.statics = statics;
   }
@@ -1354,6 +1377,9 @@ fn materialize_class<'g>(
     field_slots: FxHashMap::default(),
     field_count: 0,
     own_field_initializer: None,
+    own_defaults: Vec::new(),
+    defaults: Vec::new(),
+    runs_initializers: false,
     constructor: None,
     static_slots: FxHashMap::default(),
     statics: Vec::new(),
@@ -1387,6 +1413,16 @@ fn materialize_class<'g>(
       vm, tv, arena, memo,
     )?));
   }
+  // Defaults are literals, so a string among them is interned here as
+  // the compiler interned it there.
+  let mut own_defaults = Vec::with_capacity(cc.own_defaults.len());
+  for (slot, tv) in &cc.own_defaults {
+    own_defaults.push((*slot, materialize_constant(vm, tv, arena, memo)?));
+  }
+  let mut defaults = Vec::with_capacity(cc.defaults.len());
+  for (slot, tv) in &cc.defaults {
+    defaults.push((*slot, materialize_constant(vm, tv, arena, memo)?));
+  }
   // Same derivation `Instr::FinalizeClass` uses: the constructor, if
   // any, is the method literally named "@new"; NOT one sharing the
   // class's own name (that was the bug here: every structurally
@@ -1402,6 +1438,9 @@ fn materialize_class<'g>(
     c.field_slots = cc.field_slots.iter().cloned().collect();
     c.field_count = cc.field_count;
     c.own_field_initializer = own_field_initializer;
+    c.own_defaults = own_defaults;
+    c.defaults = defaults;
+    c.runs_initializers = cc.runs_initializers;
     c.constructor = constructor;
     c.static_slots = cc.static_slots.iter().cloned().collect();
     c.statics = statics;

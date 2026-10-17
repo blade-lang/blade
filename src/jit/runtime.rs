@@ -1462,6 +1462,35 @@ pub unsafe extern "C" fn zuri_jit_alloc_instance_fast(
     .to_bits()
 }
 
+/// The member at public slot `slot` of the module `receiver` is or binds,
+/// as `Value` bits, when that module's slot table is `table`; 0 for
+/// anything else. What compiled code checks before building a class an
+/// `Invoke` on a module was seen to construct.
+pub unsafe extern "C" fn zuri_jit_module_member(
+  _vm_ptr: *mut VM,
+  receiver_bits: u64,
+  table: u64,
+  slot: u64,
+) -> u64 {
+  let receiver = Value::from_bits(receiver_bits);
+  let module = if receiver.is_module() {
+    receiver
+  } else if receiver.is_module_binding() {
+    receiver.as_module_binding().module
+  } else {
+    return 0;
+  };
+  if crate::vm::object::module_slots_table(module) as u64 != table {
+    return 0;
+  }
+  let m = module.as_module();
+  let slot = slot as usize;
+  match (m.namespace.public.get(slot), m.namespace.slots.get(slot)) {
+    (Some(public), Some(value)) if public.get() => value.get().to_bits(),
+    _ => 0,
+  }
+}
+
 /// `jit::codegen`'s inline construct fast path's other mandatory real
 /// call, alongside `zuri_jit_alloc_and_pin_instance`: releasing the
 /// `gc_pins` entry that call pushed. Unlike `Instr::CloseUpvalues`
@@ -2485,18 +2514,28 @@ pub unsafe extern "C" fn zuri_jit_make_class(
     None
   };
 
-  let (methods, field_slots, field_count, constructor) = match superclass_val {
-    Some(sup) => {
-      let s = sup.as_class();
-      (
-        s.methods.clone(),
-        s.field_slots.clone(),
-        s.field_count,
-        s.constructor,
-      )
-    },
-    None => (Default::default(), Default::default(), 0, None),
-  };
+  let (methods, field_slots, field_count, constructor, defaults, runs_initializers) =
+    match superclass_val {
+      Some(sup) => {
+        let s = sup.as_class();
+        (
+          s.methods.clone(),
+          s.field_slots.clone(),
+          s.field_count,
+          s.constructor,
+          s.defaults.clone(),
+          s.runs_initializers,
+        )
+      },
+      None => (
+        Default::default(),
+        Default::default(),
+        0,
+        None,
+        Vec::new(),
+        false,
+      ),
+    };
 
   let class_val = vm.heap.alloc_class(crate::vm::object::ObjClass {
     name,
@@ -2505,6 +2544,9 @@ pub unsafe extern "C" fn zuri_jit_make_class(
     field_slots,
     field_count,
     own_field_initializer: None,
+    own_defaults: Vec::new(),
+    defaults,
+    runs_initializers,
     constructor,
     static_slots: Default::default(),
     statics: Vec::new(),
@@ -2546,7 +2588,31 @@ pub unsafe extern "C" fn zuri_jit_set_field_init(
   let base = base as usize;
   let class_val = vm.get_reg(base, class as u8);
   let init = vm.get_reg(base, src as u8);
-  class_val.as_class_mut().own_field_initializer = Some(init);
+  {
+    let mut c = class_val.as_class_mut();
+    c.own_field_initializer = Some(init);
+    c.runs_initializers = true;
+  }
+  write_barrier(class_val.as_obj());
+  OK
+}
+
+pub unsafe extern "C" fn zuri_jit_set_field_default(
+  vm_ptr: *mut VM,
+  base: u64,
+  class: u64,
+  name_bits: u64,
+  value_bits: u64,
+) -> u64 {
+  let vm = unsafe { vm(vm_ptr) };
+  let class_val = vm.get_reg(base as usize, class as u8);
+  let name = Value::from_bits(name_bits);
+  {
+    let mut c = class_val.as_class_mut();
+    if let Some(&slot) = c.field_slots.get(name.as_str()) {
+      c.set_field_default(slot, Value::from_bits(value_bits));
+    }
+  }
   write_barrier(class_val.as_obj());
   OK
 }
@@ -3367,6 +3433,7 @@ pub fn helper_table() -> Vec<HelperSpec> {
     spec4!(zuri_jit_bitnot_slow),
     spec4!(zuri_jit_neg_slow),
     spec4!(zuri_jit_declare_field),
+    spec5!(zuri_jit_set_field_default),
     spec4!(zuri_jit_set_field_init),
     spec4!(zuri_jit_finalize_class),
     spec5!(zuri_jit_import_all),
@@ -3406,6 +3473,7 @@ pub fn helper_table() -> Vec<HelperSpec> {
     spec9!(zuri_jit_construct_prepare),
     spec4!(zuri_jit_alloc_and_pin_instance),
     spec3!(zuri_jit_alloc_instance_fast),
+    spec4!(zuri_jit_module_member),
     spec1!(zuri_jit_take_constructed_instance),
     spec4!(zuri_jit_new_finish),
     spec9!(zuri_jit_invoke_prepare),

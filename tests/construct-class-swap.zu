@@ -61,3 +61,47 @@ iter var i = 0; i < 30000; i++ {
 }
 
 echo wrong == 0
+
+/* A site whose instance never leaves the function is built with no
+ * object at all, straight from the constructor's stores, so nothing at
+ * the call itself resolves the class. Reassigning the class it was
+ * compiled against still has to reach it.
+ */
+class Pixel {
+  var x = 0
+  var y = 0
+
+  @new(x, y) {
+    self.x = x
+    self.y = y
+  }
+}
+
+class Scaled {
+  var x = 0
+  var y = 0
+
+  @new(x, y) {
+    self.x = x * 10
+  }
+}
+
+def total_x(count) {
+  var total = 0
+
+  iter var i = 0; i < count; i++ {
+    total += Pixel(i, 2).x
+  }
+
+  return total
+}
+
+iter var i = 0; i < 3000; i++ {
+  total_x(10)
+}
+
+echo total_x(100)
+
+Pixel = Scaled
+
+echo total_x(100)

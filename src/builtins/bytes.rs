@@ -376,7 +376,12 @@ fn to_list(ctx: &mut ZuriContext) -> Result<Value, String> {
 
 fn bytes_to_string(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 0);
-  let s = ctx.args[0].with_bytes(|b| String::from_utf8_lossy(b).into_owned());
+  // Valid UTF-8 is the usual case, and checking for it is much quicker
+  // than the lossy decoder's walk, which only invalid bytes need.
+  let s = ctx.args[0].with_bytes(|b| match std::str::from_utf8(b) {
+    Ok(text) => text.to_owned(),
+    Err(_) => String::from_utf8_lossy(b).into_owned(),
+  });
   Ok(ctx.vm.heap_mut().alloc_string(s))
 }
 

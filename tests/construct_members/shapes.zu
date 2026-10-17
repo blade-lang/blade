@@ -1,0 +1,39 @@
+# Classes the construct-module-member fixture builds through this
+# module, and a way to swap the one it exports.
+
+class Point {
+  var x = 0
+  var y = 0
+  var tag = 'point'
+
+  @new(x, y) {
+    self.x = x
+    self.y = y
+  }
+}
+
+class Checked {
+  var x = 0
+
+  @new(x) {
+    if x < 0 {
+      x = 0
+    }
+
+    self.x = x
+  }
+}
+
+class Other {
+  var x = 0
+  var y = 5
+  var tag = 'other'
+
+  @new(x, y) {
+    self.x = x * 10
+  }
+}
+
+def swap() {
+  Point = Other
+}
