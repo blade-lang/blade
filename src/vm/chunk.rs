@@ -1,5 +1,6 @@
 use core::fmt;
-use std::cell::{Cell, OnceCell};
+use std::cell::Cell;
+use std::sync::OnceLock;
 
 use rustc_hash::FxHashMap;
 
@@ -935,7 +936,7 @@ pub struct Chunk {
   /// A cell packs `(is_root, slot)` as `GLOBAL_CACHED | slot << 1 |
   /// is_root`, and `0` means unresolved. Read and written only through
   /// `cached_global` and `cache_global`.
-  global_cache: OnceCell<Box<[Cell<u64>]>>,
+  global_cache: OnceLock<Box<[Cell<u64>]>>,
   /// Monomorphic inline cache for `Instr::GetField`/`Instr::SetField`
   /// on an INSTANCE receiver (never consulted by the interpreter, which
   /// has no analogous per-instruction cache of its own); one cell per
@@ -958,7 +959,7 @@ pub struct Chunk {
   /// recycled underneath a cached entry the way a once-nursery address
   /// can (contrast `invoke_cache`, whose own docs spell out the
   /// relocation hazard that applies to it).
-  field_cache: OnceCell<Box<[FieldCacheCell]>>,
+  field_cache: OnceLock<Box<[FieldCacheCell]>>,
   /// Same idea as `field_cache`, for `Instr::Invoke`: see
   /// `InvokeCacheCell`. Was a `RefCell<FxHashMap<usize, _>>`, which cost
   /// a borrow-flag check and a hash probe on every dynamic method call
@@ -978,11 +979,11 @@ pub struct Chunk {
   /// switching the cached class key to something collision-proof against
   /// relocation; flagging clearly rather than leaving silent. The
   /// primitive half has no such hazard: a `NativeFunction` is `'static`.
-  invoke_cache: OnceCell<Box<[InvokeCacheCell]>>,
+  invoke_cache: OnceLock<Box<[InvokeCacheCell]>>,
   /// For each instruction inside a `catch` body, where an error there
   /// resumes, or `u32::MAX`; see `catch_resume`. Read by the compiler
   /// threads, so a lock rather than a cell.
-  catch_regions: std::sync::OnceLock<Box<[u32]>>,
+  catch_regions: OnceLock<Box<[u32]>>,
   /// What has reached each instruction, as a union of `kind` bits, one
   /// byte per instruction position. The instructions `kind::recorded`
   /// names record the operands a compiled guard would check; nothing
@@ -998,7 +999,7 @@ pub struct Chunk {
   ///
   /// A byte of zero means the site never ran interpreted or in profiling
   /// code.
-  feedback: std::sync::OnceLock<Box<[Cell<u8>]>>,
+  feedback: OnceLock<Box<[Cell<u8>]>>,
   /// One entry per `Instr::CheckParamType` this chunk emits, in the
   /// order they're emitted (parameter order); `check_idx` indexes
   /// straight into this, same relationship `const_idx` has to
@@ -1174,11 +1175,11 @@ impl Chunk {
       constants: Vec::new(),
       jump_tables: Vec::new(),
       lines: Vec::new(),
-      global_cache: OnceCell::new(),
-      field_cache: OnceCell::new(),
-      invoke_cache: OnceCell::new(),
-      catch_regions: std::sync::OnceLock::new(),
-      feedback: std::sync::OnceLock::new(),
+      global_cache: OnceLock::new(),
+      field_cache: OnceLock::new(),
+      invoke_cache: OnceLock::new(),
+      catch_regions: OnceLock::new(),
+      feedback: OnceLock::new(),
       param_checks: Vec::new(),
     }
   }

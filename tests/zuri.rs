@@ -1181,7 +1181,7 @@ mod launch {
       !text.contains("the project copy"),
       "a project command shadowed one the runtime ships\n--- actual ---\n{text}\n"
     );
-    assert_ran(&output, "Usage: fmt");
+    assert_ran(&output, "Usage: zuri fmt");
   }
 
   #[test]

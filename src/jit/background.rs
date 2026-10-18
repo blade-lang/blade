@@ -38,7 +38,8 @@
 //! raw immediate (see `jit::codegen`'s own docs). What a worker reads
 //! through `proto` is the bytecode and the constant pool, both written
 //! once when the function was compiled from source and never touched
-//! again.
+//! again, plus the fixed addresses of per-chunk cache cells initialized
+//! once through `OnceLock`.
 //!
 //! The VM's own thread installs the finished machine code once it
 //! drains the result channel: see `VM::drain_jit_results`.
