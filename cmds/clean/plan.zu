@@ -18,7 +18,7 @@ var _UNITS = { s: 1, m: 60, h: 3600, d: 86400, w: 604800 }
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('clean', false)
+  var parser = args.Parser('zuri clean', false)
 
   parser.description = 'Frees the space downloads, logs and installed packages take up.'
   parser.epilog = 'With nothing chosen, the download cache and the logs are cleaned.'

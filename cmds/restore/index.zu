@@ -23,7 +23,7 @@ import .._shared.sync
 import .._shared.ui
 
 def parser() {
-  var parser = args.Parser('restore', false)
+  var parser = args.Parser('zuri restore', false)
 
   parser.description = 'Restores the project dependencies with their locked versions.'
 

@@ -20,7 +20,7 @@ var LOGIN_DAYS = 365
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('account', true)
+  var parser = args.Parser('zuri account', true)
 
   parser.description = 'Signs this machine in to a registry, and manages the account and its '
     + 'tokens there.'

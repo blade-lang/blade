@@ -19,7 +19,7 @@ import .._shared.errors { run }
 import .._shared.ui
 
 def parser() {
-  var parser = args.Parser('search', true)
+  var parser = args.Parser('zuri search', true)
 
   parser.description = 'Finds packages on a registry by name, description or keyword.'
 

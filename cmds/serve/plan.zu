@@ -143,7 +143,7 @@ var _BOOLEANS = ['trust_proxy', 'read_only']
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('serve', false)
+  var parser = args.Parser('zuri serve', false)
 
   parser.description = 'Runs Nyssa, the package repository and the registry API.'
   parser.epilog = 'With no subcommand, the repository starts and serves until stopped.'

@@ -20,7 +20,7 @@ import .._shared.semver
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('install', false)
+  var parser = args.Parser('zuri install', false)
 
   parser.description = 'Adds package dependencies to a project.'
   parser.epilog = 'With no package named, every dependency in project.toml is installed at '

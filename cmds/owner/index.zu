@@ -20,7 +20,7 @@ import .._shared.errors { UsageError, run }
 import .._shared.names
 
 def parser() {
-  var parser = args.Parser('owner', true)
+  var parser = args.Parser('zuri owner', true)
 
   parser.description = 'Shows, adds and removes a publisher from a package.'
 

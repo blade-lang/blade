@@ -381,7 +381,7 @@ def options(parsed, file: ?string) {
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('test', false)
+  var parser = args.Parser('zuri test', false)
 
   parser.description = "Run the tests."
   parser.epilog = 'If no target is given, everything in the tests directory is run.'

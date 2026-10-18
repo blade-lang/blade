@@ -38,7 +38,7 @@ var MAGIC = 'ZURIBND1'
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('bundle', false)
+  var parser = args.Parser('zuri bundle', false)
 
   parser.description = 'Packages the project and a runtime together, into something that runs '
     + 'on a machine with no zuri installed.'

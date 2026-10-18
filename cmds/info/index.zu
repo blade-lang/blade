@@ -28,7 +28,7 @@ import .._shared.sync
 import .._shared.ui
 
 def parser() {
-  var parser = args.Parser('info', false)
+  var parser = args.Parser('zuri info', false)
 
   parser.description = 'Describes the project and its packages, or one package on a registry.'
 

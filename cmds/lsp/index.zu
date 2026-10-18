@@ -29,7 +29,7 @@ import .logging
 import .server { Server }
 
 def main() {
-  var parser = args.Parser('lsp', false)
+  var parser = args.Parser('zuri lsp', false)
 
   parser.description = 'Runs the Zuri language server for editor integration and support.'
   parser.epilog = 'Editors start the server themselves; see the Editor Support chapter of the book.'

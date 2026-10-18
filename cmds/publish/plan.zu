@@ -27,7 +27,7 @@ var _SPDX = '/^\\(?[A-Za-z0-9.+-]+\\)?(\\s+(AND|OR|WITH)\\s+\\(?[A-Za-z0-9.+-]+\
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('publish', false)
+  var parser = args.Parser('zuri publish', false)
 
   parser.description = 'Packs the project and publishes it as a new version to a package registry.'
   parser.epilog = 'Run it from anywhere inside the project. A published version never changes.'

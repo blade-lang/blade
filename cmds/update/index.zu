@@ -28,7 +28,7 @@ import .._shared.sync
 import .._shared.ui
 
 def parser() {
-  var parser = args.Parser('update', false)
+  var parser = args.Parser('zuri update', false)
 
   parser.description = 'Updates packages to the newest versions their ranges allow.'
 

@@ -451,7 +451,7 @@ def inside_git_repo(directory: string) {
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('init', false)
+  var parser = args.Parser('zuri init', false)
 
   parser.description = 'Creates a new Zuri package/project.'
   parser.epilog = 'If no path is given, the project will be created in the current working directory.'

@@ -25,7 +25,7 @@ var EXTRAS = ['LICENSE', 'README.md']
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('upgrade', false)
+  var parser = args.Parser('zuri upgrade', false)
 
   parser.description = 'Upgrades this installation of zuri with a newer release.'
 

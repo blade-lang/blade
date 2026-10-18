@@ -19,7 +19,7 @@ import .._shared.paths
  * @returns args.Parser
  */
 def parser() {
-  var parser = args.Parser('migrate', false)
+  var parser = args.Parser('zuri migrate', false)
 
   parser.description = 'Applies, rolls back and reports database migrations.'
   parser.epilog = 'With no subcommand, every pending migration is applied.'

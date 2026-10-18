@@ -23,7 +23,7 @@ import .._shared.sync
 import .._shared.ui
 
 def parser() {
-  var parser = args.Parser('uninstall', true)
+  var parser = args.Parser('zuri uninstall', true)
 
   parser.description = 'Removes packages from the project, along with dependencies that are only needed by them.'
 

@@ -20,7 +20,7 @@ import .._shared.names
 import .._shared.semver
 
 def parser() {
-  var parser = args.Parser('yank', true)
+  var parser = args.Parser('zuri yank', true)
 
   parser.description = 'Delists a published version of a package from being installable for new projects.'
 
