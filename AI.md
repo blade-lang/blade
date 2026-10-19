@@ -39,3 +39,41 @@ In about 24 hours, Claude Opus 5 read the entire codebase, asked various questio
 On this one, Claude Opus 5 did a good job! I believe it excels at this kind of stuff.
 
 While mdBook will be phased out over time to replace it with Zuri's own alternative (maybe `Doka` &mdash; which predates this repository and does about the same job), where it stands now at commit `1472fca` works just fine.
+
+---
+
+_Oct 19, 2026 03:55 AM GMT+1_
+
+I realized I haven't updated this in a long time and its been a lot of commits that I'd better not state any commit hash since I can't remember precisely which commit it started.
+
+That said, there are updates to the AI usage in the repository. Especially, the built-in commands which were majorly rewritten from the amalgamation of sources from the old C runtime, the abandoned first Rust iteration, and my local copy of the unupdated now defunct/archived GraalVM Truffle based JIT implementation.
+
+The process was massively guided, but since a lot of template works have been done in the earlier parts of this year on the commands and their new structure/format, it makes no sense to write everything from scratch anymore if I could guide AI in the amalgamation of the codebases to form a self-coherent new implementation and review the work done for correctness.
+
+Once the preliminary work for that has been established, I employed Claude Opus 5.5 in bug fixes, refactoring (etc) for the standard library modules I had blindly copied over from the previous works. A friend did look at this and concluded everything was written by AI (another gigantic AI slop), but AI learned to write slops from developers and since I had to copy files over from one device to another because my MacBook has been faulty for quite sometimes, it may appear that large single commits containing multiple files at once is pure AI slop. I assure you, some of the slops are mine, and some as you guessed right were, from Opus 5.5.
+
+---
+
+Another friend of mine (not the MF above) pointed out an AI attribution I have completely failed to document so far. And the line that seemed to offend him most was what I said earlier in this document:
+
+> At that point, I downgraded Claude Sonnet/Opus 5 involvement to simply documenting code
+
+**He didn't buy it. And he was accurately justified.**
+
+Here's the thing I failed to mention earlier &mdash; I have used Visual Studio Code exclusively throughout this work up until this moment that I write (Oct 19, 2026 04:12). 
+
+I know you guessed it too. Visual Studio Code comes with Github Copilot enabled and that on its own comes with some monthly free limits so long as you're authenticated &mdash; and I am!
+
+So here's what I failed to account for earlier:
+
+As I write code, Copilot does continue to suggest code to me, and many a time, it suggest precisely what I intended to write and I press TAB and it accepts it. Yes. That is AI assisted coding on its own.
+
+Here's my friend argument: So long as I continue to accept those suggestions, I continue to use AI majorly for writing code.
+
+Here's my counter argument: Why wouldn't I accept the offer to write the same 100 characters of code I intended to write if it was presented freely? Why does that have to be in some ways different from Intellescense? Everyone accepts Intellescense suggestions!
+
+And he countered: What about when the suggestion is better than what you intend to write, shows the limitations of your original approach, or fixes a bug you would have written in? Intellescence doesn't do that!
+
+On that argument, I stand corrected. I never relegated AI to documentation and test writing. I relegated its autonomy to documentation and test writing! Big difference!
+
+I hope everyone is happy now!
