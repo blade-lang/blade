@@ -69,24 +69,51 @@
 
           <div class="install" data-tabs>
             <div class="tabs" role="tablist" aria-label="Install Zuri">
-              <button class="tab" role="tab" id="hero-unix-tab" aria-controls="hero-unix" aria-selected="true">macOS &amp; Linux</button>
-              <button class="tab" role="tab" id="hero-win-tab" aria-controls="hero-win" aria-selected="false" tabindex="-1">Windows</button>
-              <button class="tab" role="tab" id="hero-src-tab" aria-controls="hero-src" aria-selected="false" tabindex="-1">From source</button>
+              <button class="tab" role="tab" id="hero-unix-tab" aria-controls="hero-unix" aria-selected="true">macOS
+                &amp; Linux</button>
+              <button class="tab" role="tab" id="hero-win-tab" aria-controls="hero-win" aria-selected="false"
+                tabindex="-1">Windows</button>
+              <button class="tab" role="tab" id="hero-src-tab" aria-controls="hero-src" aria-selected="false"
+                tabindex="-1">From source</button>
             </div>
 
             <div class="cmd" role="tabpanel" id="hero-unix" aria-labelledby="hero-unix-tab">
               <code><span class="p">$ </span>curl -fsSL https://zuri-lang.github.io/zuri/install.sh | sh</code>
-              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="12" height="12" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg></button>
             </div>
 
             <div class="cmd" role="tabpanel" id="hero-win" aria-labelledby="hero-win-tab" hidden>
               <code><span class="p">&gt; </span>powershell -c &quot;irm https://zuri-lang.github.io/zuri/install.ps1 | iex&quot;</code>
-              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="12" height="12" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg></button>
             </div>
 
             <div class="cmd" role="tabpanel" id="hero-src" aria-labelledby="hero-src-tab" hidden>
               <code><span class="p">$ </span>git clone https://github.com/zuri-lang/zuri &amp;&amp; cd zuri &amp;&amp; cargo patch-crates &amp;&amp; cargo build --release</code>
-              <button class="copy" type="button" aria-label="Copy the build commands"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+              <button class="copy" type="button" aria-label="Copy the build commands"><svg class="idle"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                  stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="12" height="12" rx="2" />
+                  <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg></button>
             </div>
 
             <p class="install-note">
@@ -97,16 +124,19 @@
           </div>
 
           <div class="actions">
-            <a class="btn primary" href="book/ch01-00-getting-started.html">Get started <span class="arrow" aria-hidden="true">&rarr;</span></a>
+            <a class="btn primary" href="book/ch01-00-getting-started.html">Get started <span class="arrow"
+                aria-hidden="true">&rarr;</span></a>
             <a class="btn" href="#toolchain">Tour the toolchain</a>
           </div>
         </div>
 
         <div class="hero-demo">
           <div class="window player" data-player aria-label="A project going from zuri init to a shipped executable">
-            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@laptop: ~/weather</span></div>
+            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                class="window-title">ada@laptop: ~/weather</span></div>
             <div class="scenes" aria-live="off">
-              <div class="scene" data-scene="init"><pre class="term"><code><span class="t-path">~ </span><span class="t-p">$ </span><span class="t-c" data-type>zuri init weather --yes</span>
+              <div class="scene" data-scene="init">
+                <pre class="term"><code><span class="t-path">~ </span><span class="t-p">$ </span><span class="t-c" data-type>zuri init weather --yes</span>
 <span class="t-o" data-out>  <span class="t-head">zuri init</span>  weather 0.1.0
 
   <span class="t-ok">added</span>  project.toml
@@ -117,15 +147,21 @@
   <span class="t-ok">added</span>  .gitignore
   <span class="t-ok">added</span>  .gitattributes
 
-  Your project is ready.</span></code></pre></div>
-              <div class="scene" data-scene="install"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri install thermo</span>
+  Your project is ready.</span></code></pre>
+              </div>
+              <div class="scene" data-scene="install">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri install thermo</span>
 <span class="t-o" data-out>Resolving dependencies
 Installing thermo 0.1.0
   <span class="t-ok">+</span> thermo 0.1.0
-Installed 1 package.</span></code></pre></div>
-              <div class="scene" data-scene="run"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri run</span>
-<span class="t-o" data-out>Hello, world!</span></code></pre></div>
-              <div class="scene" data-scene="test"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri test</span>
+Installed 1 package.</span></code></pre>
+              </div>
+              <div class="scene" data-scene="run">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri run</span>
+<span class="t-o" data-out>Hello, world!</span></code></pre>
+              </div>
+              <div class="scene" data-scene="test">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri test</span>
 <span class="t-o" data-out>
   <span class="t-head">zuri test</span>  1 file in tests
 
@@ -133,13 +169,20 @@ Installed 1 package.</span></code></pre></div>
 
   1 file
   <span class="t-ok">2 passed</span>  <span class="t-dim">&bull;</span>  2 total
-  <span class="t-dim">time 43ms</span></span></code></pre></div>
-              <div class="scene" data-scene="fmt"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri fmt</span>
-<span class="t-o" data-out>Nothing to do. All 3 files are already formatted.</span></code></pre></div>
-              <div class="scene" data-scene="bundle"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri bundle --format exe</span>
-<span class="t-o" data-out>Built /home/ada/weather/dist/weather-0.1.0-x86_64-unknown-linux-gnu</span></code></pre></div>
-              <div class="scene" data-scene="ship"><pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>./dist/weather-0.1.0-x86_64-unknown-linux-gnu</span>
-<span class="t-o" data-out>Hello, world!</span></code></pre></div>
+  <span class="t-dim">time 43ms</span></span></code></pre>
+              </div>
+              <div class="scene" data-scene="fmt">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri fmt</span>
+<span class="t-o" data-out>Nothing to do. All 3 files are already formatted.</span></code></pre>
+              </div>
+              <div class="scene" data-scene="bundle">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>zuri bundle --format exe</span>
+<span class="t-o" data-out>Built /home/ada/weather/dist/weather-0.1.0-x86_64-unknown-linux-gnu</span></code></pre>
+              </div>
+              <div class="scene" data-scene="ship">
+                <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c" data-type>./dist/weather-0.1.0-x86_64-unknown-linux-gnu</span>
+<span class="t-o" data-out>Hello, world!</span></code></pre>
+              </div>
             </div>
             <div class="steps" role="group" aria-label="Steps">
               <button class="step" type="button" data-step="init" aria-pressed="true">init</button>
@@ -212,17 +255,27 @@ Installed 1 package.</span></code></pre></div>
         </div>
 
         <ul class="swap" aria-label="What Zuri ships in place of assembled tools">
-            <li class="head-row"><span>Elsewhere, you assemble</span><span class="via"></span><span>Zuri ships</span></li>
-            <li><span class="from">a package manager and a lockfile</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri install</code></span></li>
-            <li><span class="from">an HTTP framework</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>import http</code></span></li>
-            <li><span class="from">a database driver for each engine</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>import sql</code></span></li>
-            <li><span class="from">a validation library</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>import validate</code></span></li>
-            <li><span class="from">a template engine</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>import wire</code></span></li>
-            <li><span class="from">a test runner</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri test</code></span></li>
-            <li><span class="from">a formatter</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri fmt</code></span></li>
-            <li><span class="from">a language server</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri lsp</code></span></li>
-            <li><span class="from">a bundler</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri bundle</code></span></li>
-            <li><span class="from">a package registry</span><span class="via" aria-hidden="true">&rarr;</span><span class="to"><code>zuri serve</code></span></li>
+          <li class="head-row"><span>Elsewhere, you assemble</span><span class="via"></span><span>Zuri ships</span></li>
+          <li><span class="from">a package manager and a lockfile</span><span class="via"
+              aria-hidden="true">&rarr;</span><span class="to"><code>zuri install</code></span></li>
+          <li><span class="from">an HTTP framework</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>import http</code></span></li>
+          <li><span class="from">a database driver for each engine</span><span class="via"
+              aria-hidden="true">&rarr;</span><span class="to"><code>import sql</code></span></li>
+          <li><span class="from">a validation library</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>import validate</code></span></li>
+          <li><span class="from">a template engine</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>import wire</code></span></li>
+          <li><span class="from">a test runner</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>zuri test</code></span></li>
+          <li><span class="from">a formatter</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>zuri fmt</code></span></li>
+          <li><span class="from">a language server</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>zuri lsp</code></span></li>
+          <li><span class="from">a bundler</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>zuri bundle</code></span></li>
+          <li><span class="from">a package registry</span><span class="via" aria-hidden="true">&rarr;</span><span
+              class="to"><code>zuri serve</code></span></li>
         </ul>
       </div>
     </section>
@@ -244,21 +297,24 @@ Installed 1 package.</span></code></pre></div>
           <a class="card a-gold" href="book/ch01-02-hello-world.html">
             <span class="cmdline">zuri run</span>
             <h3>Run anything</h3>
-            <p>Scripts, packages and whole directories, with a REPL one bare <code>zuri</code> away, and <code>-w</code> to run it again on every change.</p>
+            <p>Scripts, packages and whole directories, with a REPL one bare <code>zuri</code> away, and <code>-w</code>
+              to run it again on every change.</p>
             <span class="go">Hello, World!</span>
           </a>
 
           <a class="card a-red" href="book/ch23-00-testing.html">
             <span class="cmdline">zuri test</span>
             <h3>Test runner</h3>
-            <p>Every test file in a process of its own, as many at once as <code>--jobs</code> allows, with filters, timeouts and a report that points at the failing line.</p>
+            <p>Every test file in a process of its own, as many at once as <code>--jobs</code> allows, with filters,
+              timeouts and a report that points at the failing line.</p>
             <span class="go">Testing</span>
           </a>
 
           <a class="card a-teal" href="book/ch01-02-hello-world.html#formatting">
             <span class="cmdline">zuri fmt</span>
             <h3>Formatter</h3>
-            <p>One house style for every Zuri file. <code>--dry-run</code> turns it into the check a commit hook or CI job runs.</p>
+            <p>One house style for every Zuri file. <code>--dry-run</code> turns it into the check a commit hook or CI
+              job runs.</p>
             <span class="go">Formatting</span>
           </a>
 
@@ -272,7 +328,10 @@ Installed 1 package.</span></code></pre></div>
           <a class="card a-gold" href="book/ch27-02-installing.html">
             <span class="cmdline">zuri install</span>
             <h3>Package manager</h3>
-            <p>Version ranges resolved into a lockfile with exactly one version of every package, <code>zuri publish</code> to share your own, and a <code>--dry-run</code> on every package command that changes a project.</p>
+            <p>Version ranges resolved into a lockfile with exactly one version of every package,
+              <code>zuri publish</code> to share your own, and a <code>--dry-run</code> on every package command that
+              changes a project.
+            </p>
             <span class="go">Installing Packages</span>
           </a>
 
@@ -286,21 +345,25 @@ Installed 1 package.</span></code></pre></div>
           <a class="card a-teal" href="book/ch27-05-bundles.html">
             <span class="cmdline">zuri bundle</span>
             <h3>Bundler</h3>
-            <p>Your program and the runtime as a directory, an archive, a single executable or a macOS app, for every platform, from one machine.</p>
+            <p>Your program and the runtime as a directory, an archive, a single executable or a macOS app, for every
+              platform, from one machine.</p>
             <span class="go">Bundles</span>
           </a>
 
           <a class="card a-purple" href="book/ch27-05-bundles.html#upgrading-zuri">
             <span class="cmdline">zuri upgrade</span>
             <h3>Self-update</h3>
-            <p>Moves the installation to a newer release, verified against its published checksum before anything is replaced.</p>
+            <p>Moves the installation to a newer release, verified against its published checksum before anything is
+              replaced.</p>
             <span class="go">Upgrading</span>
           </a>
 
           <a class="card a-gold" href="book/ch27-04-commands.html">
             <span class="cmdline">zuri &lt;yours&gt;</span>
             <h3>Your own commands</h3>
-            <p>A project or a package adds commands to <code>zuri</code>, written in Zuri, listed in <code>zuri --help</code> beside the built-in ones.</p>
+            <p>A project or a package adds commands to <code>zuri</code>, written in Zuri, listed in
+              <code>zuri --help</code> beside the built-in ones.
+            </p>
             <span class="go">Commands From Packages</span>
           </a>
         </div>
@@ -320,7 +383,8 @@ Installed 1 package.</span></code></pre></div>
 
         <div class="pair">
           <div class="window">
-            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">signup.zu</span></div>
+            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                class="window-title">signup.zu</span></div>
             <pre><code class="zu">import http
 import validate
 import log
@@ -349,14 +413,17 @@ server.listen()</code></pre>
 
           <div class="stack">
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@laptop: ~/signup</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">ada@laptop: ~/signup</span></div>
               <pre class="term"><code><span class="t-path">~/signup </span><span class="t-p">$ </span><span class="t-c">zuri run signup.zu</span>
 <span class="t-log">2026-10-09T21:43:40+01:00 INFO [signup]: signed up ada@example.com</span></code></pre>
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">another terminal</span></div>
-              <pre class="term"><code><span class="t-p">$</span> <span class="t-c">curl -X POST localhost:3000/signup -d '{"name":"Ada","email":"ada@example.com"}'</span>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">another
+                  terminal</span></div>
+              <pre
+                class="term"><code><span class="t-p">$</span> <span class="t-c">curl -X POST localhost:3000/signup -d '{"name":"Ada","email":"ada@example.com"}'</span>
 <span class="t-o">{"ok":true}</span>
 
 <span class="t-p">$</span> <span class="t-c">curl -X POST localhost:3000/signup -d '{"name":"Ada","email":"nope"}'</span>
@@ -368,7 +435,7 @@ server.listen()</code></pre>
         <div class="dialect-notes">
           <p>
             <strong>There is one binary and the library that ships beside
-            it.</strong> Zuri has first-class language-level support for
+              it.</strong> Zuri has first-class language-level support for
             package management and vendoring, so the code you bring in
             from outside needs no third-party tooling either.
           </p>
@@ -396,17 +463,24 @@ server.listen()</code></pre>
         <div data-tabs>
           <div class="battery-tabs" role="tablist" aria-label="Standard library examples">
             <button class="tab" role="tab" id="b-sql-tab" aria-controls="b-sql" aria-selected="true">Databases</button>
-            <button class="tab" role="tab" id="b-wire-tab" aria-controls="b-wire" aria-selected="false" tabindex="-1">Templates</button>
-            <button class="tab" role="tab" id="b-isolate-tab" aria-controls="b-isolate" aria-selected="false" tabindex="-1">Concurrency</button>
-            <button class="tab" role="tab" id="b-auth-tab" aria-controls="b-auth" aria-selected="false" tabindex="-1">Authentication</button>
-            <button class="tab" role="tab" id="b-images-tab" aria-controls="b-images" aria-selected="false" tabindex="-1">Images</button>
-            <button class="tab" role="tab" id="b-ffi-tab" aria-controls="b-ffi" aria-selected="false" tabindex="-1">C and Rust</button>
-            <button class="tab" role="tab" id="b-testing-tab" aria-controls="b-testing" aria-selected="false" tabindex="-1">Testing</button>
+            <button class="tab" role="tab" id="b-wire-tab" aria-controls="b-wire" aria-selected="false"
+              tabindex="-1">Templates</button>
+            <button class="tab" role="tab" id="b-isolate-tab" aria-controls="b-isolate" aria-selected="false"
+              tabindex="-1">Concurrency</button>
+            <button class="tab" role="tab" id="b-auth-tab" aria-controls="b-auth" aria-selected="false"
+              tabindex="-1">Authentication</button>
+            <button class="tab" role="tab" id="b-images-tab" aria-controls="b-images" aria-selected="false"
+              tabindex="-1">Images</button>
+            <button class="tab" role="tab" id="b-ffi-tab" aria-controls="b-ffi" aria-selected="false" tabindex="-1">C
+              and Rust</button>
+            <button class="tab" role="tab" id="b-testing-tab" aria-controls="b-testing" aria-selected="false"
+              tabindex="-1">Testing</button>
           </div>
 
           <div class="pair" role="tabpanel" id="b-sql" aria-labelledby="b-sql-tab">
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">shop.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">shop.zu</span></div>
               <pre><code class="zu">import sql
 
 var db = sql.open(&#x27;sqlite://shop.db&#x27;)
@@ -421,16 +495,20 @@ for order in db.query(&#x27;select * from orders where total &gt; ?&#x27;, [25])
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>Kettle: 34.5</code></pre>
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-sql">SQLite, PostgreSQL, MySQL and MariaDB behind one interface, with pools, transactions, streaming and prepared statements. Changing engines means changing the connection string. <a class="more" href="book/ch17-00-sql.html">Read more</a></p>
+          <p class="panel-note" data-for="b-sql">SQLite, PostgreSQL, MySQL and MariaDB behind one interface, with pools,
+            transactions, streaming and prepared statements. Changing engines means changing the connection string. <a
+              class="more" href="book/ch17-00-sql.html">Read more</a></p>
 
           <div class="pair" role="tabpanel" id="b-wire" aria-labelledby="b-wire-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">page.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">page.zu</span></div>
               <pre><code class="zu">import wire
 
 var page = &#x27;
@@ -446,7 +524,8 @@ echo wire.render_string(page, {
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>&lt;h1&gt;TODAY&lt;/h1&gt;
 &lt;ul&gt;
   &lt;li&gt;Ship the release&lt;/li&gt;&lt;li&gt;&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;&lt;/li&gt;
@@ -454,11 +533,14 @@ echo wire.render_string(page, {
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-wire" hidden>Wire escapes every value for exactly where it lands in the page, so the script in that list arrives as text. <a class="more" href="book/ch14-00-wire.html">Read more</a></p>
+          <p class="panel-note" data-for="b-wire" hidden>Wire escapes every value for exactly where it lands in the
+            page, so the script in that list arrives as text. <a class="more" href="book/ch14-00-wire.html">Read
+              more</a></p>
 
           <div class="pair" role="tabpanel" id="b-isolate" aria-labelledby="b-isolate-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">digests.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">digests.zu</span></div>
               <pre><code class="zu">import isolate
 import hash
 
@@ -473,16 +555,20 @@ echo digests.map(@(d) =&gt; d[,12])</code></pre>
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>[8ed3f6ad685b, f44e64e75f39, be9d587defa1]</code></pre>
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-isolate" hidden>Isolates are real OS threads with heaps of their own, talking through channels. Every core works, and no lock is ever yours to forget. <a class="more" href="book/ch11-00-isolates.html">Read more</a></p>
+          <p class="panel-note" data-for="b-isolate" hidden>Isolates are real OS threads with heaps of their own,
+            talking through channels. Every core works, and no lock is ever yours to forget. <a class="more"
+              href="book/ch11-00-isolates.html">Read more</a></p>
 
           <div class="pair" role="tabpanel" id="b-auth" aria-labelledby="b-auth-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">login.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">login.zu</span></div>
               <pre><code class="zu">import bcrypt
 import jwt
 
@@ -498,16 +584,20 @@ if bcrypt.compare(&#x27;correct horse battery staple&#x27;, stored) {
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>signed in as ada</code></pre>
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-auth" hidden>Password hashing, signed tokens, ciphers, digests and UUIDs, all in the standard library and all documented in one place. <a class="more" href="reference/index.html">Read more</a></p>
+          <p class="panel-note" data-for="b-auth" hidden>Password hashing, signed tokens, ciphers, digests and UUIDs,
+            all in the standard library and all documented in one place. <a class="more"
+              href="reference/index.html">Read more</a></p>
 
           <div class="pair" role="tabpanel" id="b-images" aria-labelledby="b-images-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">poster.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">poster.zu</span></div>
               <pre><code class="zu">import imagine { Image }
 
 Image(480, 270, &#x27;#1e3a5f&#x27;)
@@ -521,17 +611,23 @@ echo Image.open(&#x27;poster.png&#x27;).size()</code></pre>
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>{width: 480, height: 270}</code></pre>
-              <figure class="output-figure"><img src="poster.png" alt="A poster in the four wing colours: an orange sun over purple and red mountains on a teal sea, under a navy sky." width="480" height="270" loading="lazy"></figure>
+              <figure class="output-figure"><img src="poster.png"
+                  alt="A poster in the four wing colours: an orange sun over purple and red mountains on a teal sea, under a navy sky."
+                  width="480" height="270" loading="lazy"></figure>
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-images" hidden>Imagine decodes, draws, filters and encodes PNG, JPEG, WebP, AVIF, GIF and more. The picture beside the output is the file this program wrote. <a class="more" href="book/ch16-00-imagine.html">Read more</a></p>
+          <p class="panel-note" data-for="b-images" hidden>Imagine decodes, draws, filters and encodes PNG, JPEG, WebP,
+            AVIF, GIF and more. The picture beside the output is the file this program wrote. <a class="more"
+              href="book/ch16-00-imagine.html">Read more</a></p>
 
           <div class="pair" role="tabpanel" id="b-ffi" aria-labelledby="b-ffi-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">native.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">native.zu</span></div>
               <pre><code class="zu">import ffi
 
 var c = ffi.open(ffi.LIBC).declare(&#x27;
@@ -545,17 +641,21 @@ echo c.div(17, 5)</code></pre>
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code>12
 {quot: 3, rem: 2}</code></pre>
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-ffi" hidden>Paste a C declaration and call it. Structs, callbacks across threads and libraries of your own all come through the same door. <a class="more" href="book/ch26-00-ffi.html">Read more</a></p>
+          <p class="panel-note" data-for="b-ffi" hidden>Paste a C declaration and call it. Structs, callbacks across
+            threads and libraries of your own all come through the same door. <a class="more"
+              href="book/ch26-00-ffi.html">Read more</a></p>
 
           <div class="pair" role="tabpanel" id="b-testing" aria-labelledby="b-testing-tab" hidden>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">tests/cart.test.zu</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">tests/cart.test.zu</span></div>
               <pre><code class="zu">import test { * }
 
 def subtotal(items) {
@@ -576,7 +676,8 @@ describe(&#x27;subtotal&#x27;, @{
             </div>
 
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">output</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">output</span></div>
               <pre class="term"><code><span class="t-p">$</span> <span class="t-c">zuri test</span>
 
   <span class="t-head">zuri test</span>  1 file in tests
@@ -589,7 +690,9 @@ describe(&#x27;subtotal&#x27;, @{
             </div>
           </div>
 
-          <p class="panel-note" data-for="b-testing" hidden><code>import test</code> gives you suites, expectations, spies and a report that names the line that failed. <code>zuri test</code> runs them. <a class="more" href="book/ch23-00-testing.html">Read more</a></p>
+          <p class="panel-note" data-for="b-testing" hidden><code>import test</code> gives you suites, expectations,
+            spies and a report that names the line that failed. <code>zuri test</code> runs them. <a class="more"
+              href="book/ch23-00-testing.html">Read more</a></p>
         </div>
       </div>
     </section>
@@ -608,21 +711,75 @@ describe(&#x27;subtotal&#x27;, @{
         </div>
 
         <dl class="modules">
-            <div class="module a-gold"><dt>The web</dt><dd><code>http</code> <span>server, client, HTTP/2, WebSocket</span> <code>wire</code> <span>templates</span> <code>html</code> <span>HTML5 parser, CSS selectors</span> <code>url</code> <code>mime</code></dd></div>
-            <div class="module a-red"><dt>Mail</dt><dd><code>mail</code> <span>SMTP, IMAP and POP3, clients and servers</span></dd></div>
-            <div class="module a-teal"><dt>Networking</dt><dd><code>net</code> <span>TCP, UDP, TLS, DTLS, polling</span> <code>rpc</code> <span>JSON-RPC 2.0</span></dd></div>
-            <div class="module a-purple"><dt>Databases</dt><dd><code>sql</code> <span>SQLite, PostgreSQL, MySQL, MariaDB, pools, transactions</span></dd></div>
-            <div class="module a-gold"><dt>Data formats</dt><dd><code>json</code> <code>yaml</code> <code>toml</code> <code>csv</code> <code>struct</code> <code>base64</code> <code>convert</code></dd></div>
-            <div class="module a-red"><dt>Correctness</dt><dd><code>validate</code> <code>types</code> <code>enum</code></dd></div>
-            <div class="module a-teal"><dt>Security</dt><dd><code>crypto</code> <code>hash</code> <code>bcrypt</code> <code>jwt</code> <code>uuid</code></dd></div>
-            <div class="module a-purple"><dt>The machine</dt><dd><code>os</code> <code>env</code> <code>io</code> <code>args</code> <code>log</code> <code>stat</code> <code>date</code> <span>with the IANA time zones</span></dd></div>
-            <div class="module a-gold"><dt>Concurrency</dt><dd><code>isolate</code> <span>OS threads, separate heaps, channels</span></dd></div>
-            <div class="module a-red"><dt>Numbers and collections</dt><dd><code>math</code> <code>array</code> <span>typed arrays</span> <code>set</code></dd></div>
-            <div class="module a-teal"><dt>Archives</dt><dd><code>compress</code> <span>gzip, zlib, deflate, bzip2, brotli, zstd, lz4, tar, zip</span></dd></div>
-            <div class="module a-purple"><dt>Images and colour</dt><dd><code>imagine</code> <span>decode, draw, filter, encode</span> <code>colors</code> <span>colour spaces, terminal colour</span></dd></div>
-            <div class="module a-gold"><dt>Interop</dt><dd><code>ffi</code> <span>C and Rust libraries, callbacks</span></dd></div>
-            <div class="module a-red"><dt>Testing</dt><dd><code>test</code> <span>suites, expectations, mocks and spies</span></dd></div>
-            <div class="module a-teal"><dt>Metaprogramming</dt><dd><code>zuri</code> <span>lexer, parser, compiler, reflection</span></dd></div>
+          <div class="module a-gold">
+            <dt>The web</dt>
+            <dd><code>http</code> <span>server, client, HTTP/2, WebSocket</span> <code>wire</code>
+              <span>templates</span> <code>html</code> <span>HTML5 parser, CSS selectors</span> <code>url</code>
+              <code>mime</code>
+            </dd>
+          </div>
+          <div class="module a-red">
+            <dt>Mail</dt>
+            <dd><code>mail</code> <span>SMTP, IMAP and POP3, clients and servers</span></dd>
+          </div>
+          <div class="module a-teal">
+            <dt>Networking</dt>
+            <dd><code>net</code> <span>TCP, UDP, TLS, DTLS, polling</span> <code>rpc</code> <span>JSON-RPC 2.0</span>
+            </dd>
+          </div>
+          <div class="module a-purple">
+            <dt>Databases</dt>
+            <dd><code>sql</code> <span>SQLite, PostgreSQL, MySQL, MariaDB, pools, transactions</span></dd>
+          </div>
+          <div class="module a-gold">
+            <dt>Data formats</dt>
+            <dd><code>json</code> <code>yaml</code> <code>toml</code> <code>csv</code> <code>struct</code>
+              <code>base64</code> <code>convert</code>
+            </dd>
+          </div>
+          <div class="module a-red">
+            <dt>Correctness</dt>
+            <dd><code>validate</code> <code>types</code> <code>enum</code></dd>
+          </div>
+          <div class="module a-teal">
+            <dt>Security</dt>
+            <dd><code>crypto</code> <code>hash</code> <code>bcrypt</code> <code>jwt</code> <code>uuid</code></dd>
+          </div>
+          <div class="module a-purple">
+            <dt>The machine</dt>
+            <dd><code>os</code> <code>env</code> <code>io</code> <code>args</code> <code>log</code> <code>stat</code>
+              <code>date</code> <span>with the IANA time zones</span>
+            </dd>
+          </div>
+          <div class="module a-gold">
+            <dt>Concurrency</dt>
+            <dd><code>isolate</code> <span>OS threads, separate heaps, channels</span></dd>
+          </div>
+          <div class="module a-red">
+            <dt>Numbers and collections</dt>
+            <dd><code>math</code> <code>array</code> <span>typed arrays</span> <code>set</code></dd>
+          </div>
+          <div class="module a-teal">
+            <dt>Archives</dt>
+            <dd><code>compress</code> <span>gzip, zlib, deflate, bzip2, brotli, zstd, lz4, tar, zip</span></dd>
+          </div>
+          <div class="module a-purple">
+            <dt>Images and colour</dt>
+            <dd><code>imagine</code> <span>decode, draw, filter, encode</span> <code>colors</code> <span>colour spaces,
+                terminal colour</span></dd>
+          </div>
+          <div class="module a-gold">
+            <dt>Interop</dt>
+            <dd><code>ffi</code> <span>C and Rust libraries, callbacks</span></dd>
+          </div>
+          <div class="module a-red">
+            <dt>Testing</dt>
+            <dd><code>test</code> <span>suites, expectations, mocks and spies</span></dd>
+          </div>
+          <div class="module a-teal">
+            <dt>Metaprogramming</dt>
+            <dd><code>zuri</code> <span>lexer, parser, compiler, reflection</span></dd>
+          </div>
         </dl>
 
         <p class="closing">
@@ -646,10 +803,14 @@ describe(&#x27;subtotal&#x27;, @{
           </p>
 
           <div class="formats">
-            <div class="format"><strong>Single executable</strong><span>One file to download and run. <code>--format exe</code></span></div>
-            <div class="format"><strong>macOS app</strong><span>A double-clickable application. <code>--format app</code></span></div>
-            <div class="format"><strong>Archive</strong><span>A <code>.tar.gz</code>, or a <code>.zip</code> for Windows.</span></div>
-            <div class="format"><strong>Directory</strong><span>Ready for a container image. <code>--format dir</code></span></div>
+            <div class="format"><strong>Single executable</strong><span>One file to download and run.
+                <code>--format exe</code></span></div>
+            <div class="format"><strong>macOS app</strong><span>A double-clickable application.
+                <code>--format app</code></span></div>
+            <div class="format"><strong>Archive</strong><span>A <code>.tar.gz</code>, or a <code>.zip</code> for
+                Windows.</span></div>
+            <div class="format"><strong>Directory</strong><span>Ready for a container image.
+                <code>--format dir</code></span></div>
           </div>
 
           <ul class="platforms" aria-label="Platforms a bundle targets">
@@ -671,7 +832,8 @@ describe(&#x27;subtotal&#x27;, @{
         </div>
 
         <div class="window">
-          <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@laptop: ~/weather</span></div>
+          <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@laptop:
+              ~/weather</span></div>
           <pre class="term"><code><span class="t-path">~/weather </span><span class="t-p">$ </span><span class="t-c">zuri bundle --format exe</span>
 <span class="t-o">Built /home/ada/weather/dist/weather-0.1.0-x86_64-unknown-linux-gnu</span>
 
@@ -700,7 +862,8 @@ describe(&#x27;subtotal&#x27;, @{
         <div class="split">
           <div>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@laptop: ~</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">ada@laptop: ~</span></div>
               <pre class="term"><code><span class="t-path">~/thermo </span><span class="t-p">$ </span><span class="t-c">zuri publish</span>
 <span class="t-o">Publishing thermo 0.1.0 to https://pub.zurilang.org
 Published thermo 0.1.0 (1.4 KiB, sha256:a682a47cda7a3a6bc9e4c2ee0ee5477b591d3030fa42d1cd305ff43d3b536e8d)</span>
@@ -713,24 +876,31 @@ Installed 1 package.</span></code></pre>
             </div>
 
             <ul class="ticks" style="--accent: var(--teal)">
-              <li class="tick"><strong>One version of every package,</strong> resolved from version ranges into a lockfile that <code>zuri restore</code> reproduces exactly.</li>
-              <li class="tick"><strong>Every package command that changes a project</strong> shows exactly what it would do with <code>--dry-run</code>.</li>
-              <li class="tick"><strong>Packages carry commands,</strong> and globally installed tools land on your PATH.</li>
+              <li class="tick"><strong>One version of every package,</strong> resolved from version ranges into a
+                lockfile that <code>zuri restore</code> reproduces exactly.</li>
+              <li class="tick"><strong>Every package command that changes a project</strong> shows exactly what it would
+                do with <code>--dry-run</code>.</li>
+              <li class="tick"><strong>Packages carry commands,</strong> and globally installed tools land on your PATH.
+              </li>
             </ul>
           </div>
 
           <div>
             <div class="window">
-              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">ada@server: ~</span></div>
+              <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                  class="window-title">ada@server: ~</span></div>
               <pre class="term"><code><span class="t-path">~ </span><span class="t-p">$ </span><span class="t-c">zuri serve</span>
 <span class="t-o">Nyssa is serving http://127.0.0.1:3000
 listening on 127.0.0.1:3000, storage in /home/ada/.zuri/nyssa</span></code></pre>
             </div>
 
             <ul class="ticks" style="--accent: var(--purple)">
-              <li class="tick"><strong>Nyssa is the registry in every installation:</strong> the API the package commands talk to, and a website for finding packages and reading their documentation.</li>
-              <li class="tick"><strong>SQLite with nothing to set up,</strong> or PostgreSQL, MySQL and MariaDB through the same connection strings <code>sql</code> opens.</li>
-              <li class="tick"><strong>Ready for production:</strong> HTTPS, accounts and tokens, closed sign-up, a read-only mode, live backups and archive checks.</li>
+              <li class="tick"><strong>Nyssa is the registry in every installation:</strong> the API the package
+                commands talk to, and a website for finding packages and reading their documentation.</li>
+              <li class="tick"><strong>SQLite with nothing to set up,</strong> or PostgreSQL, MySQL and MariaDB through
+                the same connection strings <code>sql</code> opens.</li>
+              <li class="tick"><strong>Ready for production:</strong> HTTPS, accounts and tokens, closed sign-up, a
+                read-only mode, live backups and archive checks.</li>
             </ul>
 
             <a class="more" href="book/ch27-00-packages.html" style="--accent: var(--teal)">Packages and Nyssa</a>
@@ -756,8 +926,8 @@ listening on 127.0.0.1:3000, storage in /home/ada/.zuri/nyssa</span></code></pre
               function parameter type guards, private methods and
               modules, all enforced by the compiler. The point of each
               is the same. <strong>The things that are hard to see when
-              reading code are the things the language refuses to let
-              you get wrong.</strong>
+                reading code are the things the language refuses to let
+                you get wrong.</strong>
             </p>
 
             <p>
@@ -768,7 +938,8 @@ listening on 127.0.0.1:3000, storage in /home/ada/.zuri/nyssa</span></code></pre
           </div>
 
           <div class="window" style="margin-top: 1.5rem">
-            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">account.zu</span></div>
+            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+                class="window-title">account.zu</span></div>
             <pre><code class="zu">class Account {
   @new(owner: string) {
     self.owner = owner
@@ -833,9 +1004,10 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
     <section class="section dark" id="editors">
       <div class="wrap editor-grid">
         <div class="window editor" aria-label="An editor showing a diagnostic and a completion list from zuri lsp">
-            <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-title">account.zu</span></div>
-            <pre><code><span class="ln"><span class="zk">class</span> <span class="zt">Account</span> {</span><span class="ln">  <span class="zd">@new</span>(owner: <span class="zt">string</span>) {</span><span class="ln">    <span class="zk">self</span>.owner = owner</span><span class="ln">    <span class="zk">self</span>._balance = <span class="zn">0</span></span><span class="ln">  }</span><span class="ln"> </span><span class="ln">  <span class="zf">deposit</span>(amount: <span class="zt">number</span>) {</span><span class="ln">    <span class="zk">self</span>._balance += amount</span><span class="ln">    <span class="zk">return</span> <span class="zk">self</span>._balance</span><span class="ln">  }</span><span class="ln">}</span><span class="ln"> </span><span class="ln"><span class="zk">var</span> account = <span class="zf">Account</span>(<span class="zs">'ada'</span>)</span><span class="ln">account.<span class="zf">deposit</span>(<span class="squiggle"><span class="zs">'50'</span></span>)<span class="popup hover"><b>TypeError</b> deposit() expects parameter 'amount' (argument 1) to be a number, got string</span></span><span class="ln"> </span><span class="ln"> </span><span class="ln">account.<span class="cursor"></span><span class="popup complete"><span class="sel"><i class="m">m</i>deposit<small>(amount: number)</small></span><span><i class="f">f</i>owner</span><span><i class="m">m</i>to_string<small>()</small></span></span></span></code></pre>
-          </div>
+          <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span
+              class="window-title">account.zu</span></div>
+          <pre><code><span class="ln"><span class="zk">class</span> <span class="zt">Account</span> {</span><span class="ln">  <span class="zd">@new</span>(owner: <span class="zt">string</span>) {</span><span class="ln">    <span class="zk">self</span>.owner = owner</span><span class="ln">    <span class="zk">self</span>._balance = <span class="zn">0</span></span><span class="ln">  }</span><span class="ln"> </span><span class="ln">  <span class="zf">deposit</span>(amount: <span class="zt">number</span>) {</span><span class="ln">    <span class="zk">self</span>._balance += amount</span><span class="ln">    <span class="zk">return</span> <span class="zk">self</span>._balance</span><span class="ln">  }</span><span class="ln">}</span><span class="ln"> </span><span class="ln"><span class="zk">var</span> account = <span class="zf">Account</span>(<span class="zs">'ada'</span>)</span><span class="ln">account.<span class="zf">deposit</span>(<span class="squiggle"><span class="zs">'50'</span></span>)<span class="popup hover"><b>TypeError</b> deposit() expects parameter 'amount' (argument 1) to be a number, got string</span></span><span class="ln"> </span><span class="ln"> </span><span class="ln">account.<span class="cursor"></span><span class="popup complete"><span class="sel"><i class="m">m</i>deposit<small>(amount: number)</small></span><span><i class="f">f</i>owner</span><span><i class="m">m</i>to_string<small>()</small></span></span></span></code></pre>
+        </div>
 
         <div>
           <p class="kicker" style="--accent: var(--teal)">Editor support</p>
@@ -847,12 +1019,18 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
           </p>
 
           <ul class="features">
-            <li><strong>Completion</strong><span>Members, names in scope and module exports, with the import added for you.</span></li>
-            <li><strong>Diagnostics as you type</strong><span>With the runtime's own messages, and quick fixes beside them.</span></li>
-            <li><strong>Navigation</strong><span>Definitions, references, implementations, call and type hierarchies.</span></li>
-            <li><strong>Refactoring</strong><span>Rename across the workspace, extract and inline variables and functions.</span></li>
-            <li><strong>Hover and signatures</strong><span>Documentation laid out the way the reference lays it out.</span></li>
-            <li><strong>Tests and formatting</strong><span>Run a test from the line it is on, and format a file or a selection.</span></li>
+            <li><strong>Completion</strong><span>Members, names in scope and module exports, with the import added for
+                you.</span></li>
+            <li><strong>Diagnostics as you type</strong><span>With the runtime's own messages, and quick fixes beside
+                them.</span></li>
+            <li><strong>Navigation</strong><span>Definitions, references, implementations, call and type
+                hierarchies.</span></li>
+            <li><strong>Refactoring</strong><span>Rename across the workspace, extract and inline variables and
+                functions.</span></li>
+            <li><strong>Hover and signatures</strong><span>Documentation laid out the way the reference lays it
+                out.</span></li>
+            <li><strong>Tests and formatting</strong><span>Run a test from the line it is on, and format a file or a
+                selection.</span></li>
           </ul>
 
           <div class="editors">
@@ -884,30 +1062,36 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
         <ol class="tiers">
           <li class="tier a-teal">
             <h3>The interpreter</h3>
-            <p>Your program starts at once, as bytecode, and every function begins here while the runtime watches what is hot.</p>
+            <p>Your program starts at once, as bytecode, and every function begins here while the runtime watches what
+              is hot.</p>
           </li>
           <li class="tier a-gold">
             <h3>Kebbi</h3>
-            <p>The quick compiler turns a hot function into machine code that keeps values in registers, proving what it can about types before it compiles.</p>
+            <p>The quick compiler turns a hot function into machine code that keeps values in registers, proving what it
+              can about types before it compiles.</p>
           </li>
           <li class="tier a-purple">
             <h3>Bayelsa</h3>
-            <p>The optimizing compiler builds the function as a graph of typed values, builds small functions into their callers, moves checks out of loops and bets on what the code has done so far.</p>
+            <p>The optimizing compiler builds the function as a graph of typed values, builds small functions into their
+              callers, moves checks out of loops and bets on what the code has done so far.</p>
           </li>
         </ol>
 
         <div class="perf-notes">
           <div>
             <h3>Compiles never block</h3>
-            <p>Both compilers run on background threads. A program carries on in the code it already has until the faster code is ready.</p>
+            <p>Both compilers run on background threads. A program carries on in the code it already has until the
+              faster code is ready.</p>
           </div>
           <div>
             <h3>Every core, safely</h3>
-            <p>Isolates run on real OS threads with heaps of their own, so parallel work needs no locks and shares no state by accident.</p>
+            <p>Isolates run on real OS threads with heaps of their own, so parallel work needs no locks and shares no
+              state by accident.</p>
           </div>
           <div>
             <h3>Native when it matters</h3>
-            <p>Call straight into C and Rust libraries through <code>ffi</code> when a hot path already exists in native code.</p>
+            <p>Call straight into C and Rust libraries through <code>ffi</code> when a hot path already exists in native
+              code.</p>
           </div>
         </div>
 
@@ -961,10 +1145,13 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
           <div>
             <h3>Already here</h3>
             <ul class="ticks" style="--accent: var(--teal)">
-              <li class="tick">The language, complete and self-hosting enough to parse, compile and reflect on itself</li>
+              <li class="tick">The language, complete and self-hosting enough to parse, compile and reflect on itself
+              </li>
               <li class="tick">A tiered Just-In-Time compiler</li>
               <li class="tick">A standard library covering the whole stack</li>
               <li class="tick">SQLite, PostgreSQL, MySQL and MariaDB behind one interface</li>
+              <li class="tick"><strong>An ORM</strong>, so that persisting a model never means reaching outside the
+                language.</li>
               <li class="tick">A test runner and a formatter</li>
               <li class="tick">A language server for every editor</li>
               <li class="tick">Package management built into the runtime</li>
@@ -978,8 +1165,8 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
           <div class="next">
             <h3>On the way, in the order it matters</h3>
             <ul class="ticks">
-              <li class="tick"><strong>An ORM</strong>, so that persisting a model never means reaching outside the language.</li>
-              <li class="tick"><strong>HTTP/3.</strong> The <code>http</code> module speaks HTTP/1.1 and HTTP/2 today.</li>
+              <li class="tick"><strong>HTTP/3.</strong> The <code>http</code> module speaks HTTP/1.1 and HTTP/2 today.
+              </li>
             </ul>
           </div>
         </div>
@@ -1014,37 +1201,67 @@ var account = Account(&#x27;ada&#x27;)</code></pre>
         </p>
 
         <div class="install" data-tabs>
-            <div class="tabs" role="tablist" aria-label="Install Zuri">
-              <button class="tab" role="tab" id="end-unix-tab" aria-controls="end-unix" aria-selected="true">macOS &amp; Linux</button>
-              <button class="tab" role="tab" id="end-win-tab" aria-controls="end-win" aria-selected="false" tabindex="-1">Windows</button>
-              <button class="tab" role="tab" id="end-src-tab" aria-controls="end-src" aria-selected="false" tabindex="-1">From source</button>
-            </div>
-
-            <div class="cmd" role="tabpanel" id="end-unix" aria-labelledby="end-unix-tab">
-              <code><span class="p">$ </span>curl -fsSL https://zuri-lang.github.io/zuri/install.sh | sh</code>
-              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
-            </div>
-
-            <div class="cmd" role="tabpanel" id="end-win" aria-labelledby="end-win-tab" hidden>
-              <code><span class="p">&gt; </span>powershell -c &quot;irm https://zuri-lang.github.io/zuri/install.ps1 | iex&quot;</code>
-              <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
-            </div>
-
-            <div class="cmd" role="tabpanel" id="end-src" aria-labelledby="end-src-tab" hidden>
-              <code><span class="p">$ </span>git clone https://github.com/zuri-lang/zuri &amp;&amp; cd zuri &amp;&amp; cargo patch-crates &amp;&amp; cargo build --release</code>
-              <button class="copy" type="button" aria-label="Copy the build commands"><svg class="idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
-            </div>
-
-            <p class="install-note">
-              Linux and macOS on x86-64 and ARM, and Windows on x86-64.
-              <code>zuri upgrade</code> keeps it current.
-              <a href="book/ch01-01-installation.html">Installation guide</a>
-            </p>
+          <div class="tabs" role="tablist" aria-label="Install Zuri">
+            <button class="tab" role="tab" id="end-unix-tab" aria-controls="end-unix" aria-selected="true">macOS &amp;
+              Linux</button>
+            <button class="tab" role="tab" id="end-win-tab" aria-controls="end-win" aria-selected="false"
+              tabindex="-1">Windows</button>
+            <button class="tab" role="tab" id="end-src-tab" aria-controls="end-src" aria-selected="false"
+              tabindex="-1">From source</button>
           </div>
 
+          <div class="cmd" role="tabpanel" id="end-unix" aria-labelledby="end-unix-tab">
+            <code><span class="p">$ </span>curl -fsSL https://zuri-lang.github.io/zuri/install.sh | sh</code>
+            <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2" />
+                <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+              </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" />
+              </svg></button>
+          </div>
+
+          <div class="cmd" role="tabpanel" id="end-win" aria-labelledby="end-win-tab" hidden>
+            <code><span class="p">&gt; </span>powershell -c &quot;irm https://zuri-lang.github.io/zuri/install.ps1 | iex&quot;</code>
+            <button class="copy" type="button" aria-label="Copy the install command"><svg class="idle"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2" />
+                <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+              </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" />
+              </svg></button>
+          </div>
+
+          <div class="cmd" role="tabpanel" id="end-src" aria-labelledby="end-src-tab" hidden>
+            <code><span class="p">$ </span>git clone https://github.com/zuri-lang/zuri &amp;&amp; cd zuri &amp;&amp; cargo patch-crates &amp;&amp; cargo build --release</code>
+            <button class="copy" type="button" aria-label="Copy the build commands"><svg class="idle"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="12" height="12" rx="2" />
+                <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+              </svg><svg class="done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" />
+              </svg></button>
+          </div>
+
+          <p class="install-note">
+            Linux and macOS on x86-64 and ARM, and Windows on x86-64.
+            <code>zuri upgrade</code> keeps it current.
+            <a href="book/ch01-01-installation.html">Installation guide</a>
+          </p>
+        </div>
+
         <div class="actions">
-          <a class="btn primary" href="book/ch01-00-getting-started.html" style="background: var(--paper); color: var(--ink); border-color: var(--paper)">Get started <span class="arrow" aria-hidden="true">&rarr;</span></a>
-          <a class="btn" href="https://github.com/zuri-lang/zuri" style="background: transparent; color: var(--night-ink); border-color: var(--night-edge)">Star on GitHub</a>
+          <a class="btn primary" href="book/ch01-00-getting-started.html"
+            style="background: var(--paper); color: var(--ink); border-color: var(--paper)">Get started <span
+              class="arrow" aria-hidden="true">&rarr;</span></a>
+          <a class="btn" href="https://github.com/zuri-lang/zuri"
+            style="background: transparent; color: var(--night-ink); border-color: var(--night-edge)">Star on GitHub</a>
         </div>
       </div>
     </section>

@@ -307,11 +307,11 @@ Already here:
       packages whichever way they like.
 - [x] **Bundles** that allows shipping a program to run where Zuri is 
       not installed, as a directory, an archive or a single executable.
+- [x] **An ORM**, so that persisting a model never means reaching outside
+      the language.
 
 On the way, in the order it matters:
 
-- [ ] **An ORM**, so that persisting a model never means reaching outside
-      the language.
 - [ ] **HTTP/3.** The `http` module speaks HTTP/1.1 and HTTP/2 today.
 
 ## AI Involvement
