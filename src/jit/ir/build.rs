@@ -1121,6 +1121,12 @@ impl<'a> Builder<'a> {
   /// actually takes is left to that tier. A site the interpreter never
   /// ran costs nothing either way.
   fn baseline_faster(&self, ip: usize, instr: &Instr) -> Option<&'static str> {
+    if crate::jit::tier2_direct() {
+      return None;
+    }
+    if !self.loops.is_empty() || self.cx.proto.chunk.code.len() > 16 {
+      return None;
+    }
     let seen = self.cx.feedback.kinds.get(ip).copied().unwrap_or(0);
     match instr {
       Instr::Add { .. }

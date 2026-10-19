@@ -806,6 +806,12 @@ class HttpResponse {
 
     self._finish_callbacks = []
 
+    if callbacks.length() > 0 {
+      self._run_finish_callbacks(callbacks)
+    }
+  }
+
+  _run_finish_callbacks(callbacks) {
     for callback in callbacks {
       catch {
         callback()

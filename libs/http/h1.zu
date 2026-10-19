@@ -406,6 +406,11 @@ def write_response(connection, request, response, options: ?dict) {
     return keep_alive
   }
 
+  _write_stream_body(connection, source, streaming)
+  return keep_alive
+}
+
+def _write_stream_body(connection, source, streaming) {
   var writer = ChunkWriter(connection, streaming)
 
   catch {
@@ -424,8 +429,6 @@ def write_response(connection, request, response, options: ?dict) {
 
   writer.finish()
   connection.flush()
-
-  return keep_alive
 }
 
 # How much of a file is moved per read when streaming it out. Large

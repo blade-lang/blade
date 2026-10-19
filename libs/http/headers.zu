@@ -22,21 +22,24 @@ import .errors { ProtocolError }
 #
 # tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
 #         "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA
-var _TOKEN_CHARS = {}
+var _TOKEN_TABLE = []
 
 def _init_token_chars() {
+  iter var i = 0; i < 256; i++ {
+    _TOKEN_TABLE.append(false)
+  }
   var specials = "!#$%&'*+-.^_`|~"
   iter var i = 0; i < specials.length(); i++ {
-    _TOKEN_CHARS[specials[i].ord()] = true
+    _TOKEN_TABLE[specials[i].ord()] = true
   }
   iter var c = 48; c <= 57; c++ { # 0-9
-    _TOKEN_CHARS[c] = true
+    _TOKEN_TABLE[c] = true
   }
   iter var c = 65; c <= 90; c++ { # A-Z
-    _TOKEN_CHARS[c] = true
+    _TOKEN_TABLE[c] = true
   }
   iter var c = 97; c <= 122; c++ { # a-z
-    _TOKEN_CHARS[c] = true
+    _TOKEN_TABLE[c] = true
   }
 }
 
@@ -103,8 +106,11 @@ def is_valid_name(name) {
     return false
   }
 
-  iter var i = 0; i < name.length(); i++ {
-    if !_TOKEN_CHARS.contains(name[i].ord()) {
+  var raw = name.to_bytes()
+  var len = raw.length()
+  iter var i = 0; i < len; i++ {
+    var b = raw.get(i)
+    if b >= 256 or !_TOKEN_TABLE[b] {
       return false
     }
   }
@@ -132,8 +138,10 @@ def is_valid_value(value) {
     return false
   }
 
-  iter var i = 0; i < value.length(); i++ {
-    var c = value[i].ord()
+  var raw = value.to_bytes()
+  var len = raw.length()
+  iter var i = 0; i < len; i++ {
+    var c = raw.get(i)
     if c == 13 or c == 10 or c == 0 {
       return false
     }
@@ -297,8 +305,16 @@ class Headers {
       raise ProtocolError('invalid header field name: ${name}')
     }
 
-    self.remove(name)
-    self._fields[name.lower()] = [name, [text]]
+    var key = name.lower()
+    var entry = self._fields.get(key, nil)
+    if entry != nil {
+      for val in entry[1] {
+        self._size -= entry[0].length() + val.length() + 4
+      }
+      self._fields.remove(key)
+    }
+
+    self._fields[key] = [name, [text]]
     self._size += name.length() + text.length() + 4
 
     return self
@@ -396,9 +412,14 @@ class Headers {
    * @returns bool
    */
   contains_token(name: string, token: string) {
+    var entry = self._fields.get(name.lower(), nil)
+    if entry == nil {
+      return false
+    }
+
     var wanted = token.lower()
 
-    for value in self.get_all(name) {
+    for value in entry[1] {
       for part in value.split(',') {
         if part.trim().lower() == wanted {
           return true

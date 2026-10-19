@@ -229,17 +229,7 @@ class Connection {
       self._pos = 0
     }
 
-    var chunk
-    catch {
-      chunk = self._transport.read(_READ_CHUNK)
-    } as error
-
-    if error {
-      if is_timeout_error(error.message) {
-        raise TimeoutError('read timed out')
-      }
-      raise ConnectionError(error.message)
-    }
+    var chunk = self._read_transport_chunk()
 
     if chunk.length() == 0 {
       self._eof = true
@@ -468,17 +458,22 @@ class Connection {
    *
    * @throws TimeoutError, ConnectionError
    */
-  flush() {
-    if self._out.length() == 0 {
-      return
+  _read_transport_chunk() {
+    catch {
+      return self._transport.read(_READ_CHUNK)
+    } as error {
+      if is_timeout_error(error.message) {
+        raise TimeoutError('read timed out')
+      }
+      raise ConnectionError(error.message)
     }
+  }
 
+  _flush_transport_output() {
     catch {
       self._transport.write_all(self._out)
       self._transport.flush()
-    } as error
-
-    if error {
+    } as error {
       self._out.dispose()
       self._out = bytes(0)
 
@@ -487,6 +482,14 @@ class Connection {
       }
       raise ConnectionError(error.message)
     }
+  }
+
+  flush() {
+    if self._out.length() == 0 {
+      return
+    }
+
+    self._flush_transport_output()
 
     self._out.dispose()
     self._out = bytes(0)

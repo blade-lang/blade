@@ -680,24 +680,28 @@ class HttpServer {
    *
    * @throws HttpError if the socket cannot be bound
    */
+  _accept_next_safe() {
+    catch {
+      return self._acceptor.next()
+    } as accept_error {
+      return accept_error
+    }
+  }
+
   listen() {
     self.bind()
 
     while self._listening {
-      var client
+      var client = self._accept_next_safe()
 
-      catch {
-        client = self._acceptor.next()
-      } as accept_error
-
-      if accept_error {
+      if instance_of(client, Error) {
         # A listener closed under it is what a stopped server looks
         # like from here, and is not an error worth reporting.
         if !self._listening {
           break
         }
 
-        self._report(accept_error, nil)
+        self._report(client, nil)
         continue
       }
 
@@ -810,6 +814,19 @@ class HttpServer {
    *
    * @param TcpStream client
    */
+  _serve_connection_safe(connection) {
+    catch {
+      if self.http2 and self._is_http2(connection) {
+        self.serve_http2(connection)
+      } else {
+        self._serve_requests(connection)
+      }
+      return nil
+    } as error {
+      return error
+    }
+  }
+
   serve_connection(client) {
     var connection = self.accept_connection(client)
 
@@ -817,15 +834,8 @@ class HttpServer {
       return
     }
 
-    catch {
-      if self.http2 and self._is_http2(connection) {
-        self.serve_http2(connection)
-      } else {
-        self._serve_requests(connection)
-      }
-    } as error
-
-    if error {
+    var error = self._serve_connection_safe(connection)
+    if error != nil {
       self._report(error, connection)
     }
 
@@ -891,6 +901,19 @@ class HttpServer {
    *    read timeout apply from the second request onwards
    * @returns bool: whether to keep the connection open
    */
+  _read_request_head(connection) {
+    catch {
+      return h1.read_request(connection, {
+        max_line_size: self.max_line_size,
+        max_header_size: self.max_header_size,
+        max_header_count: self.max_header_count,
+        header_timeout: self.header_timeout,
+      })
+    } as read_error {
+      return read_error
+    }
+  }
+
   serve_next(connection, served: ?number) {
     var already = served == nil ? 0 : served
 
@@ -902,26 +925,17 @@ class HttpServer {
       connection.set_read_timeout(self.keep_alive_timeout)
     }
 
-    var request
+    var request = self._read_request_head(connection)
 
-    catch {
-      request = h1.read_request(connection, {
-        max_line_size: self.max_line_size,
-        max_header_size: self.max_header_size,
-        max_header_count: self.max_header_count,
-        header_timeout: self.header_timeout,
-      })
-    } as read_error
-
-    if read_error {
+    if instance_of(request, Error) {
       # An idle keep-alive connection timing out, or a peer closing
       # between requests, is the normal end of a connection.
-      if instance_of(read_error, TimeoutError) or
-        instance_of(read_error, ConnectionError) {
+      if instance_of(request, TimeoutError) or
+        instance_of(request, ConnectionError) {
         return false
       }
 
-      self._send_early_error(connection, read_error)
+      self._send_early_error(connection, request)
 
       return false
     }
@@ -1018,17 +1032,10 @@ class HttpServer {
    * @param ?HttpResponse response: an existing response to fill in
    * @returns HttpResponse
    */
-  handle_request(request, response) {
-    var result = response == nil ? HttpResponse() : response
-    result.version = request.version
-
+  _dispatch_safe(request, result) {
     catch {
       self._dispatch(request, result, 0)
-    } as error
-
-    if error {
-      # A failure after the head went out cannot be answered any more,
-      # and carries on up; what was sent is still final.
+    } as error {
       catch {
         self._handle_failure(request, result, error)
       } as unanswerable
@@ -1038,11 +1045,37 @@ class HttpServer {
         raise unanswerable
       }
     }
+  }
+
+  handle_request(request, response) {
+    var result = response == nil ? HttpResponse() : response
+    result.version = request.version
+
+    self._dispatch_safe(request, result)
 
     self._finish(request, result)
     result.finish()
 
     return result
+  }
+
+  _write_response_safe(connection, request, response) {
+    catch {
+      return h1.write_response(connection, request, response, {
+        server_name: self.server_name,
+      })
+    } as write_error {
+      self._report(write_error, connection)
+      return nil
+    }
+  }
+
+  _notify_reply_listeners(request, response) {
+    for listener in self._reply_listeners {
+      catch {
+        listener(request, response)
+      }
+    }
   }
 
   _serve_one(connection, request) {
@@ -1066,23 +1099,13 @@ class HttpServer {
       return false
     }
 
-    var keep_alive
-
-    catch {
-      keep_alive = h1.write_response(connection, request, response, {
-        server_name: self.server_name,
-      })
-    } as write_error
-
-    if write_error {
-      self._report(write_error, connection)
+    var keep_alive = self._write_response_safe(connection, request, response)
+    if keep_alive == nil {
       return false
     }
 
-    for listener in self._reply_listeners {
-      catch {
-        listener(request, response)
-      }
+    if self._reply_listeners.length() > 0 {
+      self._notify_reply_listeners(request, response)
     }
 
     # Whatever the handler left unread has to go before the next
@@ -1094,6 +1117,23 @@ class HttpServer {
     }
 
     return keep_alive
+  }
+
+  _send_continue_safe(connection) {
+    catch {
+      h1.send_continue(connection)
+      return true
+    } as error {
+      return false
+    }
+  }
+
+  _read_body_safe(reader, max_size) {
+    catch {
+      return reader.read_all(max_size)
+    } as error {
+      return error
+    }
   }
 
   # Reads the request body into memory, subject to the size limit, and
@@ -1127,21 +1167,15 @@ class HttpServer {
         return false
       }
 
-      catch {
-        h1.send_continue(connection)
-      } as error
-
-      if error {
+      if !self._send_continue_safe(connection) {
         return false
       }
     }
 
-    catch {
-      request.body = reader.read_all(self.max_body_size)
-    } as error
+    var body_res = self._read_body_safe(reader, self.max_body_size)
 
-    if error {
-      if instance_of(error, TooLargeError) {
+    if instance_of(body_res, Error) {
+      if instance_of(body_res, TooLargeError) {
         response.status = status.CONTENT_TOO_LARGE
         response.headers.set('Connection', 'close')
         response.text('413 Content Too Large')
@@ -1154,6 +1188,7 @@ class HttpServer {
       return false
     }
 
+    request.body = body_res
     return true
   }
 
@@ -1337,6 +1372,17 @@ class HttpServer {
       return
     }
 
+    self._compress_body_safe(response, coding)
+
+    # The response now depends on what the client said it accepts,
+    # whether or not we ended up compressing, so any shared cache must
+    # vary on it.
+    if !response.headers.contains_token('vary', 'accept-encoding') {
+      response.headers.add('Vary', 'Accept-Encoding')
+    }
+  }
+
+  _compress_body_safe(response, coding) {
     catch {
       var compressed = body.encode_content(
         response.body, coding, self.compression_quality,
@@ -1347,13 +1393,6 @@ class HttpServer {
         response.body = compressed
         response.headers.set('Content-Encoding', coding)
       }
-    }
-
-    # The response now depends on what the client said it accepts,
-    # whether or not we ended up compressing, so any shared cache must
-    # vary on it.
-    if !response.headers.contains_token('vary', 'accept-encoding') {
-      response.headers.add('Vary', 'Accept-Encoding')
     }
   }
 
@@ -1389,6 +1428,14 @@ class HttpServer {
     }
   }
 
+  _probe_h2_safe(connection) {
+    catch {
+      return connection.read_some(24)
+    } as error {
+      return nil
+    }
+  }
+
   # Works out whether a connection is going to speak HTTP/2.
   #
   # Over TLS the answer is whatever ALPN settled on during the
@@ -1401,13 +1448,9 @@ class HttpServer {
       return connection.alpn == 'h2'
     }
 
-    var probe
+    var probe = self._probe_h2_safe(connection)
 
-    catch {
-      probe = connection.read_some(24)
-    } as error
-
-    if error or probe == nil or probe.length() == 0 {
+    if probe == nil or probe.length() == 0 {
       return false
     }
 
