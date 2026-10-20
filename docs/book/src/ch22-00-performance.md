@@ -39,14 +39,14 @@ whether you get it.
 
 ## The Two Compilers
 
-**Kebbi** compiles first. It turns a function's bytecode into machine code
+**Kebbi** is the baseline compiler. It turns a function's bytecode into machine code
 one instruction at a time, keeps values in machine registers, and proves
 what it can about types before it compiles: a parameter annotated `list` is
 a list, and a counter that starts at 0 and steps by 1 is a whole number.
 Kebbi compiles quickly, and its code runs several times faster than the
 interpreter.
 
-**Bayelsa** compiles second. It builds the whole function as a graph of
+**Bayelsa** is the optimizing compiler. It builds the whole function as a graph of
 typed values, then optimizes that graph before it generates any machine
 code. It carries a fact proven once to every later use, moves checks that
 cannot change out of loops, keeps loop counters as plain integers, builds
@@ -58,20 +58,21 @@ Both compile with Cranelift, and both run on background threads. A program
 never waits for a compile: it carries on in the interpreter, or in the code
 it already has, until the new code is ready.
 
-### How a Function Moves Between Them
+### How a Function Compiles
 
 1. **The interpreter.** Every function starts here. It counts its calls and
    its loop turns, and records the kind of value each operation meets.
-2. **Kebbi, profiling.** Once a function is warm, Kebbi compiles it with
-   the counting and recording built in. The function is fast from here on,
-   and still watching itself.
-3. **Bayelsa.** Once the profiling code has done enough work, Bayelsa
-   compiles the function from what it recorded. A loop running at that
-   moment moves into the new code at its next turn.
+2. **Bayelsa (default).** Once a function is warm, Bayelsa compiles it
+   directly from the feedback the interpreter gathered. Small helper calls
+   inline, constant checks hoist out of loops, and variables stay in CPU
+   registers.
+3. **Kebbi fallback.** If Bayelsa declines a function (for instance, because
+   it contains a `catch` block), Kebbi compiles it instead.
 
-A function every operation of which has already run in the interpreter
-skips the profiling step and goes straight to Bayelsa, since profiling
-would only record what the interpreter already knows.
+When requested via `ZURI_JIT_TIERED=1`, Zuri can also run a multi-tier
+pipeline: a warm function compiles in Kebbi first with profiling
+instrumentation, and once that profiling code has done enough work, Bayelsa
+compiles it from the gathered feedback.
 
 ### When a Bet Fails
 
@@ -133,12 +134,12 @@ $ ZURI_JIT_LOG=1 zuri run fib.zu
 196418
 ```
 
-`fib` goes straight to Bayelsa because every one of its operations ran in
-the interpreter before it warmed up. With Bayelsa off, Kebbi compiles it
-instead, and the line lists what Kebbi proved:
+`fib` goes straight to Bayelsa because warm functions compile directly
+through the optimizing compiler by default. With Bayelsa off (`ZURI_JIT_KEBBI=1`),
+Kebbi compiles it instead, and the line lists what Kebbi proved:
 
 ```console
-$ ZURI_JIT_BAYELSA=0 ZURI_JIT_LOG=1 zuri run fib.zu
+$ ZURI_JIT_KEBBI=1 ZURI_JIT_LOG=1 zuri run fib.zu
 [jit] compiled 'fib' in Kebbi (13 bytecode ops, 0 osr point(s), speculative_params=0x1, speculative_regs=0x0, speculative_lists=0x0, speculative_ints=0x1)
 196418
 ```
@@ -424,18 +425,20 @@ getting faster.
 
 ## Choosing a Mode
 
-Both compilers run by default. `ZURI_JIT_BAYELSA=0` turns Bayelsa off, and
-every hot function then stays in Kebbi.
+Bayelsa compiles directly by default, falling back to Kebbi whenever a function
+is declined. `ZURI_JIT_KEBBI=1` (or `ZURI_JIT_BAYELSA=0`) turns Bayelsa off, and
+every hot function then stays in Kebbi. `ZURI_JIT_TIERED=1` enables the multi-tier
+pipeline where Kebbi profiles before Bayelsa compiles.
 
 Keep the default for anything that runs long enough for its speed to
 matter: servers, batch jobs, numeric work, anything whose hot loops run for
 more than a moment. That is where Bayelsa's code repays its compile many
 times over.
 
-Turn Bayelsa off when:
+Turn Bayelsa off (`ZURI_JIT_KEBBI=1`) when:
 
 - **The program is short.** A script that finishes in a fraction of a
-  second spends a real share of its life compiling a second time, and the
+  second spends a real share of its life compiling, and the
   faster code arrives too late to pay for itself.
 - **Cores are scarce.** Bayelsa's compiles take more processor time than
   Kebbi's. On a machine or container held to one core, or with every core
@@ -444,8 +447,7 @@ Turn Bayelsa off when:
   few milliseconds each time, gains nothing from code that is faster on
   its thousandth iteration.
 - **Timings have to hold from the first run.** Kebbi reaches its speed
-  sooner and stays there. Under Bayelsa a function speeds up once more,
-  part way through a run.
+  sooner and stays there.
 
 Measure both. The switch is one variable, and running the real workload
 each way settles the question for that workload.
@@ -458,14 +460,15 @@ them.
 | Variable | Effect |
 | --- | --- |
 | `ZURI_JIT=0` | disable the JIT entirely |
-| `ZURI_JIT_BAYELSA=0` | compile with Kebbi alone |
+| `ZURI_JIT_KEBBI=1` | compile with Kebbi alone (same as `ZURI_JIT_BAYELSA=0`) |
+| `ZURI_JIT_TIERED=1` | enable multi-tier mode (Kebbi profiling before Bayelsa) |
 | `ZURI_JIT_LOG=1` | one line per compilation attempt |
 | `ZURI_JIT_LOG_IR=1` | dump the Cranelift IR, and Bayelsa's own before it |
 | `ZURI_JIT_COVERAGE=1` | a table of what compiled, at exit |
 | `ZURI_JIT_NO_SPECIALIZATION=1` | compile, but do not speculate on types |
 | `ZURI_JIT_THREADS=n` | background compiler threads |
 | `ZURI_JIT_CALL_K`, `ZURI_JIT_OSR_K` | the warm-up curve constants |
-| `ZURI_JIT_TIERUP_K` | how much profiling work comes before Bayelsa |
+| `ZURI_JIT_TIERUP_K` | how much profiling work comes before Bayelsa (tiered mode) |
 | `ZURI_GC_LOG=1` | garbage collector activity |
 | `ZURI_GC_NURSERY_MB=n` | the young generation's starting and smallest size, in megabytes |
 | `ZURI_OPCODE_PROFILE=1` | interpreter opcode histogram |

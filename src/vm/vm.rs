@@ -1795,21 +1795,22 @@ impl VM {
     None
   }
 
-  /// The first compile of a warm `proto`. With two tiers, a function
-  /// every one of whose sites has run goes straight to tier 2: profiling
-  /// code would only record again what the interpreter already has. One
-  /// with sites that have not run yet gets profiling tier 1, which sees
-  /// them run before tier 2 builds on them. A frame entering at the loop
-  /// header `entry` gets a way into tier 2's code there.
+  /// The first compile of a warm `proto`. In direct mode (the default),
+  /// functions compile directly through Bayelsa. When multi-tier is
+  /// active, a function every one of whose sites has run goes straight
+  /// to tier 2, while one with unrun sites gets profiling tier 1. A frame
+  /// entering at the loop header `entry` gets a way into tier 2's code there.
   fn enqueue_first_compile(
     &mut self,
     proto: &ObjFunction,
     proto_value: Value,
     entry: Option<usize>,
   ) {
-    let straight = crate::jit::tier2_enabled()
-      && proto.jit.tier2.get() == crate::vm::object::TIER2_NONE
-      && proto.chunk.feedback_complete();
+    let direct = crate::jit::tier2_direct();
+    let straight = direct
+      || (crate::jit::tier2_enabled()
+        && proto.jit.tier2.get() == crate::vm::object::TIER2_NONE
+        && proto.chunk.feedback_complete());
     if straight && crate::jit::log_enabled() {
       eprintln!("[jit] '{}' goes straight to Bayelsa", proto.display_name());
     }
