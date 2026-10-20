@@ -3495,11 +3495,16 @@ impl VM {
         },
       }
       proto.jit.compiling.set(false);
-      if let Some(pos) = self
-        .pending_jit_compiles
-        .iter()
-        .position(|v| std::ptr::eq(v.as_func(), proto))
-      {
+      if let Some(pos) = self.pending_jit_compiles.iter().position(|v| {
+        let func = if v.is_func() {
+          v.as_func()
+        } else if v.is_closure() {
+          v.as_closure().function.as_func()
+        } else {
+          return false;
+        };
+        std::ptr::eq(func, proto)
+      }) {
         self.pending_jit_compiles.swap_remove(pos);
       }
       self.release_jit_callees(proto);
@@ -6642,8 +6647,7 @@ impl VM {
               match member {
                 Some(v) => {
                   if v.is_class() && self.jit_enabled {
-                    // SAFETY: a frame's closure lives as long as the frame.
-                    let proto = unsafe { (*closure_ptr).function };
+                    let proto = self.frames[frame_idx].closure_val.as_closure().function;
                     self.note_module_member(proto, ip - 1, module_val, method_name_val);
                   }
                   self.set_reg(base, obj + 1, v);
@@ -6889,6 +6893,12 @@ impl VM {
             let path = path_val.as_str().to_string();
             let importer = importer_val.as_str().to_string();
             let module_val = tri!(crate::vm::modules::import(self, &importer, &path), 'step);
+            frame_idx = self.frames.len() - 1;
+            let f = &self.frames[frame_idx];
+            base = f.base;
+            func_ptr = f.function;
+            closure_ptr = f.closure_val.as_closure() as *const ObjClosure;
+            ip = f.ip;
             self.set_reg(base, dst, module_val);
           },
 

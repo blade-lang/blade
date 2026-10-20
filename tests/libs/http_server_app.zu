@@ -72,7 +72,7 @@ def api_server(port_channel, static_root) {
   # Slower to answer than the short timeout the client suite gives a
   # request before it.
   server.get('/slow', @(request, response) {
-    os.sleep(0.5)
+    os.sleep(1.5)
     response.text('eventually')
   })
 

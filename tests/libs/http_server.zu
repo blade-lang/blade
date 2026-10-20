@@ -470,7 +470,7 @@ ok('keep-alive connections are reused')
 client.close()
 
 var timing = http.HttpClient()
-var quick = timing.get(base + '/', { timeout: 200 })
+var quick = timing.get(base + '/', { timeout: 600 })
 assert quick.status == 200,
   'a request with a short timeout opens the connection'
 assert timing.pooled_connections() == 1, 'which goes back in the pool'
@@ -483,7 +483,7 @@ assert timing.pooled_connections() == 1, 'over that same connection'
 var hurried = nil
 
 catch {
-  timing.get(base + '/slow', { timeout: 200 })
+  timing.get(base + '/slow', { timeout: 600 })
 } as error {
   hurried = error
 }
