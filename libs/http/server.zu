@@ -944,7 +944,10 @@ class HttpServer {
       return false
     }
 
-    connection.set_read_timeout(self.read_timeout)
+    if request.content_length() > 0
+      or request.headers.contains('transfer-encoding') {
+      connection.set_read_timeout(self.read_timeout)
+    }
 
     if !self._serve_one(connection, request) {
       return false

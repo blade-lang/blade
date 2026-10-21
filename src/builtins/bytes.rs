@@ -7,7 +7,7 @@ use crate::{
     MethodTable, build,
     enforce::{
       ArgType, enforce_method_arg_count, enforce_method_arg_range, enforce_method_arg_type,
-      enforce_method_arg_type_opt,
+      enforce_method_arg_type_any_of, enforce_method_arg_type_opt,
     },
     method, method_n, method_opt,
   },
@@ -115,14 +115,20 @@ fn clone_bytes(ctx: &mut ZuriContext) -> Result<Value, String> {
   Ok(ctx.vm.heap_mut().alloc_bytes(bytes))
 }
 
-/// In-place: appends the OTHER byte stream's content onto this one, as
-/// documented ("extend() is an in-place action so the original byte
+/// In-place: appends the OTHER byte stream or string's UTF-8 bytes onto this
+/// one, as documented ("extend() is an in-place action so the original byte
 /// stream will be modified").
 fn extend(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_count!(ctx, 1);
-  enforce_method_arg_type!(ctx, 1, ArgType::Bytes);
-  let other = ctx.args[1].as_bytes();
-  with_bytes_mut(ctx.args[0], |v| v.extend(other));
+  enforce_method_arg_type_any_of!(ctx, 1, [ArgType::Bytes, ArgType::String]);
+  let arg = ctx.args[1];
+  if arg.is_string() {
+    let s = arg.as_str();
+    with_bytes_mut(ctx.args[0], |v| v.extend_from_slice(s.as_bytes()));
+  } else {
+    let other = arg.as_bytes();
+    with_bytes_mut(ctx.args[0], |v| v.extend(other));
+  }
   Ok(ctx.args[0])
 }
 

@@ -184,17 +184,8 @@ class HttpResponse {
    * @param {string|bytes} data
    * @returns HttpResponse: this same instance, for chaining
    */
-  write(data) {
-    if is_string(data) {
-      var encoded = data.to_bytes()
-      self.body.extend(encoded)
-      encoded.dispose()
-    } else if is_bytes(data) {
-      self.body.extend(data)
-    } else {
-      raise TypeError('data must be bytes or a string, got ${typeof(data)}')
-    }
-
+  write(data: string|bytes) {
+    self.body.extend(data)
     return self
   }
 

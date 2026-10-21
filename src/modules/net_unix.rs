@@ -243,15 +243,6 @@ impl ZuriUnix {
   }
 }
 
-#[cfg(unix)]
-fn get_data(value: Value) -> Vec<u8> {
-  if value.is_string() {
-    value.as_str().as_bytes().to_vec()
-  } else {
-    value.with_bytes(|b| b.to_vec())
-  }
-}
-
 /// A socket address as text. An unnamed socket, which is what both ends
 /// of a `pair()` are, has no path at all and reports nil rather than an
 /// invented one.
@@ -604,14 +595,20 @@ fn unix_write(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(UNIX_STREAM));
   enforce_method_arg_type_any_of!(ctx, 1, [ArgType::Bytes, ArgType::String]);
 
-  let data = get_data(ctx.args[1]);
   let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
   let socket = ptr.downcast_mut::<ZuriUnix>().unwrap();
+  let stream = socket.stream_mut()?;
 
-  let written = socket
-    .stream_mut()?
-    .write(data.as_slice())
-    .map_err(|e| e.to_string())?;
+  let val = ctx.args[1];
+  let written = if val.is_string() {
+    stream
+      .write(val.as_str().as_bytes())
+      .map_err(|e| e.to_string())?
+  } else {
+    val
+      .with_bytes(|b| stream.write(b))
+      .map_err(|e| e.to_string())?
+  };
 
   Ok(Value::number(written as f64))
 }
@@ -622,14 +619,20 @@ fn unix_write_all(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(UNIX_STREAM));
   enforce_method_arg_type_any_of!(ctx, 1, [ArgType::Bytes, ArgType::String]);
 
-  let data = get_data(ctx.args[1]);
   let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
   let socket = ptr.downcast_mut::<ZuriUnix>().unwrap();
+  let stream = socket.stream_mut()?;
 
-  socket
-    .stream_mut()?
-    .write_all(data.as_slice())
-    .map_err(|e| e.to_string())?;
+  let val = ctx.args[1];
+  if val.is_string() {
+    stream
+      .write_all(val.as_str().as_bytes())
+      .map_err(|e| e.to_string())?;
+  } else {
+    val
+      .with_bytes(|b| stream.write_all(b))
+      .map_err(|e| e.to_string())?;
+  }
 
   Ok(Value::nil())
 }

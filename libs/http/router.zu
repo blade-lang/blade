@@ -142,11 +142,13 @@ class Router {
   var _root
   var _routes = []
   var _named = {}
+  var _static_routes = {}
 
   @new() {
     self._root = _new_node()
     self._routes = []
     self._named = {}
+    self._static_routes = {}
   }
 
   /**
@@ -221,6 +223,10 @@ class Router {
     node.handlers[upper] = route
     self._routes.append(route)
 
+    if !pattern.contains(':') and !pattern.contains('*') {
+      self._static_routes[upper + ' ' + pattern] = route
+    }
+
     if name != nil {
       self._named[name] = route
     }
@@ -245,9 +251,21 @@ class Router {
    * @returns RouteMatch
    */
   match(method: string, path: string) {
-    var params = {}
     var upper = method.upper()
 
+    var static_route = self._static_routes.get(upper + ' ' + path, nil)
+    if static_route != nil {
+      return RouteMatch(static_route, {}, [])
+    }
+
+    if upper == 'HEAD' {
+      var head_fallback = self._static_routes.get('GET ' + path, nil)
+      if head_fallback != nil {
+        return RouteMatch(head_fallback, {}, [])
+      }
+    }
+
+    var params = {}
     var node = self._find(self._root, _split(path), 0, params)
 
     if node == nil {

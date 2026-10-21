@@ -135,7 +135,7 @@ class Connection {
    *    can no longer report on its own
    * @param ?SocketAddr local
    */
-  @new(transport, peer, local) {
+  @new(transport, peer, local, read_timeout: ?number) {
     self._transport = transport
     self._buf = bytes(0)
     self._out = bytes(0)
@@ -143,6 +143,7 @@ class Connection {
     self._closed = false
     self._eof = false
     self._total_read = 0
+    self._read_timeout = read_timeout
 
     self.peer_address = peer
     self.local_address = local
@@ -438,14 +439,8 @@ class Connection {
    *
    * @param {bytes|string} data
    */
-  write(data) {
-    if is_string(data) {
-      var encoded = data.to_bytes()
-      self._out.extend(encoded)
-      encoded.dispose()
-    } else {
-      self._out.extend(data)
-    }
+  write(data: string|bytes) {
+    self._out.extend(data)
 
     if self._out.length() >= _WRITE_HIGH_WATER {
       self.flush()
@@ -472,10 +467,11 @@ class Connection {
   _flush_transport_output() {
     catch {
       self._transport.write_all(self._out)
-      self._transport.flush()
+      if self.secure {
+        self._transport.flush()
+      }
     } as error {
       self._out.dispose()
-      self._out = bytes(0)
 
       if is_timeout_error(error.message) {
         raise TimeoutError('write timed out')
@@ -490,9 +486,7 @@ class Connection {
     }
 
     self._flush_transport_output()
-
     self._out.dispose()
-    self._out = bytes(0)
   }
 
   /**
@@ -505,6 +499,12 @@ class Connection {
    * @param number milliseconds: `0` or negative to block indefinitely
    */
   set_read_timeout(milliseconds) {
+    if self._read_timeout == milliseconds {
+      return
+    }
+
+    self._read_timeout = milliseconds
+
     if !self.secure {
       self._transport.set_read_timeout(milliseconds)
     }
@@ -790,6 +790,37 @@ def tunnel(proxy: dict, host: string, port: int, options: ?dict) {
   return Connection(secured, carrier.peer_address, carrier.local_address)
 }
 
+def _get_peer(client) {
+  catch {
+    return client.peer_address()
+  }
+  return nil
+}
+
+def _get_local(client) {
+  catch {
+    return client.local_address()
+  }
+  return nil
+}
+
+def _set_nodelay_safe(client) {
+  catch {
+    client.set_nodelay(true)
+  }
+}
+
+def _tls_accept_safe(client, config) {
+  catch {
+    return tls.TlsStream.accept(client, config)
+  } as error {
+    catch {
+      client.close()
+    }
+    raise ConnectionError('TLS handshake failed: ${error.message}')
+  }
+}
+
 /**
  * Turns a freshly accepted `TcpStream` into a `Connection`, running a
  * server-side TLS handshake first when `tls_config` is given.
@@ -802,41 +833,23 @@ def tunnel(proxy: dict, host: string, port: int, options: ?dict) {
  * @throws ConnectionError if the TLS handshake fails
  */
 def accept(client, options: ?dict) {
-  if options == nil {
-    options = {}
-  }
+  var settings = options == nil ? {} : options
 
-  var peer, local
-  catch {
-    peer = client.peer_address()
-    local = client.local_address()
-  }
+  var peer = _get_peer(client)
+  var local = _get_local(client)
 
-  catch {
-    client.set_nodelay(true)
-  }
+  _set_nodelay_safe(client)
 
-  var read_timeout = options.get('read_timeout', 30000)
-  var write_timeout = options.get('write_timeout', 30000)
+  var read_timeout = settings.get('read_timeout', 30000)
+  var write_timeout = settings.get('write_timeout', 30000)
   client.set_read_timeout(read_timeout)
   client.set_write_timeout(write_timeout)
 
-  var config = options.get('tls_config', nil)
+  var config = settings.get('tls_config', nil)
   if config == nil {
-    return Connection(client, peer, local)
+    return Connection(client, peer, local, read_timeout)
   }
 
-  var stream
-  catch {
-    stream = tls.TlsStream.accept(client, config)
-  } as error
-
-  if error {
-    catch {
-      client.close()
-    }
-    raise ConnectionError('TLS handshake failed: ${error.message}')
-  }
-
-  return Connection(stream, peer, local)
+  var stream = _tls_accept_safe(client, config)
+  return Connection(stream, peer, local, read_timeout)
 }

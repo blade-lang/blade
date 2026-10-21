@@ -79,6 +79,7 @@ def worker_main(connections, setup, options) {
     live: {},
     next_token: 1,
     limit: options.get('max_connections_per_worker', _MAX_PER_WORKER),
+    last_reap: time(),
   }
 
   while true {
@@ -130,7 +131,10 @@ def worker_main(connections, setup, options) {
       _service(state, token)
     }
 
-    _reap_idle(state)
+    if time() - state.last_reap >= 1.0 {
+      _reap_idle(state)
+      state.last_reap = time()
+    }
   }
 
   # Whatever is still open when the loop ends is still owed a close.
@@ -139,12 +143,21 @@ def worker_main(connections, setup, options) {
   }
 }
 
-# Takes on as many waiting connections as this worker has room for,
-# without ever blocking. Returns how many it took.
+# How many connections one worker will take from the channel in a
+# single pass. Bounding this ensures connections distribute fairly
+# across all worker isolates instead of the first waking worker
+# draining the entire channel.
+var _MAX_ADMIT_PER_PASS = 1
+
+# Takes on waiting connections for this worker, bounded per pass to
+# keep distribution fair across worker isolates. Returns how many it took.
 def _admit_waiting(state, connections) {
   var taken = 0
+  var pass_limit = state.limit < _MAX_ADMIT_PER_PASS
+    ? state.limit
+    : _MAX_ADMIT_PER_PASS
 
-  while state.live.length() < state.limit {
+  while taken < pass_limit and state.live.length() < state.limit {
     var client = connections.try_recv()
 
     if client == nil {
@@ -185,6 +198,10 @@ def _admit(state, client) {
 # whether any did - in which case the poll that follows should not
 # sleep, since there may be more work waiting behind it.
 def _service_buffered(state) {
+  if state.live.is_empty() {
+    return false
+  }
+
   var pending = []
 
   for token, entry in state.live {

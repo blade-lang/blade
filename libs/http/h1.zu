@@ -191,7 +191,7 @@ def _read_headers(connection, options, deadline) {
   var max_size = _limit(options, 'max_header_size')
   var max_count = _limit(options, 'max_header_count')
 
-  var block = []
+  var result = headers.Headers()
   var total = 0
   var count = 0
 
@@ -223,10 +223,10 @@ def _read_headers(connection, options, deadline) {
       raise TooLargeError('header section exceeds ${max_size} bytes')
     }
 
-    block.append(line)
+    headers.parse_line(result, line, true)
   }
 
-  return headers.parse('\r\n'.join(block), true)
+  return result
 }
 
 /**
@@ -379,14 +379,14 @@ def write_response(connection, request, response, options: ?dict) {
   }
 
   var wire_version = version == '1.0' ? '1.0' : '1.1'
-  var head = 'HTTP/${wire_version} ${response.status} ${response.reason_phrase()}\r\n'
-  head += response.headers.to_wire()
+  connection.write('HTTP/${wire_version} ${response.status} ${response.reason_phrase()}\r\n')
+  response.headers.write_to(connection)
 
   for cookie in response.cookie_headers() {
-    head += 'Set-Cookie: ${cookie}\r\n'
+    connection.write('Set-Cookie: ${cookie}\r\n')
   }
 
-  connection.write(head + '\r\n')
+  connection.write('\r\n')
   response.commit()
 
   if bodiless {
@@ -395,7 +395,9 @@ def write_response(connection, request, response, options: ?dict) {
   }
 
   if source == nil {
-    connection.write(response.body)
+    if response.body.length() > 0 {
+      connection.write(response.body)
+    }
     connection.flush()
     return keep_alive
   }

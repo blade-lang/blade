@@ -150,15 +150,6 @@ pub(crate) type Descriptor = std::os::windows::io::RawSocket;
 /// silently operating on a socket that TLS now owns.
 pub(crate) const TCP_STREAM_UPGRADED: &str = "zuri::net::TcpStream::__upgraded__";
 
-fn get_data(args: &[Value]) -> Vec<u8> {
-  let value = args[0];
-  if value.is_string() {
-    value.as_str().as_bytes().to_vec()
-  } else {
-    value.with_bytes(|b| b.to_vec())
-  }
-}
-
 pub(crate) struct ZuriTcp {
   pub stream: Option<TcpStream>,
   pub listener: Option<TcpListener>,
@@ -730,9 +721,14 @@ fn tcp_write(ctx: &mut ZuriContext) -> Result<Value, String> {
   let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
   let tcp = ptr.downcast_mut::<ZuriTcp>().unwrap();
 
-  let data = get_data(&ctx.args[1..]);
+  let val = ctx.args[1];
+  let written = if val.is_string() {
+    tcp.write(val.as_str().as_bytes())?
+  } else {
+    val.with_bytes(|b| tcp.write(b))?
+  };
 
-  Ok(Value::number(tcp.write(data.as_slice())? as f64))
+  Ok(Value::number(written as f64))
 }
 
 fn tcp_write_all(ctx: &mut ZuriContext) -> Result<Value, String> {
@@ -743,8 +739,12 @@ fn tcp_write_all(ctx: &mut ZuriContext) -> Result<Value, String> {
   let mut ptr = ctx.args[0].as_ptr_cell().borrow_mut();
   let tcp = ptr.downcast_mut::<ZuriTcp>().unwrap();
 
-  let data = get_data(&ctx.args[1..]);
-  tcp.write_all(data.as_slice())?;
+  let val = ctx.args[1];
+  if val.is_string() {
+    tcp.write_all(val.as_str().as_bytes())?;
+  } else {
+    val.with_bytes(|b| tcp.write_all(b))?;
+  }
 
   Ok(Value::nil())
 }

@@ -842,15 +842,6 @@ fn tls_wrap_server(ctx: &mut ZuriContext) -> Result<Value, String> {
 // TlsStream I/O natives
 // ---------------------------------------------------------------------------
 
-fn get_data(args: &[Value]) -> Vec<u8> {
-  let value = args[0];
-  if value.is_string() {
-    value.as_str().as_bytes().to_vec()
-  } else {
-    value.as_bytes().to_vec()
-  }
-}
-
 fn with_stream<F, T>(ctx: &mut ZuriContext, f: F) -> Result<T, String>
 where
   F: FnOnce(&mut ZuriTlsStream) -> Result<T, String>,
@@ -906,8 +897,12 @@ fn tls_write(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(TLS_STREAM));
   enforce_method_arg_type_any_of!(ctx, 1, [ArgType::Bytes, ArgType::String]);
 
-  let data = get_data(&ctx.args[1..]);
-  let written = with_stream(ctx, |s| s.write(&data))?;
+  let val = ctx.args[1];
+  let written = if val.is_string() {
+    with_stream(ctx, |s| s.write(val.as_str().as_bytes()))?
+  } else {
+    val.with_bytes(|b| with_stream(ctx, |s| s.write(b)))?
+  };
   Ok(Value::number(written as f64))
 }
 
@@ -916,8 +911,12 @@ fn tls_write_all(ctx: &mut ZuriContext) -> Result<Value, String> {
   enforce_method_arg_type!(ctx, 0, ArgType::PtrOf(TLS_STREAM));
   enforce_method_arg_type_any_of!(ctx, 1, [ArgType::Bytes, ArgType::String]);
 
-  let data = get_data(&ctx.args[1..]);
-  with_stream(ctx, |s| s.write_all(&data))?;
+  let val = ctx.args[1];
+  if val.is_string() {
+    with_stream(ctx, |s| s.write_all(val.as_str().as_bytes()))?;
+  } else {
+    val.with_bytes(|b| with_stream(ctx, |s| s.write_all(b)))?;
+  }
   Ok(Value::nil())
 }
 

@@ -638,11 +638,29 @@ class Headers {
   to_wire() {
     var parts = []
 
-    self.each(@(name, value) {
-      parts.append('${name}: ${value}\r\n')
-    })
+    for _, entry in self._fields {
+      var name = entry[0]
+      for value in entry[1] {
+        parts.append('${name}: ${value}\r\n')
+      }
+    }
 
     return ''.join(parts)
+  }
+
+  /**
+   * Writes the headers in wire format directly to `target`, avoiding
+   * intermediate array and string allocations.
+   *
+   * @param target: an object with a `write(string|bytes)` method
+   */
+  write_to(target) {
+    for _, entry in self._fields {
+      var name = entry[0]
+      for value in entry[1] {
+        target.write('${name}: ${value}\r\n')
+      }
+    }
   }
 
   /**
@@ -713,6 +731,70 @@ class Headers {
  * @throws ProtocolError on a malformed field, a folded line, or a
  *    duplicated singleton field
  */
+/**
+ * Parses a single header line and records it into `target`.
+ *
+ * @param Headers target
+ * @param string line
+ * @param ?bool strict
+ * @throws ProtocolError on malformed headers, folding, or singleton conflicts
+ */
+def parse_line(target: Headers, line: string, strict: ?bool) {
+  if line.is_empty() {
+    return
+  }
+
+  if strict == nil {
+    strict = true
+  }
+
+  # An obs-fold continuation. Unfolding it would mean guessing what
+  # the sender meant, and intermediaries guess differently.
+  if line[0] == ' ' or line[0] == '\t' {
+    raise ProtocolError('obsolete header line folding is not accepted')
+  }
+
+  var colon = line.index_of(':')
+  if colon < 1 {
+    raise ProtocolError('malformed header line: ${line}')
+  }
+
+  var name = line[0, colon]
+
+  # RFC 9112 §5.1 is explicit: no whitespace is allowed between the
+  # field name and the colon, and a server MUST reject it. This is
+  # the "Content-Length : 5" smuggling trick.
+  if name != name.trim() {
+    raise ProtocolError('whitespace between header name and colon: ${name}')
+  }
+
+  if !is_valid_name(name) {
+    raise ProtocolError('invalid header field name: ${name}')
+  }
+
+  var value = line[colon + 1,].trim(' \t')
+
+  if strict and _SINGLETON.contains(name.lower()) and target.contains(name) {
+    # Two different Content-Lengths (or Hosts) is not a message with
+    # a repeated field; it is two parties being invited to disagree
+    # about where this message ends.
+    if target.get(name, nil) != value {
+      raise ProtocolError('conflicting duplicate ${name} header')
+    }
+    return
+  }
+
+  target.add(name, value)
+}
+
+/**
+ * Parses a complete HTTP header section into a `Headers` instance.
+ *
+ * @param string block
+ * @param ?bool strict: whether to enforce singleton header checks
+ * @returns Headers
+ * @throws ProtocolError
+ */
 def parse(block: string, strict: ?bool) {
   if strict == nil {
     strict = true
@@ -724,47 +806,9 @@ def parse(block: string, strict: ?bool) {
   }
 
   for line in block.split('\r\n') {
-    if line.is_empty() {
-      continue
+    if !line.is_empty() {
+      parse_line(headers, line, strict)
     }
-
-    # An obs-fold continuation. Unfolding it would mean guessing what
-    # the sender meant, and intermediaries guess differently.
-    if line[0] == ' ' or line[0] == '\t' {
-      raise ProtocolError('obsolete header line folding is not accepted')
-    }
-
-    var colon = line.index_of(':')
-    if colon < 1 {
-      raise ProtocolError('malformed header line: ${line}')
-    }
-
-    var name = line[0, colon]
-
-    # RFC 9112 §5.1 is explicit: no whitespace is allowed between the
-    # field name and the colon, and a server MUST reject it. This is
-    # the "Content-Length : 5" smuggling trick.
-    if name != name.trim() {
-      raise ProtocolError('whitespace between header name and colon: ${name}')
-    }
-
-    if !is_valid_name(name) {
-      raise ProtocolError('invalid header field name: ${name}')
-    }
-
-    var value = line[colon + 1,].trim(' \t')
-
-    if strict and _SINGLETON.contains(name.lower()) and headers.contains(name) {
-      # Two different Content-Lengths (or Hosts) is not a message with
-      # a repeated field; it is two parties being invited to disagree
-      # about where this message ends.
-      if headers.get(name, nil) != value {
-        raise ProtocolError('conflicting duplicate ${name} header')
-      }
-      continue
-    }
-
-    headers.add(name, value)
   }
 
   return headers

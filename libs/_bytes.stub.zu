@@ -179,10 +179,10 @@ class bytes {
    * @note `extend()` is an in-place action so the original byte
    *    stream will be modified.
    *
-   * @param {bytes} n The byte stream to extend with.
+   * @param {bytes|string} n The byte stream or string to extend with.
    * @returns {bytes}
    */
-  extend(n: bytes) {}
+  extend(n: bytes|string) {}
 
   /**
    * Returns the index of the first occurrence of the given byte
