@@ -329,7 +329,9 @@ class Connection {
    * @returns ?list: `nil` on clean EOF, error list `['error', msg]`,
    *    or `[method, target, version, fields, size, consumed, authority, cookie]`
    */
-  read_request_head(max_line, max_header_size, max_header_count, header_timeout) {
+  read_request_head(
+    max_line, max_header_size, max_header_count, header_timeout,
+  ) {
     if self._pos == self._buf.length() {
       self._buf.dispose()
       self._pos = 0

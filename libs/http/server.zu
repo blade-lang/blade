@@ -1115,7 +1115,9 @@ class HttpServer {
       opts['keep_alive'] = false
     }
 
-    var keep_alive = self._write_response_safe(connection, request, response, opts)
+    var keep_alive = self._write_response_safe(
+      connection, request, response, opts,
+    )
     if keep_alive == nil {
       return false
     }

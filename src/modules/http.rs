@@ -3,8 +3,8 @@
 //! Powered by `httparse` with SIMD-accelerated zero-copy parsing of HTTP/1.x
 //! request lines and headers directly from socket byte buffers.
 
-use std::borrow::Cow;
 use smallvec::{SmallVec, smallvec};
+use std::borrow::Cow;
 
 use crate::builtins::enforce::ArgType;
 use crate::modules::{BuiltinModuleDef, native};
@@ -112,14 +112,14 @@ fn parse_data(
         .heap()
         .alloc_string(format!("more than {max_header_count} header fields"));
       return Ok(ctx.heap().alloc_list(vec![err_tag, msg]));
-    }
+    },
     Err(err) => {
       let err_tag = ctx.heap().intern_str("error");
       let msg = ctx
         .heap()
         .alloc_string(format!("malformed HTTP request: {err}"));
       return Ok(ctx.heap().alloc_list(vec![err_tag, msg]));
-    }
+    },
   };
 
   if status.is_partial() {
@@ -187,7 +187,7 @@ fn parse_data(
       let err_tag = ctx.heap().intern_str("error");
       let msg = ctx.heap().alloc_string("unsupported HTTP version");
       return Ok(ctx.heap().alloc_list(vec![err_tag, msg]));
-    }
+    },
   };
 
   let mut host_count = 0;
@@ -205,7 +205,7 @@ fn parse_data(
         let err_tag = ctx.heap().intern_str("error");
         let msg = ctx.heap().alloc_string("invalid header field value");
         return Ok(ctx.heap().alloc_list(vec![err_tag, msg]));
-      }
+      },
     };
 
     if name.eq_ignore_ascii_case("host") {
@@ -226,7 +226,7 @@ fn parse_data(
         Some(existing) => {
           existing.push_str("; ");
           existing.push_str(val_str);
-        }
+        },
       }
     }
 
@@ -344,6 +344,13 @@ fn parse_request_head_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
     val.with_bytes(|data| parse_data(ctx, data, pos, max_line, max_header_size, max_header_count))
   } else {
     let s = val.as_str().to_string();
-    parse_data(ctx, s.as_bytes(), pos, max_line, max_header_size, max_header_count)
+    parse_data(
+      ctx,
+      s.as_bytes(),
+      pos,
+      max_line,
+      max_header_size,
+      max_header_count,
+    )
   }
 }

@@ -180,7 +180,7 @@ impl JitEngine {
     }
 
     self.next_id += 1;
-    let name = format!("zuri_fn_{}", self.next_id);
+    let name = format!("zuri_fn_{}_{}", proto.display_name(), self.next_id);
     let sig = crate::jit::ir::lower::entry_signature(&self.module);
     let func_id = self
       .module
@@ -299,7 +299,7 @@ impl JitEngine {
     facts: CompileFacts,
   ) -> Result<PendingCompile, String> {
     self.next_id += 1;
-    let name = format!("zuri_fn_{}", self.next_id);
+    let name = format!("zuri_fn_{}_{}", proto.display_name(), self.next_id);
 
     let mut sig = self.module.make_signature();
     sig.params.push(AbiParam::new(types::I64)); // vm: *mut VM
