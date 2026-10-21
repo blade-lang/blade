@@ -165,8 +165,8 @@ class Frame {
  * @returns number
  */
 def read_u32(data, offset: number) {
-  return data[offset] * 16777216 + data[offset + 1] * 65536 +
-    data[offset + 2] * 256 + data[offset + 3]
+  return (data[offset] << 24) | (data[offset + 1] << 16) |
+    (data[offset + 2] << 8) | data[offset + 3]
 }
 
 /**
@@ -176,10 +176,10 @@ def read_u32(data, offset: number) {
  * @param number value
  */
 def write_u32(out, value: number) {
-  out.append((value // 16777216) % 256)
-  out.append((value // 65536) % 256)
-  out.append((value // 256) % 256)
-  out.append(value % 256)
+  out.append((value >> 24) & 255)
+  out.append((value >> 16) & 255)
+  out.append((value >> 8) & 255)
+  out.append(value & 255)
 }
 
 /**
@@ -190,7 +190,7 @@ def write_u32(out, value: number) {
  * @returns number
  */
 def read_u24(data, offset: number) {
-  return data[offset] * 65536 + data[offset + 1] * 256 + data[offset + 2]
+  return (data[offset] << 16) | (data[offset + 1] << 8) | data[offset + 2]
 }
 
 /**
@@ -245,6 +245,8 @@ def read_frame(connection, max_frame_size: number) {
   return Frame(type, flags, stream_id, payload)
 }
 
+var _FRAME_HEADER = bytes(9)
+
 /**
  * Writes one frame to a connection.
  *
@@ -257,16 +259,17 @@ def read_frame(connection, max_frame_size: number) {
 def write_frame(connection, type: int, flags: int, stream_id: int, payload) {
   var length = payload == nil ? 0 : payload.length()
 
-  var header = bytes(0)
-  header.append((length // 65536) % 256)
-  header.append((length // 256) % 256)
-  header.append(length % 256)
-  header.append(type)
-  header.append(flags)
-  write_u32(header, stream_id)
+  _FRAME_HEADER[0] = (length >> 16) & 255
+  _FRAME_HEADER[1] = (length >> 8) & 255
+  _FRAME_HEADER[2] = length & 255
+  _FRAME_HEADER[3] = type
+  _FRAME_HEADER[4] = flags
+  _FRAME_HEADER[5] = (stream_id >> 24) & 255
+  _FRAME_HEADER[6] = (stream_id >> 16) & 255
+  _FRAME_HEADER[7] = (stream_id >> 8) & 255
+  _FRAME_HEADER[8] = stream_id & 255
 
-  connection.write(header)
-  header.dispose()
+  connection.write(_FRAME_HEADER)
 
   if length > 0 {
     connection.write(payload)
@@ -283,8 +286,8 @@ def encode_settings(values: dict) {
   var out = bytes(0)
 
   for identifier, value in values {
-    out.append((identifier // 256) % 256)
-    out.append(identifier % 256)
+    out.append((identifier >> 8) & 255)
+    out.append(identifier & 255)
     write_u32(out, value)
   }
 
@@ -311,7 +314,7 @@ def decode_settings(payload) {
   var values = {}
 
   iter var at = 0; at < payload.length(); at += 6 {
-    var identifier = payload[at] * 256 + payload[at + 1]
+    var identifier = (payload[at] << 8) | payload[at + 1]
     values[identifier] = read_u32(payload, at + 2)
   }
 

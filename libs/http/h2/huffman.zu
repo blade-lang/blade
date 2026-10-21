@@ -50,6 +50,12 @@ var _left = []
 var _right = []
 var _symbol = []
 
+var _MASKS = [128, 64, 32, 16, 8, 4, 2, 1]
+var _POW2 = []
+iter var _p = 0; _p <= 36; _p++ {
+  _POW2.append(2 ** _p)
+}
+
 /**
  * The number of the symbol HPACK uses to pad the final byte of a
  * Huffman-encoded string, and which must never appear as a decoded
@@ -177,12 +183,12 @@ def encode(data) {
     var symbol = data[i]
     var length = _LENGTHS[symbol]
 
-    accumulator = accumulator * (2 ** length) + _CODES[symbol]
+    accumulator = accumulator * _POW2[length] + _CODES[symbol]
     bits += length
 
     while bits >= 8 {
       bits -= 8
-      var divisor = 2 ** bits
+      var divisor = _POW2[bits]
       out.append((accumulator // divisor) % 256)
       accumulator = accumulator % divisor
     }
@@ -190,7 +196,7 @@ def encode(data) {
 
   if bits > 0 {
     var padding = 8 - bits
-    out.append((accumulator * (2 ** padding) + (2 ** padding - 1)) % 256)
+    out.append((accumulator * _POW2[padding] + (_POW2[padding] - 1)) % 256)
   }
 
   return out
@@ -226,8 +232,8 @@ def decode(data, start, end) {
   iter var i = start; i < end; i++ {
     var byte = data[i]
 
-    iter var bit = 7; bit >= 0; bit-- {
-      var one = (byte // (2 ** bit)) % 2 == 1
+    iter var m = 0; m < 8; m++ {
+      var one = (byte & _MASKS[m]) != 0
 
       node = one ? _right[node] : _left[node]
 
@@ -236,7 +242,9 @@ def decode(data, start, end) {
       }
 
       bits_since_leaf++
-      all_ones = one ? all_ones : false
+      if !one {
+        all_ones = false
+      }
 
       if _symbol[node] >= 0 {
         if _symbol[node] == EOS {
