@@ -39,11 +39,23 @@ fn build(vm: &mut VM) -> Vec<(&'static str, Value)> {
     ),
     (
       "hpack_decode_integer",
-      native(vm, "hpack_decode_integer", 3, false, hpack_decode_integer_fn),
+      native(
+        vm,
+        "hpack_decode_integer",
+        3,
+        false,
+        hpack_decode_integer_fn,
+      ),
     ),
     (
       "hpack_encode_integer",
-      native(vm, "hpack_encode_integer", 4, false, hpack_encode_integer_fn),
+      native(
+        vm,
+        "hpack_encode_integer",
+        4,
+        false,
+        hpack_encode_integer_fn,
+      ),
     ),
     (
       "hpack_decode_string",
@@ -399,23 +411,16 @@ fn parse_request_head_fn(ctx: &mut ZuriContext) -> Result<Value, String> {
 // ---------------------------------------------------------------------------
 
 const HUFFMAN_CODE_LENGTHS: [u8; 257] = [
-  13, 23, 28, 28, 28, 28, 28, 28, 28, 24, 30, 28, 28, 30, 28, 28,
-  28, 28, 28, 28, 28, 28, 30, 28, 28, 28, 28, 28, 28, 28, 28, 28,
-  6, 10, 10, 12, 13, 6, 8, 11, 10, 10, 8, 11, 8, 6, 6, 6,
-  5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 7, 8, 15, 6, 12, 10,
-  13, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-  7, 7, 7, 7, 7, 7, 7, 7, 8, 7, 8, 13, 19, 13, 14, 6,
-  15, 5, 6, 5, 6, 5, 6, 6, 6, 5, 7, 7, 6, 6, 6, 5,
-  6, 7, 6, 5, 5, 6, 7, 7, 7, 7, 7, 15, 11, 14, 13, 28,
-  20, 22, 20, 20, 22, 22, 22, 23, 22, 23, 23, 23, 23, 23, 24, 23,
-  24, 24, 22, 23, 24, 23, 23, 23, 23, 21, 22, 23, 22, 23, 23, 24,
-  22, 21, 20, 22, 22, 23, 23, 21, 23, 22, 22, 24, 21, 22, 23, 23,
-  21, 21, 22, 21, 23, 22, 23, 23, 20, 22, 22, 22, 23, 22, 22, 23,
-  26, 26, 20, 19, 22, 23, 22, 25, 26, 26, 26, 27, 27, 26, 24, 25,
-  19, 21, 26, 27, 27, 26, 27, 24, 21, 21, 26, 26, 28, 27, 27, 27,
-  20, 24, 20, 21, 22, 21, 21, 23, 22, 22, 25, 25, 24, 24, 26, 23,
-  26, 27, 26, 26, 27, 27, 27, 27, 27, 28, 27, 27, 27, 27, 27, 26,
-  30,
+  13, 23, 28, 28, 28, 28, 28, 28, 28, 24, 30, 28, 28, 30, 28, 28, 28, 28, 28, 28, 28, 28, 30, 28,
+  28, 28, 28, 28, 28, 28, 28, 28, 6, 10, 10, 12, 13, 6, 8, 11, 10, 10, 8, 11, 8, 6, 6, 6, 5, 5, 5,
+  6, 6, 6, 6, 6, 6, 6, 7, 8, 15, 6, 12, 10, 13, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+  7, 7, 7, 7, 7, 7, 8, 7, 8, 13, 19, 13, 14, 6, 15, 5, 6, 5, 6, 5, 6, 6, 6, 5, 7, 7, 6, 6, 6, 5, 6,
+  7, 6, 5, 5, 6, 7, 7, 7, 7, 7, 15, 11, 14, 13, 28, 20, 22, 20, 20, 22, 22, 22, 23, 22, 23, 23, 23,
+  23, 23, 24, 23, 24, 24, 22, 23, 24, 23, 23, 23, 23, 21, 22, 23, 22, 23, 23, 24, 22, 21, 20, 22,
+  22, 23, 23, 21, 23, 22, 22, 24, 21, 22, 23, 23, 21, 21, 22, 21, 23, 22, 23, 23, 20, 22, 22, 22,
+  23, 22, 22, 23, 26, 26, 20, 19, 22, 23, 22, 25, 26, 26, 26, 27, 27, 26, 24, 25, 19, 21, 26, 27,
+  27, 26, 27, 24, 21, 21, 26, 26, 28, 27, 27, 27, 20, 24, 20, 21, 22, 21, 21, 23, 22, 22, 25, 25,
+  24, 24, 26, 23, 26, 27, 26, 26, 27, 27, 27, 27, 27, 28, 27, 27, 27, 27, 27, 26, 30,
 ];
 
 #[derive(Clone, Copy)]
@@ -596,7 +601,11 @@ fn encode_integer(out: &mut Vec<u8>, value: usize, prefix_bits: usize, first: u8
   out.push(rem as u8);
 }
 
-fn decode_integer(data: &[u8], offset: usize, prefix_bits: usize) -> Result<(usize, usize), &'static str> {
+fn decode_integer(
+  data: &[u8],
+  offset: usize,
+  prefix_bits: usize,
+) -> Result<(usize, usize), &'static str> {
   if offset >= data.len() {
     return Err("truncated HPACK integer");
   }
@@ -1086,11 +1095,17 @@ fn decode_block_internal(
         return Ok(make_hpack_error(ctx, "HPACK index 0 is not valid"));
       }
       let (name, val) = if idx <= 61 {
-        (STATIC_TABLE[idx].0.to_string(), STATIC_TABLE[idx].1.to_string())
+        (
+          STATIC_TABLE[idx].0.to_string(),
+          STATIC_TABLE[idx].1.to_string(),
+        )
       } else {
         let dyn_idx = idx - 62;
         if dyn_idx >= dyn_entries.len() {
-          return Ok(make_hpack_error(ctx, &format!("HPACK index {idx} is past the end of the table")));
+          return Ok(make_hpack_error(
+            ctx,
+            &format!("HPACK index {idx} is past the end of the table"),
+          ));
         }
         dyn_entries[dyn_idx].clone()
       };
@@ -1107,7 +1122,10 @@ fn decode_block_internal(
         Err(e) => return Ok(make_hpack_error(ctx, e)),
       };
       if new_cap > capacity && new_cap > 4096 {
-        return Ok(make_hpack_error(ctx, "HPACK table size update exceeds the agreed maximum"));
+        return Ok(make_hpack_error(
+          ctx,
+          "HPACK table size update exceeds the agreed maximum",
+        ));
       }
       capacity = new_cap;
       while size > capacity && !dyn_entries.is_empty() {
@@ -1139,7 +1157,10 @@ fn decode_block_internal(
     } else {
       let dyn_idx = name_idx - 62;
       if dyn_idx >= dyn_entries.len() {
-        return Ok(make_hpack_error(ctx, &format!("HPACK index {name_idx} is past the end of the table")));
+        return Ok(make_hpack_error(
+          ctx,
+          &format!("HPACK index {name_idx} is past the end of the table"),
+        ));
       }
       dyn_entries[dyn_idx].0.clone()
     };
@@ -1171,7 +1192,10 @@ fn decode_block_internal(
     }
 
     if total > max_header_list_size {
-      return Ok(make_hpack_error(ctx, &format!("decoded header list exceeds {max_header_list_size} bytes")));
+      return Ok(make_hpack_error(
+        ctx,
+        &format!("decoded header list exceeds {max_header_list_size} bytes"),
+      ));
     }
   }
 
