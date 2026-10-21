@@ -130,10 +130,10 @@ class HttpServer {
   /**
    * The most requests one connection may serve before it is closed.
    * A ceiling here bounds the work a single client can pin to one
-   * worker.
+   * worker; `0` or `nil` means unlimited.
    * @type number
    */
-  var max_keep_alive_requests = 1000
+  var max_keep_alive_requests = 0
 
   /**
    * The longest request line, in bytes.
@@ -949,11 +949,15 @@ class HttpServer {
       connection.set_read_timeout(self.read_timeout)
     }
 
-    if !self._serve_one(connection, request) {
+    var is_final = self.max_keep_alive_requests != nil
+      and self.max_keep_alive_requests > 0
+      and already + 1 >= self.max_keep_alive_requests
+
+    if !self._serve_one(connection, request, is_final) {
       return false
     }
 
-    return already + 1 < self.max_keep_alive_requests
+    return !is_final
   }
 
   /**
@@ -1062,11 +1066,13 @@ class HttpServer {
     return result
   }
 
-  _write_response_safe(connection, request, response) {
+  _write_response_safe(connection, request, response, options: ?dict) {
+    var opts = options == nil ? {} : options
+    if opts.get('server_name') == nil {
+      opts['server_name'] = self.server_name
+    }
     catch {
-      return h1.write_response(connection, request, response, {
-        server_name: self.server_name,
-      })
+      return h1.write_response(connection, request, response, opts)
     } as write_error {
       self._report(write_error, connection)
       return nil
@@ -1081,7 +1087,7 @@ class HttpServer {
     }
   }
 
-  _serve_one(connection, request) {
+  _serve_one(connection, request, is_final: ?bool) {
     var response = HttpResponse()
     response.version = request.version
 
@@ -1102,7 +1108,14 @@ class HttpServer {
       return false
     }
 
-    var keep_alive = self._write_response_safe(connection, request, response)
+    var opts = {
+      server_name: self.server_name,
+    }
+    if is_final == true {
+      opts['keep_alive'] = false
+    }
+
+    var keep_alive = self._write_response_safe(connection, request, response, opts)
     if keep_alive == nil {
       return false
     }

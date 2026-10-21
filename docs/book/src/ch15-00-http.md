@@ -2371,7 +2371,7 @@ Every part of a request whose size a peer controls has a ceiling:
 | `max_body_size` | 10 MiB | the request body |
 | `header_timeout` | 10s | how long the whole head may take to arrive |
 | `keep_alive_timeout` | 5s | how long an idle connection is held |
-| `max_keep_alive_requests` | 1000 | how many requests one connection may serve |
+| `max_keep_alive_requests` | 0 (unlimited) | how many requests one connection may serve |
 
 `header_timeout` is the one that is easy to leave out and matters
 most: without it, a client sending one byte every few seconds holds a
