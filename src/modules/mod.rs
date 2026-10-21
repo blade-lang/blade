@@ -17,6 +17,7 @@ mod date;
 mod ffi;
 pub(crate) mod ffi_util;
 pub(crate) mod hash;
+mod http;
 mod imagine;
 mod io;
 mod isolate;
@@ -114,6 +115,7 @@ pub static REGISTRY: &[BuiltinModuleDef] = &[
   io::MODULE,
   os::MODULE,
   hash::MODULE,
+  http::MODULE,
   imagine::MODULE,
   crypto::MODULE,
   json::MODULE,

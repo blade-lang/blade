@@ -15,6 +15,7 @@
 
 import .errors { ConnectionError, ProtocolError, TimeoutError, TooLargeError }
 
+import _http
 import net
 import net.tls
 
@@ -301,6 +302,73 @@ class Connection {
           return nil
         }
         raise ProtocolError('connection closed in the middle of a line')
+      }
+    }
+  }
+
+  /**
+   * Advances the buffer read position by `count` bytes, dropping what was
+   * consumed.
+   *
+   * @param number count
+   */
+  advance(count: number) {
+    self._pos += count
+  }
+
+  /**
+   * Reads and parses an HTTP/1.x request head using native Rust parsing.
+   *
+   * @param number max_line
+   * @param number max_header_size
+   * @param number max_header_count
+   * @param ?number header_timeout
+   * @returns ?list: `nil` on clean EOF, error list `['error', msg]`,
+   *    or `[method, target, version, fields, size, consumed, authority, cookie]`
+   */
+  read_request_head(max_line, max_header_size, max_header_count, header_timeout) {
+    if self._pos >= _COMPACT_THRESHOLD or self._pos == self._buf.length() {
+      var rest = self._buf[self._pos,]
+      self._buf.dispose()
+      self._buf = rest
+      self._pos = 0
+    }
+
+    var deadline
+    var started = false
+
+    while true {
+      if self._buf.length() > self._pos {
+        var parsed = _http.parse_request_head(
+          self._buf,
+          self._pos,
+          max_line,
+          max_header_size,
+          max_header_count,
+        )
+
+        if parsed != nil {
+          return parsed
+        }
+      }
+
+      if !started and self.buffered() > 0 {
+        started = true
+        if header_timeout != nil {
+          deadline = time() + header_timeout
+        }
+      }
+
+      if deadline != nil and time() > deadline {
+        return ['error', 'the request head took too long to arrive']
+      }
+
+      var n = self._fill()
+      if n == 0 {
+        if self.buffered() == 0 {
+          return nil
+        }
+        return ['error', 'connection closed inside the header section']
       }
     }
   }

@@ -224,7 +224,13 @@ class Headers {
    *
    * @param ?dict fields
    */
-  @new(fields) {
+  @new(fields, _raw_size: ?number) {
+    if _raw_size != nil {
+      self._fields = fields
+      self._size = _raw_size
+      return
+    }
+
     self._fields = {}
     self._size = 0
 
@@ -823,4 +829,16 @@ def parse(block: string, strict: ?bool) {
  */
 def is_never_folded(name: string) {
   return _NEVER_FOLDED.contains(name.lower())
+}
+
+/**
+ * Constructs a `Headers` instance directly from pre-parsed header fields
+ * and pre-calculated wire size, avoiding repeated validation and lowercasing.
+ *
+ * @param dict fields: lowercased name -> [original name, [values...]]
+ * @param number size
+ * @returns Headers
+ */
+def from_raw(fields: dict, size: number) {
+  return Headers(fields, size)
 }

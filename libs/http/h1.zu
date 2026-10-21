@@ -98,55 +98,45 @@ def parse_version(text: string) {
  */
 def read_request(connection, options: ?dict) {
   var max_line = _limit(options, 'max_line_size')
+  var max_header_size = _limit(options, 'max_header_size')
+  var max_header_count = _limit(options, 'max_header_count')
+  var header_timeout = _limit(options, 'header_timeout')
 
-  var line = connection.read_line(max_line)
+  var parsed = connection.read_request_head(
+    max_line,
+    max_header_size,
+    max_header_count,
+    header_timeout,
+  )
 
-  # The clock on the head starts once its first byte has arrived, not
-  # while the connection sits idle waiting for one - an idle
-  # keep-alive connection is legitimate, a head that takes ten seconds
-  # to dribble in is not.
-  var deadline = time() + _limit(options, 'header_timeout')
-
-  if line == nil {
+  if parsed == nil {
     return nil
   }
 
-  # RFC 9112 §2.2: a server should tolerate at least one empty line
-  # before a request line, since some old clients send a spurious CRLF
-  # after a body. One is generous enough; a stream of them is a peer
-  # keeping the connection busy for free.
-  var skipped = 0
-  while line != nil and line.is_empty() {
-    skipped++
-    if skipped > 2 {
-      raise ProtocolError('too many empty lines before the request line')
+  if parsed[0] == 'error' {
+    var msg = parsed[1]
+    if msg.contains('limit') {
+      raise TooLargeError(msg)
+    } else if msg.contains('took too long') {
+      raise TimeoutError(msg)
     }
-    line = connection.read_line(max_line)
+    raise ProtocolError(msg)
   }
 
-  if line == nil {
-    return nil
-  }
+  var method = parsed[0]
+  var target = parsed[1]
+  var version = parsed[2]
+  var fields = parsed[3]
+  var size = parsed[4]
+  var consumed = parsed[5]
+  var authority = parsed[6]
+  var cookie_header = parsed[7]
 
-  var parts = line.split(' ')
-  if parts.length() != 3 {
-    raise ProtocolError('malformed request line: ${line}')
-  }
+  connection.advance(consumed)
 
-  var method = parts[0]
-  var target = parts[1]
+  var req_headers = headers.from_raw(fields, size)
 
-  if !util.is_valid_method(method) {
-    raise ProtocolError('invalid request method: ${method}')
-  }
-
-  if target.is_empty() {
-    raise ProtocolError('empty request target')
-  }
-
-  var version = parse_version(parts[2])
-
-  var request = HttpRequest(method, target, nil)
+  var request = HttpRequest(method, target, req_headers)
   request.version = version
   request.secure = connection.secure
   request.scheme = connection.secure ? 'https' : 'http'
@@ -155,26 +145,10 @@ def read_request(connection, options: ?dict) {
     request.remote_address = connection.peer_address.to_string()
   }
 
-  request.headers = _read_headers(connection, options, deadline)
-
-  # RFC 9112 §3.2: an HTTP/1.1 request must carry exactly one Host,
-  # and a server must reject one that does not. Without it a request
-  # is ambiguous on any host serving more than one name, and that
-  # ambiguity is what host-header attacks live on.
-  var host_count = request.headers.get_all('host').length()
-
-  if version == '1.1' and host_count == 0 {
-    raise ProtocolError('HTTP/1.1 request has no Host header')
-  }
-  if host_count > 1 {
-    raise ProtocolError('request has more than one Host header')
+  if authority != nil {
+    request.authority = authority
   }
 
-  if request.authority == nil {
-    request.authority = request.headers.get('host', nil)
-  }
-
-  var cookie_header = request.headers.get('cookie', nil)
   if cookie_header != nil {
     request.cookies = cookies.parse_cookie_header(cookie_header)
   }

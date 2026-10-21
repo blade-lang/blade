@@ -201,6 +201,7 @@ libffi-sys = "4.2.2"
 # BSDs. Only its recommended, event-driven watcher is used; the polling one
 # it also carries is never constructed.
 notify = "8.2"
+httparse = "1.10.1"
 
 # --- io::TTY.getsize (src/modules/io.rs) -----------------------------------
 
