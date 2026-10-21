@@ -224,7 +224,10 @@ class Connection {
     # Drop what has already been consumed before growing the buffer,
     # so a connection serving thousands of keep-alive requests doesn't
     # accumulate every byte it ever read.
-    if self._pos >= _COMPACT_THRESHOLD or self._pos == self._buf.length() {
+    if self._pos == self._buf.length() {
+      self._buf.dispose()
+      self._pos = 0
+    } else if self._pos >= _COMPACT_THRESHOLD {
       var rest = self._buf[self._pos,]
       self._buf.dispose()
       self._buf = rest
@@ -327,7 +330,10 @@ class Connection {
    *    or `[method, target, version, fields, size, consumed, authority, cookie]`
    */
   read_request_head(max_line, max_header_size, max_header_count, header_timeout) {
-    if self._pos >= _COMPACT_THRESHOLD or self._pos == self._buf.length() {
+    if self._pos == self._buf.length() {
+      self._buf.dispose()
+      self._pos = 0
+    } else if self._pos >= _COMPACT_THRESHOLD {
       var rest = self._buf[self._pos,]
       self._buf.dispose()
       self._buf = rest

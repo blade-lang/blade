@@ -49,6 +49,13 @@ class Route {
    */
   var name
 
+  /**
+   * Pre-allocated RouteMatch for static routes without path parameters
+   * or wildcards, avoiding per-request allocations.
+   * @type ?RouteMatch
+   */
+  var static_match
+
   @new(method, pattern, handler, name) {
     self.method = method
     self.pattern = pattern
@@ -224,6 +231,7 @@ class Router {
     self._routes.append(route)
 
     if !pattern.contains(':') and !pattern.contains('*') {
+      route.static_match = RouteMatch(route, {}, [])
       self._static_routes[upper + ' ' + pattern] = route
     }
 
@@ -255,13 +263,13 @@ class Router {
 
     var static_route = self._static_routes.get(upper + ' ' + path, nil)
     if static_route != nil {
-      return RouteMatch(static_route, {}, [])
+      return static_route.static_match
     }
 
     if upper == 'HEAD' {
       var head_fallback = self._static_routes.get('GET ' + path, nil)
       if head_fallback != nil {
-        return RouteMatch(head_fallback, {}, [])
+        return head_fallback.static_match
       }
     }
 
