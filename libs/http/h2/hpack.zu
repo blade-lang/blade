@@ -21,6 +21,7 @@
  * @copyright 2026, Richard Ore and Zuri contributors
  */
 
+import _http
 import ..errors { ProtocolError }
 import .huffman
 
@@ -135,23 +136,7 @@ var _NEVER_INDEXED = [
  * @param number first: the flag bits, already shifted into place
  */
 def encode_integer(out, value: number, prefix_bits: number, first: number) {
-  var limit = (2 ** prefix_bits) - 1
-
-  if value < limit {
-    out.append(first | value)
-    return
-  }
-
-  out.append(first | limit)
-
-  var remainder = value - limit
-
-  while remainder >= 128 {
-    out.append((remainder % 128) + 128)
-    remainder = remainder // 128
-  }
-
-  out.append(remainder)
+  _http.hpack_encode_integer(out, value, prefix_bits, first)
 }
 
 /**
@@ -166,43 +151,16 @@ def encode_integer(out, value: number, prefix_bits: number, first: number) {
  *    absurdly long
  */
 def decode_integer(data, offset: number, prefix_bits: number) {
-  if offset >= data.length() {
+  var res = _http.hpack_decode_integer(data, offset, prefix_bits)
+  if is_list(res) {
+    return res
+  }
+
+  if res == 1 {
     raise ProtocolError('truncated HPACK integer')
   }
 
-  var limit = (2 ** prefix_bits) - 1
-  var value = data[offset] & limit
-  var at = offset + 1
-
-  if value < limit {
-    return [value, at]
-  }
-
-  var shift = 0
-
-  while true {
-    if at >= data.length() {
-      raise ProtocolError('truncated HPACK integer')
-    }
-
-    var byte = data[at]
-    at++
-
-    value += (byte & 127) * (2 ** shift)
-    shift += 7
-
-    if byte < 128 {
-      break
-    }
-
-    # A continuation this long is not a large number, it is a peer
-    # trying to make us allocate one.
-    if shift > 28 {
-      raise ProtocolError('HPACK integer is too large')
-    }
-  }
-
-  return [value, at]
+  raise ProtocolError('HPACK integer is too large')
 }
 
 /**
@@ -213,19 +171,7 @@ def decode_integer(data, offset: number, prefix_bits: number) {
  * @param string text
  */
 def encode_string(out, text: string) {
-  var raw = text.to_bytes()
-
-  if huffman.encoded_length(raw) < raw.length() {
-    var encoded = huffman.encode(raw)
-    encode_integer(out, encoded.length(), 7, 128)
-    out.extend(encoded)
-    encoded.dispose()
-  } else {
-    encode_integer(out, raw.length(), 7, 0)
-    out.extend(raw)
-  }
-
-  raw.dispose()
+  _http.hpack_encode_string(out, text)
 }
 
 /**
@@ -238,36 +184,12 @@ def encode_string(out, text: string) {
  * @throws ProtocolError on a truncated or over-long literal
  */
 def decode_string(data, offset: number, max_length: number) {
-  if offset >= data.length() {
-    raise ProtocolError('truncated HPACK string')
+  var res = _http.hpack_decode_string(data, offset, max_length)
+  if is_list(res) {
+    return res
   }
 
-  var is_huffman = (data[offset] & 128) != 0
-  var header = decode_integer(data, offset, 7)
-  var length = header[0]
-  var start = header[1]
-
-  if length > max_length {
-    raise ProtocolError('HPACK string of ${length} bytes exceeds the limit')
-  }
-
-  if start + length > data.length() {
-    raise ProtocolError('truncated HPACK string')
-  }
-
-  var text
-
-  if is_huffman {
-    var decoded = huffman.decode(data, start, start + length)
-    text = decoded.to_string()
-    decoded.dispose()
-  } else {
-    var slice = data[start, start + length]
-    text = slice.to_string()
-    slice.dispose()
-  }
-
-  return [text, start + length]
+  raise ProtocolError(res)
 }
 
 /**
@@ -382,6 +304,15 @@ class DynamicTable {
   }
 
   /**
+   * The list of entries currently held in the table.
+   *
+   * @returns list
+   */
+  entries() {
+    return self._entries
+  }
+
+  /**
    * How many entries the table holds.
    *
    * @returns number
@@ -440,70 +371,29 @@ class Decoder {
    *    limit
    */
   decode(block) {
-    var fields = []
-    var at = 0
-    var total = 0
+    var res = _http.hpack_decode_block(
+      block,
+      self.table.entries(),
+      self.table.capacity(),
+      self.table.size(),
+      self.max_string_length,
+      self.max_header_list_size,
+    )
 
-    while at < block.length() {
-      var byte = block[at]
+    if res[0] != 'ok' {
+      raise ProtocolError(res[1])
+    }
 
-      if (byte & 128) != 0 {
-        # Indexed header field: the whole field is in a table.
-        var parsed = decode_integer(block, at, 7)
-        var entry = self.table.get(parsed[0])
+    var fields = res[1]
+    var new_capacity = res[2]
+    if new_capacity != self.table.capacity() {
+      self.table.set_capacity(new_capacity)
+    }
 
-        fields.append([entry[0], entry[1]])
-        total += _entry_size(entry[0], entry[1])
-        at = parsed[1]
-        continue
-      }
-
-      if (byte & 32) != 0 and (byte & 64) == 0 {
-        # Dynamic table size update. RFC 7541 §4.2 caps it at whatever
-        # the decoder advertised through SETTINGS.
-        var parsed = decode_integer(block, at, 5)
-
-        if parsed[0] > self.table.capacity() and parsed[0] > 4096 {
-          raise ProtocolError('HPACK table size update exceeds the agreed maximum')
-        }
-
-        self.table.set_capacity(parsed[0])
-        at = parsed[1]
-        continue
-      }
-
-      var indexed = (byte & 64) != 0
-      var prefix = indexed ? 6 : 4
-
-      var parsed = decode_integer(block, at, prefix)
-      var name_index = parsed[0]
-      at = parsed[1]
-
-      var name
-
-      if name_index == 0 {
-        var read = decode_string(block, at, self.max_string_length)
-        name = read[0]
-        at = read[1]
-      } else {
-        name = self.table.get(name_index)[0]
-      }
-
-      var read_value = decode_string(block, at, self.max_string_length)
-      var value = read_value[0]
-      at = read_value[1]
-
-      _check_name(name)
-
-      fields.append([name, value])
-      total += _entry_size(name, value)
-
-      if indexed {
-        self.table.add(name, value)
-      }
-
-      if total > self.max_header_list_size {
-        raise ProtocolError('decoded header list exceeds ${self.max_header_list_size} bytes')
+    var added = res[3]
+    if added.length() > 0 {
+      for entry in added {
+        self.table.add(entry[0], entry[1])
       }
     }
 
@@ -570,34 +460,6 @@ class Encoder {
    * @returns bytes
    */
   encode(fields: list) {
-    var out = bytes(0)
-
-    for field in fields {
-      var name = field[0]
-      var value = is_string(field[1]) ? field[1] : field[1].to_string()
-
-      var pair = _BY_PAIR.get('${name}\t${value}', nil)
-
-      if pair != nil {
-        encode_integer(out, pair, 7, 128)
-        continue
-      }
-
-      var sensitive = _NEVER_INDEXED.contains(name)
-      var flag = sensitive ? 16 : 0
-      var name_index = _BY_NAME.get(name, 0)
-
-      # Both the never-indexed and the without-indexing forms use a
-      # 4-bit prefix; they differ only in that flag bit.
-      encode_integer(out, name_index, 4, flag)
-
-      if name_index == 0 {
-        encode_string(out, name)
-      }
-
-      encode_string(out, value)
-    }
-
-    return out
+    return _http.hpack_encode_block(fields)
   }
 }
